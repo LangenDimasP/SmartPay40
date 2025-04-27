@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - {{ current_user.username }}</title> {# <--- JUDUL DINAMIS #}
+    {# Link ke Font Awesome (dari kode kamu) #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* === CSS Internal Kamu (Tidak Diubah) === */
+        * { margin: 0; padding: 0;  box-sizing: border-box; font-family: 'Arial', sans-serif; }
+        body { background-color: #f5f5f5; padding-bottom: 100px;}
+        .dashboard-container {
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 20px; /* Cukup untuk tinggi bottom-nav */
+        }
+        .header { background-color: #7c4dff; color: white; padding: 30px; width: 100%; border-radius: 0 0 50px 50px; display: flex; margin: 0 auto; justify-content: space-between; align-items: center;            position: relative; /* atau fixed/sticky */
+            z-index: 1000; /* Pastikan ada z-index */ }
+        .header h1 { font-size: 20px; font-weight: bold; }
+        .header-icons { display: flex; gap: 15px; }
+        .header-icons .icon { font-size: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .header-icons a { color: white; text-decoration: none;} /* Tambahkan ini agar ikon bisa diklik */
+        .profile-icon { width: 70px; height: 70px; background-color: #898989; border-radius: 50%; display: flex; justify-content: center; align-items: center; overflow: hidden; font-size: 35px; /* Ukuran ikon profil default */ }
+        .profile-icon img { width: 100%; height: auto; }
+        .profile-icon-header {
+                display: inline-block; width: 40px; height: 40px; background-color: rgba(255,255,255,0.2);
+                border-radius: 50%; overflow: hidden; text-align: center; line-height: 40px;
+                vertical-align: middle; border: 1px solid rgba(255,255,255,0.5);
+           }
+            .profile-icon-header img { width: 100%; height: 100%; object-fit: cover; }
+            .profile-icon-header i { font-size: 20px; color: white; }
+        .balance-card { background-color: white; margin: -40px auto 0 auto; z-index: 1001; border-radius: 20px; padding: 20px; width: 90%; /* Lebarkan sedikit di mobile */ max-width: 400px; /* Batas lebar max */ box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; }
+        .logo { display: flex; align-items: center; margin-bottom: 15px; gap: 10px; }
+        .logo img { height: 40px; width: auto; } /* Sesuaikan ukuran logo */
+        /* Hapus .logo-icon dan .logo-text jika hanya pakai img */
+        .balance-info { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; flex-wrap: wrap; /* Wrap jika layar kecil */ gap: 15px; }
+        .balance-label { font-size: 24px; font-weight: bold; flex-grow: 1; /* Biar label ambil sisa ruang */ }
+        .balance-actions { display: flex; gap: 20px; justify-content: flex-start; }
+        .action-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: inherit;} /* Agar bisa jadi link */
+        .action-icon { background-color: #ede7f6; /* Ungu muda */ color: #7c4dff; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: background-color 0.2s ease; }
+        .action-item:hover .action-icon { background-color: #d1c4e9; } /* Efek hover */
+        .action-label { font-size: 12px; margin-top: 8px; color: #333; display: block; }
+        .spending-section { background-color: #7c4dff; color: white; padding: 15px; border-radius: 15px; margin-top: 20px; text-align: center; font-size: 18px; font-weight: 500;}
+        .spending-section strong { font-weight: 700; }
+        .warning-section {
+     display: flex; align-items: center; gap: 10px; margin: 20px auto;
+     padding: 10px 15px; font-size: 14px; border-radius: 8px;
+     max-width: 90%; border: 1px solid transparent; /* Border default transparan */
+}
+/* Style untuk saldo rendah */
+.warning-section.low-balance {
+     color: #664d03; background-color: #fff3cd; border-color: #ffecb5;
+}
+.warning-section.low-balance .warning-icon { color: #ff9800; }
+/* Style untuk saldo habis */
+.warning-section.zero-balance {
+     color: #842029; background-color: #f8d7da; border-color: #f5c2c7;
+}
+.warning-section.zero-balance .warning-icon { color: #dc3545; }
+/* Style ikon default (jika belum ada) */
+.warning-icon { font-size: 24px; }
+        .warning-icon { color: #ff9800; /* Warna warning lebih oranye */ font-size: 24px; /* Kecilkan ikon */ }
+                .bottom-nav {
+                    background-color: #ffffff;
+                    display: flex;
+                    width: 70%;
+                    justify-content: space-around;
+                    padding: 15px 0;
+                    border-radius: 30px 30px 0 0;
+                    margin: 0 auto;
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                    position: fixed;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    bottom: 0;
+                    z-index: 100;
+                }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; text-decoration: none; font-size: 12px; flex-grow: 1; /* Agar sebar rata */ }
+        .nav-item.active { color: #7c4dff; font-weight: bold; }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; } /* Ukuran ikon nav */
+        .scan-button { /* Tombol SCAN dibuat sebagai bagian dari nav item biasa */ flex-grow: 1; display: flex; justify-content: center; align-items: center; margin-top: -30px; /* Angkat ke atas */ z-index: 11;}
+        .scan-button a { background-color: #7c4dff; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4); border: 3px solid white; }
+        .scan-button a:hover { background-color: #5e35b1; }
+
+        .history-preview-card {
+            background-color: #ffffff;
+            border-radius: 15px;
+            width: 70%;
+            margin: 20px auto;
+            padding: 20px 20px 40px 20px; /* Jangan terlalu besar */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+            position: relative;
+            border: 1px solid #eee;
+        }
+        .history-preview-card h4 {
+            margin-top: 0; margin-bottom: 15px; font-size: 1.1em; font-weight: 600;
+            color: #555; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;
+        }
+        .history-preview-list { list-style: none; padding: 0; margin: 0; }
+        .history-preview-list li {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 5px; /* Padding atas/bawah lebih besar */
+            border-bottom: 1px solid #f5f5f5; /* Pemisah sangat tipis */
+            font-size: 0.9em;
+        }
+        .history-preview-list li:last-child { border-bottom: none; }
+        .history-detail { display: flex; align-items: center; }
+        .history-detail .icon { /* Style untuk ikon transaksi */
+             font-size: 1.4em; margin-right: 12px; width: 30px; text-align: center;
+         }
+        .history-detail .icon.payment { color: #e53935; } /* Merah untuk bayar */
+        .history-detail .icon.topup { color: #43a047; } /* Hijau untuk topup */
+        .history-detail .tx-desc { display: block; font-weight: 500; color: #444; }
+        .history-detail .tx-time { font-size: 0.85em; color: #888; }
+        .history-amount { font-weight: bold; white-space: nowrap; margin-left: 10px;}
+        .history-amount.positive { color: #43a047; }
+        .history-amount.negative { color: #e53935; }
+
+        /* Tombol Lihat Semua Riwayat */
+        .view-all-history {
+            position: absolute; /* Posisi di kanan bawah kartu */
+            bottom: 15px;
+            right: 20px;
+            font-size: 0.9em;
+            color: #7c4dff; /* Warna ungu */
+            text-decoration: none;
+            font-weight: 500;
+            padding: 5px 0; /* Padding atas/bawah saja */
+        }
+        .view-all-history:hover { text-decoration: underline; color: #5e35b1; }
+
+            /* Untuk bagian ini saja - tambahkan di dalam tag style yang sudah ada */
+    .faq-section {
+        background-color: #ffffff;
+        border-radius: 15px;
+        width: 70%;
+        margin: 20px auto;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        position: relative;
+        border: 1px solid #eee;
+    }
+    
+    .faq-title {
+        margin-top: 80px;
+        margin-bottom: 20px;
+        font-size: 2em;
+        font-weight: 800;
+        padding-left: 40px;
+        color: #555;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 10px;
+    }
+    
+    .faq-container {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    
+    .faq-content {
+        flex: 2;
+        padding: 20px;
+    }
+    
+    .faq-image {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .faq-image img {
+    max-width: 100%;
+    height: 450px;
+    width: auto;
+    margin-top: -50px; /* Naikkan gambar ke atas, sesuaikan nilainya */
+}
+    
+    .faq-item {
+        margin-bottom: 15px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .faq-item:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-2px);
+    }
+    
+    .faq-question {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 5px;
+    }
+    
+    .faq-question i {
+        color: #7c4dff;
+        font-size: 1.8em;
+    }
+    
+    .faq-question h4 {
+        margin: 0;
+        font-size: 1.5em;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .faq-answer {
+        margin-left: 30px;
+    }
+    
+    .faq-answer p {
+        margin: 0;
+        font-size: 1.4em;
+        color: #555;
+    }
+    
+    .faq-more {
+        text-align: right;
+        margin-top: 15px;
+    }
+    
+    .faq-link {
+        color: #7c4dff;
+        text-decoration: none;
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+    
+    .faq-link:hover {
+        text-decoration: underline;
+        color: #5e35b1;
+    }
+
+    .notification-icon-wrapper {
+    position: relative;
+    z-index: 1002; /* Lebih tinggi dari .balance-card */
+}
+        /* Styling untuk link ikon lonceng */
+        #notif-bell-btn {
+             color: white; text-decoration: none; font-size: 1.4em;
+             vertical-align: middle; display: inline-block; padding: 5px; /* Beri padding area klik */
+        }
+        .notif-badge {
+            position: absolute;
+            top: 0px; /* Posisi badge sedikit di atas ikon */
+            right: -2px; /* Posisi badge sedikit di kanan ikon */
+            background-color: #e53935; /* Merah terang */
+            color: white;
+            border-radius: 50%;
+            padding: 1px 5px;
+            font-size: 0.7em; /* Ukuran font angka */
+            font-weight: bold;
+            line-height: 1.2;
+            min-width: 17px; /* Lebar minimum badge */
+            text-align: center;
+            border: 1.5px solid white; /* Border putih */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        /* Panel Notifikasi Dropdown */
+        .notif-panel {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: -10px;
+            width: 240px;
+            max-height: 70vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+            border: 1px solid #e0e0e0;
+            z-index: 9999; /* <<< NAIKKAN NILAI Z-INDEX INI */
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-5px);
+            transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+        }
+        .notif-panel.active { /* Style saat panel aktif */
+            display: block; opacity: 1; visibility: visible; transform: translateY(0);
+        }
+        .notif-header {
+            padding: 12px 15px; font-weight: 600; color: #333;
+            border-bottom: 1px solid #eee; font-size: 1em;
+        }
+        .notif-list { list-style: none; padding: 0; margin: 0; }
+        .notif-item a { text-decoration: none; color: inherit; display: block; padding: 12px 15px; transition: background-color 0.15s ease;}
+        .notif-item a:hover { background-color: #f8f9fa; }
+        .notif-item.unread { background-color: #f7f8ff; /* Latar sedikit beda untuk yg belum dibaca */ }
+        .notif-item.unread .notif-message { font-weight: 500; color: #333; } /* Teks unread sedikit bold */
+        .notif-message { margin: 0 0 4px 0; font-size: 0.9em; color: #444; line-height: 1.4;}
+        .notif-time { font-size: 0.78em; color: #888; }
+        .notif-footer {
+    padding: 8px 15px; text-align: center; border-top: 1px solid #eee; background-color: #fafafa;
+}
+.notif-footer a { color: #7c4dff; text-decoration: none; font-size: 0.9em; font-weight: 500; }
+.notif-footer a:hover { text-decoration: underline; color: #5e35b1;}
+.notif-footer i { font-size: 0.8em; margin-left: 3px;}
+        .notif-item-empty { padding: 25px; text-align: center; color: #888; font-size: 0.9em; }
+    
+    /* Responsivitas untuk FAQ section */
+    @media (max-width: 768px) {
+        .faq-container {
+            flex-direction: column;
+        }
+        .balance-card{
+            margin-top: 20px;
+            z-index: 1;
+        }
+        
+        .faq-image {
+            order: -1; /* Gambar di atas pada layar kecil */
+            margin-bottom: 15px;
+        }
+    }
+    
+    @media (max-width: 600px) {
+        .faq-section {
+            width: 95%;
+        }
+    }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Responsifitas Tambahan */
+         @media (max-width: 600px) { .balance-card { width: 95%; } .header h1 { font-size: 16px;} }
+         @media (max-width: 400px) { .balance-label { font-size: 20px;} .balance-actions { gap: 15px;} .action-icon { width: 45px; height: 45px; font-size: 18px;} .spending-section{ font-size: 16px; } }
+
+    </style>
+</head>
+<body>
+    <div class="dashboard-container"> {# Tambahkan padding bawah untuk ruang #}
+        {# === Header Dashboard === #}
+        <div class="header">
+            {# === Menampilkan Nama, Kelas, Jurusan === #}
+            <h1>Halo, {{ current_user.username }}{% if current_user.kelas and current_user.jurusan %} ({{ current_user.kelas }}-{{ current_user.jurusan }}){% endif %}</h1>
+            <div class="header-icons">
+                <div class="notification-icon-wrapper">
+                    <a href="#" id="notif-bell-btn" title="Notifikasi">
+                        <span class="icon-placeholder"><i class="fas fa-bell"></i></span> {# Ikon Lonceng #}
+                        {# Tampilkan Badge HANYA jika unread_count > 0 #}
+                        {% if unread_count > 0 %}
+                            <span class="notif-badge">{{ unread_count if unread_count <= 9 else '9+' }}</span> {# Tampilkan angka atau 9+ #}
+                        {% endif %}
+                    </a>
+                    {# Panel Notifikasi (Awalnya Tersembunyi oleh CSS) #}
+                    <div id="notif-panel" class="notif-panel">
+                        <div class="notif-header">Notifikasi Terbaru</div>
+                        <ul class="notif-list">
+                            {% if recent_notifications %}
+                                {% for notif in recent_notifications %}
+                                {# Tambahkan class 'unread' jika belum dibaca #}
+                                <li class="notif-item {% if not notif.is_read %}unread{% endif %}">
+                                    {# Link ke detail (jika ada) atau # #}
+                                    <a href="{{ notif.related_link or '#' }}">
+                                        <p class="notif-message">{{ notif.message }}</p>
+                                        <small class="notif-time">{{ notif.timestamp | wib }}</small>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="notif-item-empty">Tidak ada notifikasi terbaru.</li>
+                            {% endif %}
+                        </ul>
+                        {# Footer panel (opsional) #}
+                        <div class="notif-footer">
+                            {# Link ke route baru 'detail_notif' #}
+                            <a href="{{ url_for('detail_notif') }}">Lihat Semua Notifikasi <i class="fas fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{{ url_for('profile') }}" title="Profil Anda" class="profile-icon-header"> {# Beri class untuk styling #}
+                    {% if current_user.profile_pic_filename %}
+                        {# Tampilkan foto profil jika ada #}
+                        <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic_filename) }}?v={{ range(1, 1000) | random }}" alt="P"> {# Alt simpel #}
+                    {% else %}
+                         {# Tampilkan ikon default jika tidak ada #}
+                         <i class="fas fa-user"></i>
+                    {% endif %}
+                </a>
+            </div>
+        </div>
+
+        <div class="balance-card">
+            <div class="logo">
+                 {# === Logo Aplikasi === #}
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo DimasCash">
+                {# Hapus .logo-icon dan .logo-text jika tidak dipakai #}
+            </div>
+
+            <div class="balance-info">
+                 {# === Menampilkan Saldo === #}
+                <div class="balance-label">{{ current_user.balance | rupiah }}</div>
+                <div class="balance-actions">
+                     {# === Tombol Aksi Top Up (Link sementara) === #}
+                    <a href="{{ url_for('request_topup') }}" class="action-item" title="Info Top Up">
+                        <div class="action-icon">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <span class="action-label">Top Up</span>
+                    </a>
+                     {# === Tombol Aksi Bayar (Link ke halaman bayar) === #}
+                    <a href="{{ url_for('pay_vendor') }}" class="action-item" title="Bayar/Scan QR">
+                        <div class="action-icon">
+                            <i class="fas fa-paper-plane"></i> {# Ganti ikon jika perlu #}
+                        </div>
+                        <span class="action-label">Bayar</span>
+                    </a>
+                </div>
+            </div>
+
+            {# === Menampilkan Ringkasan Pengeluaran === #}
+            <div class="spending-section">
+                Pengeluaran Hari Ini: <strong>{{ todays_spending | rupiah }}</strong>
+            </div>
+        </div>
+
+        {# === Menampilkan Peringatan Saldo Rendah (PERBAIKAN) === #}
+        {# Definisikan threshold di luar blok if/else #}
+        {% set low_balance_threshold = 10000.0 %}
+  
+        {# Logika IF/ELIF sekarang membungkus pembuatan div container #}
+        {% if current_user.balance < low_balance_threshold and current_user.balance > 0 %}
+            {# Tampilkan container HANYA jika saldo rendah #}
+            <div class="warning-section low-balance"> {# Tambah class spesifik? Opsional #}
+                <div class="warning-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>Saldo Anda hampir habis (tersisa {{ current_user.balance|rupiah }}). Segera lakukan Top Up!</div>
+            </div>
+        {% elif current_user.balance <= 0 %}
+            {# Tampilkan container HANYA jika saldo habis #}
+            <div class="warning-section zero-balance"> {# Tambah class spesifik? Opsional #}
+                <div class="warning-icon" style="color: #dc3545;">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div>Saldo Anda Habis (Rp 0). Harap lakukan Top Up.</div>
+            </div>
+        {% endif %} {# Tidak perlu blok 'else', jika saldo cukup, tidak tampil apa-apa #}
+        {# === AKHIR PERINGATAN SALDO RENDAH (PERBAIKAN) === #}
+
+        <div class="history-preview-card">
+            <h4>Riwayat Terakhir</h4>
+            {% if recent_transactions %}
+                <ul class="history-preview-list">
+                    {% for tx in recent_transactions %}
+                    <li>
+                        <div class="history-detail">
+                            {# Ikon berdasarkan tipe transaksi #}
+                            {% if tx.type == 'payment' %}
+                                <span class="icon payment"><i class="fas fa-store"></i></span> {# Ikon toko untuk bayar #}
+                            {% elif tx.type == 'topup' %}
+                                 <span class="icon topup"><i class="fas fa-wallet"></i></span> {# Ikon dompet untuk topup #}
+                            {% else %}
+                                 <span class="icon"><i class="fas fa-receipt"></i></span> {# Ikon default #}
+                            {% endif %}
+                            <div>
+                                {# Deskripsi transaksi #}
+                                {% if tx.user_id == current_user.id %} {# Outgoing #}
+                                     {% if tx.type == 'payment' %} <span class="tx-desc">Bayar ke {{ tx.related_user.username if tx.related_user else 'N/A' }}</span>
+                                     {% elif tx.type == 'cashout_vendor' %} <span class="tx-desc">Cash Out ke Admin</span> {# Contoh jika ada #}
+                                     {% else %} <span class="tx-desc">{{ tx.type.capitalize() }}</span>
+                                     {% endif %}
+                                {% elif tx.related_user_id == current_user.id %} {# Incoming #}
+                                     {% if tx.type == 'topup' %} <span class="tx-desc">Top Up dari Admin</span>
+                                     {% else %} <span class="tx-desc">{{ tx.type.capitalize() }} Diterima</span>
+                                     {% endif %}
+                                {% endif %}
+                                {# Waktu Transaksi #}
+                                <span class="tx-time">{{ tx.timestamp | wib }}</span>
+                            </div>
+                        </div>
+                        <div class="history-amount {% if tx.user_id == current_user.id and tx.type != 'topup' %}negative{% else %}positive{% endif %}">
+                            {# Tampilkan (-) untuk pengeluaran, (+) untuk pemasukan #}
+                            {% if tx.user_id == current_user.id and tx.type != 'topup' %}-{% else %}+{% endif %}
+                            {{ tx.amount|rupiah }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="text-align: center; color: #777; font-size: 0.9em; padding: 20px 0;">Belum ada transaksi terbaru.</p>
+            {% endif %}
+            {# Tombol Lihat Semua (jika ada transaksi) #}
+            {% if recent_transactions %}
+            <a href="{{ url_for('riwayat_siswa') }}" class="view-all-history">Lihat Semua <i class="fas fa-arrow-right"></i></a>
+            {% endif %}
+        </div>
+
+        <h3 class="faq-title">Pertanyaan Umum</h3>
+        <div class="faq-container">
+            <div class="faq-content">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <i class="fas fa-question-circle"></i>
+                        <h4>Bagaimana cara melakukan Top Up?</h4>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Anda dapat melakukan top up dengan menghubungi admin di kantin sekolah atau melalui petugas yang ditunjuk.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <i class="fas fa-question-circle"></i>
+                        <h4>Kapan DimasCash bisa digunakan?</h4>
+                    </div>
+                    <div class="faq-answer">
+                        <p>DimasCash dapat digunakan setiap hari selama jam operasional kantin dan koperasi sekolah.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <i class="fas fa-question-circle"></i>
+                        <h4>Saya lupa PIN, apa yang harus dilakukan?</h4>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Silakan hubungi admin DimasCash di ruang TU untuk reset PIN.</p>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="faq-image">
+                <img src="{{ url_for('static', filename='images/faq-karakter.png') }}" alt="FAQ Helper">
+            </div>
+        </div>
+    </div>
+    
+
+
+        <div class="bottom-nav">
+             {# === Link Home (Dashboard) === #}
+            <a href="{{ url_for('dashboard') }}" class="nav-item active"> {# Beri class active #}
+                <i class="fas fa-home"></i>
+                Home
+            </a>
+             {# === Tombol Scan di Tengah === #}
+            <div class="scan-button">
+                <a href="{{ url_for('pay_vendor') }}" title="Scan QR"> {# Link ke halaman bayar #}
+                    <i class="fas fa-qrcode"></i>
+                </a>
+            </div>
+             {# === Link Riwayat === #}
+            <a href="{{ url_for('riwayat_siswa') }}" class="nav-item">
+                <i class="fas fa-receipt"></i> {# Ganti ikon jika perlu #}
+                Riwayat
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const notifBellBtn = document.getElementById('notif-bell-btn');
+        const notifPanel = document.getElementById('notif-panel');
+        const notifBadge = document.querySelector('.notif-badge'); // Badge angka
+
+        // --- Fungsi untuk memanggil backend Mark as Read ---
+        function markNotificationsAsRead() {
+            // Hanya kirim request jika badge ada dan terlihat
+            if (notifBadge && notifBadge.style.display !== 'none') {
+                console.log("Mengirim request POST ke /notifications/mark_read...");
+                // Kirim POST request ke endpoint Flask
+                fetch("{{ url_for('mark_notifications_read') }}", { // PASTIKAN ENDPOINT BENAR
+                    method: 'POST',
+                    headers: {
+'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+                        // Tambahkan header CSRF di sini jika kamu menggunakan Flask-WTF
+                        // 'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                    // Tidak perlu kirim body untuk request ini
+                })
+                .then(response => {
+                    // Cek jika response dari server tidak OK (misal error 500)
+                    if (!response.ok) {
+                        // Lemparkan error agar ditangkap oleh .catch()
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    // Jika OK, parse JSON response
+                    return response.json();
+                })
+                .then(data => {
+                    // Jika backend mengkonfirmasi sukses
+                    if (data.success) {
+                        console.log('Backend konfirmasi: Notifikasi ditandai sudah dibaca.');
+                        // Hapus class 'unread' dari list item setelah backend konfirm
+                        document.querySelectorAll('#notif-panel .notif-item.unread').forEach(item => {
+                            item.classList.remove('unread');
+                        });
+                    } else {
+                        // Jika backend melaporkan gagal
+                        console.error('Backend: Gagal menandai notifikasi sudah dibaca.', data.message);
+                        // Tampilkan lagi badge jika proses backend gagal?
+                        if (notifBadge) notifBadge.style.display = 'inline-block';
+                    }
+                })
+                .catch(error => {
+                    // Tangkap error koneksi atau error parse JSON
+                    console.error('Error saat fetch markNotificationsAsRead:', error);
+                    // Tampilkan lagi badge jika fetch gagal total?
+                    if (notifBadge) notifBadge.style.display = 'inline-block';
+                });
+            } else {
+                 console.log("Tidak ada badge terlihat saat mencoba mark read.");
+             }
+        }
+        // -------------------------------------------------------
+
+        // Event listener untuk tombol lonceng
+        if (notifBellBtn && notifPanel) {
+            notifBellBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                const isOpening = !notifPanel.classList.contains('active');
+                notifPanel.classList.toggle('active');
+
+                // Panggil markNotificationsAsRead HANYA JIKA panel DIBUKA
+                // DAN ADA badge yg terlihat (sebelum disembunyikan)
+                if (isOpening && notifBadge && notifBadge.style.display !== 'none') {
+                    // Panggil fungsi untuk update ke backend
+                    markNotificationsAsRead();
+                    // Sembunyikan badge secara visual SEGERA (Optimistic UI)
+                    notifBadge.style.display = 'none';
+                }
+            });
+
+            // Sembunyikan panel jika klik di luar
+            document.addEventListener('click', (event) => {
+                const wrapper = document.querySelector('.notification-icon-wrapper');
+                // Pastikan wrapper ditemukan sebelum cek contains
+                if (wrapper && !wrapper.contains(event.target)) {
+                    notifPanel.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

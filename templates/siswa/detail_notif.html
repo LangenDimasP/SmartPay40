@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semua Notifikasi - {{ current_user.username }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* === CSS Internal Halaman Detail Notifikasi === */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
+        body { background-color: #f0f2f5; }
+        .page-header { background: linear-gradient(to right, #8a3ff9, #7c4dff); color: white; padding: 15px 20px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .page-header a.back-link { color: white; text-decoration: none; font-size: 1.4em; margin-right: 15px; transition: transform 0.2s ease; }
+        .page-header a.back-link:hover { transform: translateX(-3px); }
+        .page-header h1 { font-size: 1.25em; margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+        .container { max-width: 800px; margin: 25px auto; padding: 0 15px; }
+
+        .notification-list-full { list-style: none; padding: 0; background-color: #fff; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.07); border: 1px solid #eee; overflow: hidden; }
+        .notification-list-full li { display: flex; align-items: center; gap: 15px; padding: 15px 20px; border-bottom: 1px solid #f5f5f5; transition: background-color 0.15s ease; }
+        .notification-list-full li:last-child { border-bottom: none; }
+        .notification-list-full li:hover { background-color: #fafbff; }
+        .notification-list-full li.unread { background-color: #f7f8ff; }
+        .notification-list-full .notif-icon { font-size: 1.5em; width: 35px; text-align: center; color: #7c4dff; }
+        .notification-list-full .notif-icon.payment { color: #e53935; }
+        .notification-list-full .notif-icon.topup { color: #43a047; }
+        .notification-list-full .notif-content { flex-grow: 1; }
+        .notif-message { margin: 0 0 3px 0; font-size: 0.95em; color: #333; line-height: 1.4; }
+        .notif-item.unread .notif-message { font-weight: 500; } /* Bold jika belum dibaca */
+        .notif-time { font-size: 0.8em; color: #888; }
+        .no-notifications { text-align: center; padding: 40px; color: #777; font-style: italic; }
+         .back-link-bottom { margin-top: 25px; text-align: center; padding-bottom: 20px;}
+         .back-link-bottom a { color: #7c4dff; text-decoration: none; font-weight: 500;}
+         .back-link-bottom a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <a href="{{ url_for('dashboard') }}" class="back-link" title="Kembali"><i class="fas fa-arrow-left"></i></a>
+        <h1>Semua Notifikasi</h1>
+    </div>
+
+    <div class="container">
+        {% if notifications %}
+            <ul class="notification-list-full">
+                {% for notif in notifications %}
+                    <li class="notif-item {% if not notif.is_read %}unread{% endif %}">
+                        {# Ikon berdasarkan pesan (contoh sederhana) #}
+                        <div class="notif-icon {% if 'Pembayaran' in notif.message %}payment{% elif 'Top up' in notif.message %}topup{% endif %}">
+                            {% if 'Pembayaran' in notif.message %} <i class="fas fa-receipt"></i>
+                            {% elif 'Top up' in notif.message %} <i class="fas fa-wallet"></i>
+                            {% else %} <i class="fas fa-info-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div class="notif-content">
+                            <p class="notif-message">{{ notif.message }}</p>
+                            <small class="notif-time">{{ notif.timestamp | wib }}</small>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="no-notifications">Anda belum memiliki notifikasi.</p>
+        {% endif %}
+
+        <div class="back-link-bottom">
+             <a href="{{ url_for('dashboard') }}"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+        </div>
+    </div>
+
+</body>
+</html>

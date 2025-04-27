@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Transaksi Penjual</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #7c4dff 0%, #9c27b0 100%);
+        }
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(124, 77, 255, 0.2);
+        }
+        .pagination-active {
+            background-color: #7c4dff;
+            color: white;
+        }
+        .date-input:focus {
+            border-color: #7c4dff;
+            box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    {% extends "penjual_base.html" %}
+
+    {% block penjual_title %}Riwayat Transaksi Penjual{% endblock %}
+
+    {% block penjual_content %}
+    <div class="min-h-screen bg-gray-50 p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header Section -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Riwayat Transaksi</h1>
+                    <p class="text-gray-600 mt-2">Daftar semua transaksi yang telah dilakukan</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-history text-purple-600 text-2xl"></i>
+                    <span class="text-sm font-medium text-gray-500">Total Transaksi: <span class="font-bold text-purple-600">123</span></span>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-filter text-purple-600 mr-2"></i> Filter Transaksi
+                </h2>
+                <form method="GET" class="space-y-4 md:space-y-0 md:grid md:grid-cols-4 md:gap-4">
+                    <div>
+                        <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai</label>
+                        <div class="relative">
+                            <input type="date" class="date-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+                                   id="start_date" name="start_date" value="{{ filter_start_date }}">
+                            <i class="fas fa-calendar-alt absolute right-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Selesai</label>
+                        <div class="relative">
+                            <input type="date" class="date-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" 
+                                   id="end_date" name="end_date" value="{{ filter_end_date }}">
+                            <i class="fas fa-calendar-alt absolute right-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition duration-300 w-full flex items-center justify-center">
+                            <i class="fas fa-search mr-2"></i> Terapkan Filter
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="reset" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition duration-300 w-full flex items-center justify-center">
+                            <i class="fas fa-redo mr-2"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Transaction Table -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-800">Daftar Transaksi</h3>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Urutkan:</span>
+                            <select class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option>Terbaru</option>
+                                <option>Terlama</option>
+                                <option>Jumlah Tertinggi</option>
+                                <option>Jumlah Terendah</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <div class="flex items-center">
+                                            <i class="far fa-clock mr-2"></i> Waktu
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-user mr-2"></i> Pembeli
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-money-bill-wave mr-2"></i> Jumlah
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-info-circle mr-2"></i> Keterangan
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Aksi
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for trans in transactions %}
+                                <tr class="transaction-card transition duration-150 ease-in-out hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">{{ trans.timestamp|wib }}</div>
+                                        <div class="text-xs text-gray-500">{{ trans.timestamp.strftime('%d-%m-%Y %H:%M') }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                                <i class="fas fa-user text-purple-600"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900">{{ trans.user.username if trans.user else 'Unknown' }}</div>
+                                                <div class="text-xs text-gray-500">ID: {{ trans.user.id if trans.user else 'N/A' }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                            {{ trans.amount|rupiah }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-900">{{ trans.description }}</div>
+                                        <div class="text-xs text-gray-500">ID Transaksi: {{ trans.id }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button class="text-purple-600 hover:text-purple-900 mr-3">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="text-gray-600 hover:text-gray-900">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="px-6 py-4 text-center">
+                                        <div class="flex flex-col items-center justify-center py-8">
+                                            <i class="fas fa-inbox text-4xl text-gray-400 mb-3"></i>
+                                            <h4 class="text-lg font-medium text-gray-700">Tidak ada transaksi</h4>
+                                            <p class="text-sm text-gray-500 mt-1">Tidak ada transaksi untuk periode ini.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination %}
+            <div class="flex items-center justify-between mt-8">
+                <div class="text-sm text-gray-500">
+                    Menampilkan <span class="font-medium">{{ pagination.first_item }}</span> sampai <span class="font-medium">{{ pagination.last_item }}</span> dari <span class="font-medium">{{ pagination.total }}</span> transaksi
+                </div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {% if pagination.has_prev %}
+                    <a href="{{ url_for('history_vendor', page=pagination.prev_num, start_date=filter_start_date, end_date=filter_end_date) }}" 
+                       class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-chevron-left mr-1"></i> Sebelumnya
+                    </a>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages() %}
+                    {% if page_num %}
+                        <a href="{{ url_for('history_vendor', page=page_num, start_date=filter_start_date, end_date=filter_end_date) }}" 
+                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {% if page_num == pagination.page %} pagination-active {% else %} text-gray-700 hover:bg-gray-50 {% endif %}">
+                            {{ page_num }}
+                        </a>
+                    {% else %}
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                            ...
+                        </span>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                    <a href="{{ url_for('history_vendor', page=pagination.next_num, start_date=filter_start_date, end_date=filter_end_date) }}" 
+                       class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Selanjutnya <i class="fas fa-chevron-right ml-1"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endblock %}
+</body>
+</html>

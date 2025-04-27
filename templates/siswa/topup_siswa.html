@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Top Up Saldo - DimasCash</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* CSS tetap sama, tidak diubah */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
+        body { background-color: #f0f2f5; padding-bottom: 20px;}
+        .page-header { background-color: #7c4dff; color: white; padding: 15px 20px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .page-header a.back-link { color: white; text-decoration: none; font-size: 1.4em; margin-right: 15px; }
+        .page-header h1 { font-size: 1.25em; margin: 0; font-weight: 600; }
+        .container { max-width: 600px; margin: 25px auto; padding: 0 15px; }
+        .info-box, .form-box, .history-box { background-color: #fff; border-radius: 12px; padding: 20px 25px; margin-bottom: 25px; box-shadow: 0 3px 10px rgba(0,0,0,0.07); border: 1px solid #eee; }
+        h3 { margin-top: 0; margin-bottom: 15px; color: #4a148c; font-size: 1.2em; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; font-size: 0.95em; }
+        input[type="number"] { width: 100%; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; margin-bottom: 15px; background-color: #f9f8ff; color: #4527a0; }
+        input[type="number"]:focus { outline: none; border-color: #7c4dff; box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.15); }
+        button[type="submit"] { background-color: #a60bf4; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1.05em; font-weight: bold; cursor: pointer; display: block; width: 100%; transition: background-color 0.2s ease; }
+        button[type="submit"]:hover:not(:disabled) { background-color: #8e0ad1; }
+        button[type="submit"]:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.7;}
+        .pending-info { background-color: #e3f2fd; border-color: #b3e5fc; color: #01579b; padding: 15px; border-radius: 8px; border: 1px solid #b3e5fc; margin-bottom: 20px; font-size: 0.95em; }
+        .pending-info i { margin-right: 8px; }
+        .request-history ul { list-style: none; padding: 0; }
+        .request-history li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; font-size: 0.9em; }
+        .request-history li:last-child { border-bottom: none; }
+        .request-history .status { text-align: center; font-weight: bold; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; white-space: nowrap;}
+        .request-history .status.pending { background-color: #fff3cd; color: #664d03; border: 1px solid #ffeeba;}
+        .request-history .status.approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;}
+        .request-history .status.rejected { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7;}
+        .request-history .timestamp { color: #777; font-size: 0.85em; display: block; margin-top: 2px;}
+        .flash-messages { margin-bottom: 15px; }
+        .flash-messages p { padding: 10px 15px; border-radius: 5px; border: 1px solid transparent; font-size: 0.9em;}
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <a href="{{ url_for('dashboard') }}" class="back-link" title="Kembali"><i class="fas fa-arrow-left"></i></a>
+        <h1>Request Top Up Saldo</h1>
+    </div>
+
+    <div class="container">
+        {# Flash messages #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <p class="flash-{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {# Info jika ada request pending #}
+        {% if pending_request %}
+            <div class="info-box pending-info">
+                <i class="fas fa-info-circle"></i> Anda memiliki <strong>1 request top up</strong> sebesar <strong>{{ pending_request.amount|rupiah }}</strong> yang sedang menunggu persetujuan (status: {{ pending_request.status }}). Harap selesaikan pembayaran tunai di Bank Mini.
+            </div>
+        {% endif %}
+
+        {# Form untuk membuat request baru #}
+        <div class="form-box">
+            <h3>Buat Request Top Up Baru</h3>
+            <form method="POST" action="{{ url_for('request_topup') }}">
+                {# Tambahkan CSRF token #}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label for="amount">Jumlah Request Top Up (Rp):</label>
+                    <input type="number" name="amount" id="amount" min="1000" step="1000" required placeholder="Min: 1000" {% if pending_request %}disabled title="Selesaikan request sebelumnya dahulu"{% endif %}>
+                </div>
+                {# Tombol dinonaktifkan jika ada request pending #}
+                <button type="submit" {% if pending_request %}disabled title="Selesaikan request sebelumnya dahulu"{% endif %}>Buat Request</button>
+            </form>
+        </div>
+
+        {# Riwayat 5 request terakhir #}
+        {% if recent_requests %}
+            <div class="history-box request-history">
+                <h3>5 Request Terakhir Anda</h3>
+                {% if recent_requests|length > 0 %}
+                    <ul>
+                        {% for req in recent_requests %}
+                            <li>
+                                <div>
+                                    Request: <strong>{{ req.amount|rupiah }}</strong> <br>
+                                    <span class="timestamp">{{ req.request_timestamp|wib }}</span>
+                                </div>
+                                <span class="status {{ req.status }}">{{ req.status.capitalize() }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p style="text-align:center; color:#777; font-size:0.9em;">Belum ada riwayat request.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

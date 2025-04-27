@@ -1,0 +1,275 @@
+/* --- Reset Dasar & Box Sizing --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- Gaya Dasar Body --- */
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Font modern & mudah dibaca */
+    line-height: 1.6;
+    color: #333333; /* Warna teks utama (abu-abu gelap) */
+    background-color: #f4f7f6; /* Warna latar belakang halaman (abu-abu sangat muda) */
+    padding-bottom: 60px; /* Ruang untuk footer */
+}
+
+/* --- Container Utama --- */
+.container {
+    max-width: 1100px; /* Lebar maksimum konten */
+    margin: 25px auto; /* Tengah secara horizontal, jarak atas/bawah */
+    padding: 25px 30px; /* Padding dalam container */
+    background-color: #ffffff; /* Latar belakang area konten putih */
+    border-radius: 8px; /* Sudut sedikit melengkung */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); /* Bayangan halus */
+}
+
+/* --- Header & Navigasi --- */
+header {
+    background-color: #2C3E50; /* Biru Keabuan Gelap */
+    color: #ffffff;
+    padding: 15px 30px;
+    border-top-left-radius: 8px; /* Sesuaikan dengan container */
+    border-top-right-radius: 8px;
+    margin-bottom: 25px; /* Jarak dari header ke konten */
+}
+
+header h1 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.9em;
+    font-weight: 300; /* Sedikit lebih tipis */
+}
+
+header nav {
+    text-align: center;
+}
+
+header nav a {
+    color: #ffffff;
+    text-decoration: none;
+    margin: 0 12px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease; /* Transisi halus saat hover */
+}
+
+header nav a:hover, header nav a.active { /* Tambahkan class 'active' jika perlu */
+    background-color: #34495E; /* Sedikit lebih terang */
+}
+
+/* --- Konten Utama --- */
+main {
+    padding: 15px 0; /* Padding atas/bawah untuk konten */
+}
+
+h2, h3 {
+    color: #2C3E50; /* Biru Keabuan Gelap */
+    margin-bottom: 18px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee; /* Garis bawah tipis */
+    font-weight: 500; /* Sedikit lebih tebal dari normal */
+}
+
+h2 { font-size: 1.6em; }
+h3 { font-size: 1.3em; }
+
+hr {
+    border: 0;
+    height: 1px;
+    background-color: #e0e0e0; /* Warna garis pemisah */
+    margin: 30px 0; /* Jarak atas/bawah */
+}
+
+/* --- Tautan Umum --- */
+a {
+    color: #FBA518; /* Warna Primer (Orange-Gold) */
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: #e09006; /* Warna primer lebih gelap saat hover */
+    text-decoration: underline;
+}
+
+/* --- Tombol --- */
+button, .btn { /* .btn adalah class opsional jika ingin style link seperti tombol */
+    display: inline-block;
+    padding: 10px 22px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:active, .btn:active {
+    transform: translateY(1px) scale(0.99); /* Efek sedikit ditekan */
+    box-shadow: none;
+}
+
+/* Tombol Utama (Submit, Bayar, dll) */
+button[type="submit"], .btn-primary {
+    background-color: #FBA518; /* Warna Primer */
+    color: #ffffff; /* Teks putih */
+}
+
+button[type="submit"]:hover, .btn-primary:hover {
+    background-color: #e09006; /* Warna primer lebih gelap */
+}
+
+/* Tombol Lain (misal Scan) */
+#start-scan-btn {
+    background-color: #3498DB; /* Biru Info */
+    color: white;
+    margin-right: 10px; /* Jarak jika ada tombol lain */
+}
+
+#start-scan-btn:hover {
+    background-color: #2980B9;
+}
+
+/* Tombol Cash Out */
+form[action*="cash_out"] button {
+    background-color: #E67E22; /* Warna Orange lain untuk bedakan */
+    color: white;
+}
+form[action*="cash_out"] button:hover {
+    background-color: #D35400;
+}
+
+
+/* --- Formulir --- */
+form div {
+    margin-bottom: 18px; /* Jarak antar elemen form */
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #555; /* Warna label sedikit lebih terang */
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="email"],
+select {
+    width: 100%; /* Lebar penuh mengikuti container */
+    padding: 12px 15px; /* Padding di dalam input */
+    border: 1px solid #cccccc; /* Border abu-abu */
+    border-radius: 4px;
+    font-size: 1em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus {
+    outline: none; /* Hilangkan outline default */
+    border-color: #FBA518; /* Warna border primer saat fokus */
+    box-shadow: 0 0 0 3px rgba(251, 165, 24, 0.15); /* Efek glow halus */
+}
+
+select {
+     appearance: none; /* Hapus tampilan default dropdown */
+     background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+     background-repeat: no-repeat;
+     background-position: right 1rem center;
+     background-size: 0.8em auto;
+     padding-right: 2.5rem; /* Ruang untuk panah */
+     cursor: pointer;
+}
+
+/* --- Pesan Flash --- */
+.flash-messages p {
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    font-size: 0.95em;
+}
+.flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+.flash-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+.flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+.flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+
+/* --- Riwayat Transaksi --- */
+ul[style*="list-style-type:none"] { /* Menargetkan UL spesifik */
+    border: 1px solid #e5e5e5;
+    padding: 20px;
+    border-radius: 5px;
+    background-color: #fdfdfd; /* Sedikit beda dari background utama */
+}
+ul[style*="list-style-type:none"] li {
+    font-size: 0.95em;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #eee; /* Pemisah antar transaksi */
+}
+ul[style*="list-style-type:none"] li:last-child {
+    border-bottom: none; /* Hilangkan border untuk item terakhir */
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+ul[style*="list-style-type:none"] li small {
+    color: #666; /* Warna abu-abu untuk detail kecil */
+    font-size: 0.9em;
+}
+ul[style*="list-style-type:none"] li strong { /* Jumlah amount */
+    font-size: 1.1em;
+}
+
+/* --- Area QR Code --- */
+#qr-reader {
+    border-color: #cccccc !important; /* Ganti border default */
+    border-radius: 4px;
+    overflow: hidden; /* Pastikan video tidak keluar border */
+}
+#qr-scan-result span {
+    padding: 5px 8px;
+    display: inline-block;
+    border-radius: 3px;
+    margin-top: 8px;
+    font-size: 0.9em;
+}
+/* Warna background untuk pesan hasil scan (opsional) */
+/* #qr-scan-result span[style*="green"] { background-color: #d1e7dd; } */
+/* #qr-scan-result span[style*="red"] { background-color: #f8d7da; } */
+
+/* --- Footer --- */
+footer {
+    text-align: center;
+    margin-top: 40px; /* Jarak dari konten terakhir */
+    padding: 20px 0;
+    color: #777; /* Warna teks footer */
+    font-size: 0.9em;
+    border-top: 1px solid #e5e5e5; /* Garis pemisah atas footer */
+}
+
+/* --- Responsifitas --- */
+@media (max-width: 768px) { /* Untuk Tablet */
+    body { font-size: 15px; }
+    .container { margin: 15px; padding: 20px 20px; }
+    header h1 { font-size: 1.6em; }
+    button, .btn { padding: 9px 18px; }
+    input, select { padding: 10px 12px; }
+    #qr-reader { width: 280px !important; } /* Sesuaikan ukuran QR reader */
+}
+
+@media (max-width: 480px) { /* Untuk Mobile */
+    body { font-size: 14px; }
+    .container { margin: 10px; padding: 15px 15px; border-radius: 5px;}
+    header { padding: 10px 15px; border-radius: 5px 5px 0 0; }
+    header h1 { font-size: 1.4em; margin-bottom: 10px; }
+    header nav a { margin: 0 5px; padding: 4px 8px; }
+    h2 { font-size: 1.4em; }
+    h3 { font-size: 1.15em; }
+    button, .btn { width: 100%; /* Tombol lebar penuh di mobile */ margin-bottom: 8px; }
+    #qr-reader { width: 100% !important; max-width: 280px; margin-left: auto; margin-right:auto; }
+    footer { margin-top: 25px; padding: 15px 0; }
+}

@@ -1,0 +1,263 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Admin - Top Up Saldo{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    /* Purple Theme Variables */
+    :root {
+        --primary-purple: #7c4dff;
+        --dark-purple: #5e35b1;
+        --light-purple: #f9f5ff;
+        --text-dark: #333333;
+        --text-light: #ffffff;
+        --success-color: #198754;
+        --danger-color: #dc3545;
+    }
+    body{
+      background-color: #f7f7ff !important;
+    }
+
+    /* Container Styling */
+    .topup-container {
+      margin: 0 auto;
+        background-color: var(--light-purple);
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(124, 77, 255, 0.15);
+        margin-top: 20px;
+        max-width: 600px;
+    }
+
+    h2 {
+        color: var(--primary-purple);
+        font-weight: 600;
+        font-size: 28px;
+        margin-bottom: 15px;
+        position: relative;
+        padding-bottom: 10px;
+    }
+
+    h2::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-purple), var(--dark-purple));
+        border-radius: 3px;
+    }
+
+    hr {
+        border: 0;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(124, 77, 255, 0.1), rgba(124, 77, 255, 0.3), rgba(124, 77, 255, 0.1));
+        margin: 20px 0;
+    }
+
+    /* Flash Messages */
+    .flash-messages {
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+
+    .flash-success {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-left: 4px solid var(--success-color);
+        padding: 10px 15px;
+        border-radius: 6px;
+        color: var(--success-color);
+        font-size: 0.95em;
+    }
+
+    .flash-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-left: 4px solid var(--danger-color);
+        padding: 10px 15px;
+        border-radius: 6px;
+        color: var(--danger-color);
+        font-size: 0.95em;
+    }
+
+    /* Form Styling */
+    form {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(124, 77, 255, 0.1);
+        border: 1px solid rgba(124, 77, 255, 0.1);
+    }
+
+    div {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        font-size: 0.95em;
+        color: var(--dark-purple);
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+
+    select, input[type="number"] {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid rgba(124, 77, 255, 0.3);
+        border-radius: 6px;
+        font-size: 1em;
+        font-family: 'Poppins', sans-serif;
+        color: var(--text-dark);
+        background-color: #fff;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    select:focus, input[type="number"]:focus {
+        border-color: var(--primary-purple);
+        outline: none;
+        box-shadow: 0 0 5px rgba(124, 77, 255, 0.3);
+    }
+
+    select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237c4dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>') no-repeat right 10px center;
+        background-color: #fff;
+        padding-right: 30px;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        opacity: 1;
+        margin-left: 10px;
+    }
+
+    button[type="submit"] {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, var(--primary-purple), var(--dark-purple));
+        color: var(--text-light);
+        border: none;
+        border-radius: 6px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(124, 77, 255, 0.2);
+    }
+
+    button[type="submit"]:hover {
+        background: linear-gradient(135deg, var(--dark-purple), var(--primary-purple));
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
+    }
+
+    /* Back Link */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--primary-purple);
+        font-weight: 500;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+    .back-link i {
+        font-size: 1em;
+    }
+
+    .back-link:hover {
+        background-color: var(--light-purple);
+        color: var(--dark-purple);
+        transform: translateX(-5px);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .topup-container {
+            padding: 15px;
+            max-width: 100%;
+        }
+
+        form {
+            padding: 15px;
+        }
+
+        label {
+            font-size: 0.9em;
+        }
+
+        select, input[type="number"] {
+            padding: 10px 12px;
+            font-size: 0.95em;
+        }
+
+        button[type="submit"] {
+            padding: 10px;
+            font-size: 0.95em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="topup-container">
+    <h2>Top Up Saldo Siswa</h2>
+
+    {# Area Flash Message #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <p class="flash-{{ category }}">{{ message }}</p>
+        {% endfor %}
+    </div>
+    <hr />
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('admin_topup') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label for="user_id">Pilih Siswa:</label>
+            <select id="user_id" name="user_id" required>
+                <option value="" disabled selected>-- Pilih Siswa --</option>
+                {# Looping daftar siswa dari variabel 'students' yang dikirim backend #}
+                {% for student in students %}
+                {# Menampilkan username dan saldo saat ini untuk info admin #}
+                <option value="{{ student.id }}">
+                    {{ student.username }} (Saldo: Rp {{ "%.2f"|format(student.balance) }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="amount">Jumlah Top Up (Rp):</label>
+            <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="100"
+                step="any"
+                required
+                placeholder="Minimal 100"
+            />
+        </div>
+        <button type="submit">Proses Top Up</button>
+    </form>
+    <hr />
+    {# Tambahkan link kembali ke dashboard admin #}
+    <p>
+        <a href="{{ url_for('admin_dashboard_content') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Kembali ke Dashboard Admin
+        </a>
+    </p>
+</div>
+{% endblock admin_content %}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Harian - {{ vendor_name }} - {{ report_date_str }}</title>
+    <style>
+        /* CSS Dasar untuk tampilan & print */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11pt; /* Ukuran font sedikit lebih kecil cocok untuk print */
+            line-height: 1.5;
+            margin: 0; /* Hapus margin default body */
+            padding: 20mm 15mm; /* Padding untuk area cetak/kertas */
+            color: #333;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+            margin-bottom: 0.6em;
+            color: #000; /* Warna hitam untuk print */
+        }
+        h1 {
+            font-size: 15pt;
+            text-align: center;
+            margin-bottom: 1.2em;
+            text-decoration: underline;
+        }
+        h2 {
+            font-size: 13pt;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 3px;
+        }
+        p { margin-bottom: 0.5em; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 10pt; /* Perkecil font tabel */
+        }
+        th, td {
+            border: 1px solid #999; /* Border lebih jelas */
+            padding: 5px 7px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #e8e8e8; /* Latar abu-abu untuk header tabel */
+            font-weight: bold;
+        }
+        td.amount, th.amount { /* Rata kanan untuk kolom angka */
+            text-align: right;
+        }
+        .summary {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #000; /* Garis pemisah atas tebal */
+        }
+        .summary p { font-size: 1.2em; }
+        .summary strong { font-size: 1.3em; }
+        .footer-note {
+            margin-top: 40px;
+            padding-top: 10px;
+            font-size: 9pt;
+            color: #555;
+            text-align: right;
+            border-top: 1px solid #ccc;
+        }
+        /* Sembunyikan elemen non-print */
+        @media print {
+            body { padding: 10mm 8mm; } /* Perkecil padding saat print */
+            a, button, .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Laporan Pendapatan Harian Kantin</h1>
+
+    <h2>Informasi Penjual</h2>
+    <p>Nama Penjual: <strong>{{ vendor_name }}</strong></p>
+    <p>Tanggal Laporan: <strong>{{ report_date_str }}</strong></p>
+
+    <div class="summary">
+        <h2>Total Pendapatan Hari Ini</h2>
+        <p><strong>{{ total_earnings|rupiah }}</strong></p>
+    </div>
+
+    <h2>Rincian Transaksi Pembayaran Diterima</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:25%;">Waktu (WIB)</th>
+                <th>Dari Siswa</th>
+                <th class="amount" style="width:30%;">Jumlah</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if transactions %}
+                {% for tx in transactions %}
+                <tr>
+                    <td>{{ tx.timestamp | wib }}</td>
+                    <td>{{ tx.user.username if tx.user else 'N/A' }}</td>
+                    <td class="amount">{{ tx.amount | rupiah }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 15px;">Tidak ada transaksi pembayaran diterima pada tanggal ini.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="footer-note">
+        Laporan ini dibuat otomatis oleh Sistem Kantin Digital pada {{ print_time_wib }}
+    </div>
+
+</body>
+</html>

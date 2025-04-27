@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selamat Datang - Kantin Digital Sekolah</title>
+    <style>
+        /* === CSS Internal Lengkap untuk Landing Page (Termasuk Services & Scroll Header) === */
+        body, html { margin: 0; padding: 0; height: 100%; box-sizing: border-box; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6; color: #333; background-color: #f8f9fa;
+        }
+
+        /* Header (Logo & Nav) - Fixed & Transparan Awal */
+        .landing-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 5%; width: 100%; position: fixed; /* DIUBAH JADI FIXED */
+            top: 0; left: 0; z-index: 1000;
+            background-color: transparent; /* AWAL TRANSPARAN */
+            transition: background-color 0.4s ease, backdrop-filter 0.4s ease; /* Transisi */
+        }
+        /* Style Header saat di-scroll (.scrolled ditambahkan oleh JS) */
+        .landing-header.scrolled {
+            background-color:#a60bf4; /* Warna solid saat scroll */
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        .landing-logo img { max-height: 45px; vertical-align: middle; }
+        .landing-nav ul { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; }
+        .landing-nav li { margin-left: 30px; }
+        .landing-nav a {
+            text-decoration: none; color: #ffffff; font-weight: 500; font-size: 1.05em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6); transition: color 0.3s ease;
+            position: relative; padding-bottom: 8px; overflow: hidden;
+        }
+        .landing-nav a:hover { text-decoration: none; }
+        .landing-nav a::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2.5px;
+            background-color: #ffffff; transform: scaleX(0); transform-origin: right center;
+            transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .landing-nav a:hover::after { transform: scaleX(1); transform-origin: left center; }
+        .landing-nav a.btn-nav-login::after { content: none; }
+        .landing-nav .btn-nav-login {
+            background-color: #a60bf4; color: white; padding: 9px 20px; border-radius: 25px;
+            font-weight: bold; box-shadow: 0 3px 6px rgba(0,0,0,0.2); text-decoration: none;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+        .landing-nav .btn-nav-login:hover { background-color: #8e0ad1; color: white; transform: translateY(-1px); text-decoration: none; }
+        .landing-nav .btn-nav-login:active { transform: translateY(0px); }
+
+        /* Konten Utama */
+        main { display: block; }
+
+        /* Bagian Hero */
+        .hero-section {
+            display: flex; align-items: center; min-height:100vh; width: 100%; /* Buat setidaknya se-layar penuh */
+            padding: 120px 8% 60px 8%; /* Padding atas besar untuk ruang header fixed */
+            background-image:url("{{ url_for('static', filename='images/bg-utama.jpg') }}");
+            background-size: cover; background-position: center center; background-repeat: no-repeat;
+            color: #ffffff;
+        }
+        .landing-text-content { flex: 1; max-width: 550px; text-shadow: 1px 1px 4px rgba(0,0,0,0.8); }
+        .landing-text-content h2 { font-size: 3em; font-weight: 700; margin-bottom: 25px; line-height: 1.25; color: #ffffff; }
+        .landing-text-content p { font-size: 1.2em; margin-bottom: 40px; line-height: 1.7; max-width: 480px; }
+        .landing-text-content .btn-main-login {
+             background-color: #a60bf4; color: white; padding: 15px 45px; font-size: 1.25em;
+             font-weight: bold; text-decoration: none; border-radius: 30px;
+             transition: background-color 0.3s ease, transform 0.1s ease; display: inline-block;
+             box-shadow: 0 5px 10px rgba(0,0,0,0.25);
+        }
+         .landing-text-content .btn-main-login:hover { background-color: #8e0ad1; transform: scale(1.03) translateY(-2px); }
+         .landing-text-content .btn-main-login:active { transform: scale(1) translateY(0px); }
+         .landing-image-content { flex: 1; min-width: 300px; }
+
+        /* Bagian Layanan */
+        .services-section {
+            padding: 60px 8%;
+            /* background-color: #ffffff; */ /* Komentari atau hapus warna latar belakang solid */
+            background-image: url("{{ url_for('static', filename='images/bg-services.jpg') }}"); /* Tambahkan background image */
+            background-size: cover; /* Pastikan gambar menutupi area */
+            background-position: center center; /* Posisikan gambar di tengah */
+            background-repeat: no-repeat; /* Hindari pengulangan gambar */
+            color: #333; /* Warna teks default (mungkin perlu disesuaikan) */
+        }
+        .services-section h2 { text-align: center; font-size: 2.4em; margin-bottom: 50px; color: #4a148c; font-weight: 600; }
+
+        .service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 30px; }
+
+        .service-card, .bottom-banner {
+            padding: 25px 25px 0 25px; /* Kurangi padding bawah agar gambar menempel */
+            border-radius: 10px; box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+            transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+            display: flex; flex-direction: column; text-decoration: none;
+            background-color: #ede7f6; color: #5e35b1;
+            overflow: hidden; /* Penting agar gambar tidak keluar dari border-radius bawah */
+            min-height: 250px; /* Beri tinggi minimal agar kartu tidak terlalu pendek */
+        }
+        .service-card a, .bottom-banner a { text-decoration: none; color: inherit; display: flex; flex-direction: column; flex-grow: 1; }
+        .service-card:hover, .bottom-banner:hover { transform: translateY(-6px); box-shadow: 0 8px 16px rgba(94, 53, 177, 0.2); }
+
+        .service-card h3, .bottom-banner h3 {
+            margin-top: 0; margin-bottom: 15px; /* Kurangi margin bawah */
+            font-size: 1.4em; /* Besarkan sedikit? */
+            font-weight: 600; color: #4527a0;
+            /* Hapus display flex jika tidak ada panah */
+        }
+        /* Hapus style .arrow jika tidak ada */
+
+        /* Hapus style .card-description */
+
+        /* Placeholder gambar (Menempel di Bawah) */
+        .card-image-placeholder {
+             margin-top: auto; /* <<< INI KUNCINYA: Dorong ke paling bawah */
+             /* Hapus background, min-height, padding atas jika ingin gambar saja */
+             background-color: transparent;
+             min-height: auto;
+             padding: 0; /* Hapus padding agar gambar bisa menempel */
+             text-align: center; /* Jaga-jaga jika ada teks placeholder */
+             color: #5e35b1;
+             font-style: italic;
+             font-size: 0.9em;
+             line-height: 1.2; /* Untuk teks placeholder */
+        }
+         .card-image-placeholder img {
+             max-width: 100%; /* Gambar mengisi lebar placeholder */
+             height: auto; /* Tinggi otomatis */
+             display: block; /* Hapus spasi bawah default img */
+             /* border-radius: 0 0 8px 8px; */ /* Lengkungkan sudut bawah gambar jika perlu */
+         }
+         /* Teks placeholder sementara */
+         .card-image-placeholder p {
+             padding: 20px; /* Beri padding jika masih pakai teks */
+             min-height: 100px; /* Beri tinggi agar kartu tidak collapse */
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             background-color: rgba(0,0,0,0.04); /* Background placeholder lagi */
+         }
+         .card-image-placeholder img ~ p { display: none; } /* Sembunyikan teks jika gambar ada */
+
+        /* Warna Kartu (semua .service-card pakai style di atas) */
+
+        /* Footer */
+        .landing-footer { text-align: center; padding: 25px; margin-top: 0; background-color: #e9ecef; color: #6c757d; font-size: 0.9em; }
+
+            /* ============================ */
+    /* Style Contact Us        */
+    /* ============================ */
+    .contact-section {
+        padding: 80px 3%; /* Padding atas/bawah dan kiri/kanan */
+        background-image: url("{{ url_for('static', filename='images/bg-contact-us.jpg') }}");
+        background-size: cover; /* Gambar menutupi seluruh area */
+        background-position: center center; /* Posisi gambar di tengah */
+        background-repeat: no-repeat;
+    }
+
+    .contact-container {
+    max-width: 600px; /* Lebar maksimum kontainer form */
+    margin: 0; /* Hapus 'auto' agar tidak lagi center horizontal */
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 10px;
+    /* text-align: center; */ /* Hapus atau komentari ini agar judul juga rata kiri */
+    text-align: left; /* Atau set eksplisit ke left */
+}
+
+    .contact-section h2 {
+        margin-bottom: 30px; /* Jarak bawah dari judul ke form */
+        font-size: 2.2em; /* Ukuran font judul */
+        color: #333; /* Warna teks judul */
+        font-weight: 600;
+    }
+
+    .form-group {
+        margin-bottom: 20px; /* Jarak antar field form */
+        text-align: left; /* Ratakan kiri placeholder/label */
+    }
+
+    /* Style untuk input text, email, dan textarea */
+    .contact-section input[type="text"],
+    .contact-section input[type="email"],
+    .contact-section textarea {
+        width: 100%; /* Lebar penuh */
+        padding: 15px; /* Padding di dalam field */
+        border: none; /* Hapus border default */
+        border-radius: 25px; /* Sudut field yang sangat melengkung seperti gambar */
+        background-color: #ebdbdf; /* Warna latar belakang field sesuai permintaan */
+        font-size: 1em;
+        color: #333; /* Warna teks input */
+        box-sizing: border-box; /* Pastikan padding termasuk dalam lebar total */
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* Bayangan lembut ke dalam */
+    }
+
+    .contact-section input::placeholder,
+    .contact-section textarea::placeholder {
+        color: #777; /* Warna placeholder */
+        opacity: 1; /* Firefox */
+    }
+
+    .contact-section textarea {
+        min-height: 120px; /* Tinggi minimal area pesan */
+        resize: vertical; /* Izinkan resize vertikal saja */
+    }
+
+    /* Style untuk tombol submit */
+    .btn-submit-contact {
+        display: block; /* Agar bisa diatur width 100% */
+        width: 100%; /* Lebar penuh */
+        padding: 15px;
+        background-color: #7f39ee; /* Warna tombol sesuai permintaan */
+        color: white;
+        border: none;
+        border-radius: 25px; /* Sudut melengkung */
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+        box-shadow: 0 3px 6px rgba(127, 57, 238, 0.3); /* Bayangan sesuai warna tombol */
+    }
+
+    .btn-submit-contact:hover {
+        background-color: #6a2fcc; /* Warna sedikit lebih gelap saat hover */
+        transform: translateY(-2px); /* Efek sedikit terangkat saat hover */
+    }
+     .btn-submit-contact:active {
+         transform: translateY(0px); /* Efek ditekan */
+     }
+         /* Hamburger Button */
+    .hamburger {
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        z-index: 1100;
+        margin-right: 8px;
+    }
+    .hamburger span {
+        display: block;
+        height: 4px;
+        width: 100%;
+        background: #fff;
+        border-radius: 2px;
+        margin: 5px 0;
+        transition: 0.3s;
+    }
+    
+    /* Hamburger active animation */
+    .hamburger.active span:nth-child(1) {
+        transform: translateY(9px) rotate(45deg);
+    }
+    .hamburger.active span:nth-child(2) {
+        opacity: 0;
+    }
+    .hamburger.active span:nth-child(3) {
+        transform: translateY(-9px) rotate(-45deg);
+    }
+    
+    /* Responsive Nav */
+    @media (max-width: 768px) {
+        .hamburger { display: flex; }
+        .landing-nav {
+            position: fixed;
+            top: 0; right: -100vw;
+            width: 70vw;
+            max-width: 320px;
+            height: 100vh;
+            background: #a60bf4;
+            box-shadow: -2px 0 12px rgba(0,0,0,0.12);
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 80px 24px 24px 24px;
+            transition: right 0.3s cubic-bezier(.4,2,.6,1);
+            z-index: 1050;
+        }
+        .landing-nav.open {
+            right: 0;
+        }
+        .landing-nav ul {
+            flex-direction: column;
+            width: 100%;
+            gap: 0;
+        }
+        .landing-nav li {
+            margin: 0 0 18px 0;
+            width: 100%;
+        }
+        .landing-nav a, .landing-nav .btn-nav-login {
+            width: 100%;
+            display: block;
+            text-align: left;
+            padding: 12px 0 12px 8px;
+            font-size: 1.1em;
+            border-radius: 8px;
+        }
+        .landing-header {
+            flex-direction: row;
+            align-items: center;
+        }
+        body.landing-page-v2 {
+            overflow-x: hidden;
+        }
+    }
+
+         /* Responsive: Tablet */
+    @media (max-width: 992px) {
+        .landing-header {
+            padding: 12px 3%;
+        }
+        .hero-section, .services-section {
+            padding-left: 3%;
+            padding-right: 3%;
+        }
+        .service-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+        .landing-text-content h2 {
+            font-size: 2.1em;
+        }
+        .landing-text-content p {
+            font-size: 1em;
+        }
+    }
+    
+    /* Responsive: Mobile */
+    @media (max-width: 768px) {
+        .landing-header {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 10px 2%;
+        }
+        .landing-logo {
+            margin-bottom: 10px;
+        }
+        .landing-nav ul {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .landing-nav li {
+            margin: 8px 0 0 0;
+        }
+        .hero-section {
+            flex-direction: column;
+            padding-top: 90px;
+            padding-bottom: 30px;
+            min-height: unset;
+            gap: 30px;
+        }
+        .landing-text-content, .landing-image-content {
+            max-width: 100%;
+            width: 100%;
+            text-align: center;
+        }
+        .landing-text-content h2 {
+            font-size: 1.5em;
+        }
+        .landing-text-content p {
+            font-size: 1em;
+            margin-bottom: 25px;
+        }
+        .services-section {
+            padding: 40px 2%;
+        }
+        .service-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+        .contact-container {
+            padding: 18px;
+            max-width: 100%;
+        }
+        .contact-section {
+            padding: 40px 2%;
+        }
+    }
+    
+    /* Responsive: Extra Small Mobile */
+    @media (max-width: 480px) {
+        .landing-header {
+            padding: 6px 1%;
+        }
+        .hero-section {
+            padding: 70px 1% 20px 1%;
+        }
+        .landing-text-content h2 {
+            font-size: 1.1em;
+        }
+        .landing-nav .btn-nav-login,
+        .landing-text-content .btn-main-login {
+            padding: 10px 18px;
+            font-size: 1em;
+        }
+        .service-card, .bottom-banner {
+            padding: 12px 8px 0 8px;
+            min-height: 180px;
+        }
+        .contact-section {
+            padding: 20px 1%;
+        }
+        .contact-container {
+            padding: 10px;
+        }
+    }
+
+    </style>
+</head>
+<body class="landing-page-v2">
+
+    <header class="landing-header"> {# Header ini akan transparan di awal, jadi solid saat scroll #}
+        <div class="landing-logo">
+            <a href="{{ url_for('index') }}">
+                <img id="landing-logo-img" src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo Kantin Digital">
+            </a>
+        </div>
+        <button class="hamburger" id="hamburger-btn" aria-label="Toggle navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav class="landing-nav">
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="#services">Services</a></li> {# Link ke ID section #}
+                <li><a href="#">Contact us</a></li> {# Placeholder #}
+                <li><a href="{{ url_for('login') }}" class="btn btn-nav-login">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        {# Bagian Hero #}
+        <section class="hero-section">
+            <div class="landing-text-content">
+                <h2>Selamat Datang di DimasCash</h2>
+                <p>Coba dan Rasakan Pengalaman yang luar biasa</p>
+                <a href="{{ url_for('login') }}" class="btn btn-main-login">Login</a>
+            </div>
+            <div class="landing-image-content">
+                </div>
+        </section>
+
+        {# Bagian Layanan (Hapus Deskripsi, Atur Posisi Gambar) #}
+        <section class="services-section" id="services">
+            <h2>Services</h2>
+            <div class="service-grid">
+
+                {# Card 1 #}
+                <a href="#" class="service-card">
+                    <h3>Kelola Akun & Saldo</h3> {# Hanya Judul #}
+                    {# Hapus <p class="card-description"> #}
+                    <div class="card-image-placeholder">
+                        <img src="{{ url_for('static', filename='images/services1.png') }}" alt="Ilustrasi Kelola Akun dan Saldo">
+                    </div>
+                </a>
+
+                {# Card 2 #}
+                <a href="#" class="service-card">
+                    <h3>Bayar Mudah di Kantin</h3> {# Hanya Judul #}
+                     {# Hapus <p class="card-description"> #}
+                     <div class="card-image-placeholder">
+                        <img src="{{ url_for('static', filename='images/services2.png') }}" alt="Ilustrasi Kelola Akun dan Saldo">
+                    </div>
+                </a>
+
+                {# Card 3 #}
+                <a href="#" class="service-card">
+                    <h3>Lacak Transaksi Anda</h3> {# Hanya Judul #}
+                    {# Hapus <p class="card-description"> #}
+                     <div class="card-image-placeholder">
+                        <img src="{{ url_for('static', filename='images/services3.png') }}" alt="Ilustrasi Kelola Akun dan Saldo">
+                    </div>
+                </a>
+
+            </div> {# Akhir Service Grid #}
+
+        </section>
+    </main>
+    {# ============================ #}
+    {#      Bagian Contact Us       #}
+    {# ============================ #}
+    <section class="contact-section" id="contact-us">
+        <div class="contact-container">
+            <h2>Contact us</h2>
+            <form action="#" method="POST"> {# Ganti action="#" dengan URL endpoint Anda jika diperlukan #}
+                <div class="form-group">
+                    {# Input untuk Nama #}
+                    <input type="text" id="name" name="name" placeholder="Name" required>
+                </div>
+                <div class="form-group">
+                    {# Input untuk Email #}
+                    <input type="email" id="email" name="email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    {# Textarea untuk Pesan #}
+                    <textarea id="message" name="message" rows="5" placeholder="Message" required></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-submit-contact">Send Message</button>
+                </div>
+            </form>
+        </div>
+    </section>
+    {# ============================ #}
+    {#    Akhir Bagian Contact Us   #}
+    {# ============================ #}
+
+    <footer class="landing-footer">
+        <p>&copy; {{ now.year if now else '2025' }} - Proyek Kantin Digital Sekolah</p>
+    </footer>
+
+    {# === SCRIPT JAVASCRIPT UNTUK EFEK SCROLL HEADER === #}
+    <script>
+        // Ambil elemen header DAN elemen gambar logo
+        const header = document.querySelector('.landing-header');
+        const logoImg = document.getElementById('landing-logo-img'); // <-- BARU: Ambil elemen logo
+    
+        // Tentukan path ke kedua versi logo
+        const originalLogoSrc = "{{ url_for('static', filename='images/logo.png') }}";
+        const whiteLogoSrc = "{{ url_for('static', filename='images/logo-putih.png') }}"; // <-- Pastikan nama file ini benar!
+    
+        // Tentukan batas scroll (pixel) sebelum background berubah
+        const scrollThreshold = 50;
+    
+        // Fungsi untuk mengecek posisi scroll dan mengubah class header DAN src logo
+        function checkScroll() {
+            if (window.scrollY > scrollThreshold) {
+                // Jika scroll sudah melewati batas
+                header.classList.add('scrolled');
+                if (logoImg) { // Cek jika elemen logo ada
+                    logoImg.src = whiteLogoSrc; // <-- BARU: Ganti ke logo putih
+                }
+            } else {
+                // Jika kembali ke atas
+                header.classList.remove('scrolled');
+                if (logoImg) { // Cek jika elemen logo ada
+                    logoImg.src = originalLogoSrc; // <-- BARU: Kembalikan ke logo asli
+                }
+            }
+        }
+    
+        // Tambahkan event listener saat user scroll
+        window.addEventListener('scroll', checkScroll);
+    
+        // Jalankan checkScroll sekali saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', checkScroll);
+    </script>
+    <script>
+        // Hamburger menu toggle
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        const landingNav = document.querySelector('.landing-nav');
+    
+        hamburgerBtn.addEventListener('click', function() {
+            this.classList.toggle('active');
+            landingNav.classList.toggle('open');
+        });
+    
+        // Optional: close nav when clicking outside or on a link
+        document.addEventListener('click', function(e) {
+            if (!landingNav.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+                hamburgerBtn.classList.remove('active');
+                landingNav.classList.remove('open');
+            }
+        });
+        // Prevent nav from closing when clicking inside
+        landingNav.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A') {
+                hamburgerBtn.classList.remove('active');
+                landingNav.classList.remove('open');
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - {{ current_user.username }}</title>
+    {# Link Font Awesome (diambil dari kodemu) #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {# === CSS Internal untuk Halaman Profil === #}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
+        body { background-color: #f5f5f5; } /* Latar belakang body utama */
+
+        /* Header Halaman Profil */
+        .profile-page-header {
+            background-color: #7c4dff; /* Warna ungu header */
+            color: white;
+            padding: 35px;
+            border-radius: 0 0 50px 50px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .profile-page-header a.back-link {
+            color: white; text-decoration: none; font-size: 1.5em; /* Perbesar ikon panah */
+            margin-right: 15px;
+        }
+        .profile-page-header h1 { font-size: 1.25em; margin: 0; font-weight: 600; } /* Perbesar judul header */
+
+        /* Kontainer Utama */
+        .profile-container {
+            display: flex;
+            justify-content: center; /* Pusatkan konten utama */
+            align-items: flex-start;
+            gap: 30px; /* Kurangi gap sedikit */
+            margin: 30px auto; /* Margin atas/bawah & auto kiri/kanan */
+            padding: 20px;
+            flex-wrap: wrap; /* Wrap di layar kecil */
+            max-width: 850px; /* Batasi lebar */
+        }
+
+        /* Bagian Foto */
+        .profile-picture-section {
+            text-align: center;
+            flex-basis: 220px; /* Lebar area foto */
+            flex-shrink: 0;
+        }
+         /* Wrapper untuk foto dan tombol upload */
+         .profile-picture-wrapper {
+            position: relative; display: inline-block; margin-bottom: 15px;
+        }
+        /* Styling img foto profil */
+        .profile-picture {
+            width: 200px; height: 200px; border-radius: 50%; object-fit: cover;
+            background-color: #e0e0e0; border: 4px solid white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2); display: block;
+        }
+        /* Styling div placeholder jika tdk ada foto */
+         .profile-picture-default {
+            width: 200px; height: 200px; border-radius: 50%; background-color: #a60bf4;
+            display: flex; justify-content: center; align-items: center;
+            border: 4px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+         }
+         .profile-picture-default i { font-size: 90px; color: #fff; }
+
+        /* Tombol Upload Foto (Ikon Kamera) */
+         .btn-upload {
+            display: flex; justify-content: center; align-items: center;
+            width: 55px; height: 55px; /* Ukuran tombol */
+            border-radius: 50%; background-color: #8a3ff9; border: 3px solid white; /* Border putih */
+            color: white; font-size: 22px; cursor: pointer; position: absolute;
+            bottom: 5px; right: 5px; /* Posisi kanan bawah foto */
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4); transition: background-color 0.2s ease;
+         }
+         .btn-upload:hover { background-color: #7c4dff; }
+         /* Wrapper input file agar tombol bisa diklik */
+         .upload-btn-wrapper {
+             position: absolute; /* Posisikan input di atas tombol */
+             bottom: 5px; right: 5px; /* Sama dengan posisi tombol */
+             width: 55px; height: 55px; /* Sama dengan ukuran tombol */
+             overflow: hidden; /* Sembunyikan tampilan asli input */
+             border-radius: 50%; /* Area klik bulat */
+             cursor: pointer;
+         }
+         .upload-btn-wrapper input[type=file] {
+            position: absolute; left: 0; top: 0; opacity: 0; /* Sembunyikan input */
+            width: 100%; height: 100%; cursor: pointer;
+         }
+         .profile-picture-section small { font-size: 0.85em; color: #666; display: block; margin-top: 10px;}
+
+        /* Bagian Data Profil */
+        .profile-data-section {
+            flex-grow: 1; min-width: 300px; background-color: #ffffff;
+            border-radius: 15px; padding: 25px 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            /* Hapus border hitam */
+        }
+        .profile-field { margin-bottom: 25px; } /* Jarak antar data */
+        .profile-field-label {
+            font-size: 0.9em; font-weight: 600; color: #888; /* Warna abu-abu */
+            margin-bottom: 6px; text-transform: uppercase; display: block;
+        }
+        .profile-field-value {
+            font-size: 1.1em; color: #333; padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0; /* Garis bawah tipis abu */
+        }
+        /* Hapus Tombol Save jika tidak ada fungsi edit data */
+        /* .btn-save { ... } */
+         .back-to-dash { margin-top: 30px; text-align: center; }
+         .back-to-dash a { color: #8a3ff9; text-decoration: none; font-weight: 500;}
+         .back-to-dash a:hover { text-decoration: underline; }
+
+        /* Responsifitas */
+        @media (max-width: 768px) {
+            .profile-container { flex-direction: column; align-items: center; gap: 30px; margin-top: 20px; }
+            .profile-picture-section { margin-right: 0; }
+            .profile-data-section { max-width: 95%; width: 100%; padding: 20px;}
+        }
+    </style>
+</head>
+<body>
+    {# Header Halaman Profil #}
+    <div class="profile-page-header">
+        <a href="{{ url_for('dashboard') }}" class="back-link" title="Kembali ke Dashboard"><i class="fas fa-arrow-left"></i></a>
+        <h1>Profil Pengguna</h1>
+    </div>
+
+    {# Kontainer Utama #}
+    <div class="profile-container">
+
+        {# Kolom Kiri: Foto & Upload #}
+        <div class="profile-picture-section">
+            {# Form HARUS membungkus input file dan tombolnya #}
+            <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data" id="profile-pic-form">
+                <div class="profile-picture-wrapper">
+                    {% if current_user.profile_pic_filename %}
+                        <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic_filename) }}?v={{ range(1, 1000) | random }}"
+                             alt="Foto Profil {{ current_user.username }}" class="profile-picture">
+                    {% else %}
+                        <div class="profile-picture-default">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                    {# Tombol & Input File Overlay #}
+                    <div class="upload-btn-wrapper">
+                         {# Tombol visual (tidak submit) #}
+                        <button type="button" class="btn-upload" aria-label="Ganti Foto Profil" title="Ganti Foto Profil">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        {# Input file yang sebenarnya, trigger form submit #}
+                        <input type="file" name="profile_pic" accept="image/png, image/jpeg, image/gif" required onchange="document.getElementById('profile-pic-form').submit();">
+                    </div>
+                </div>
+            </form> {# Akhir form upload #}
+            <small>Klik ikon kamera untuk ganti foto.</small>
+            <small>(Max 2MB: png, jpg, gif)</small>
+             {# Tampilkan flash message di bawah foto jika ada #}
+            {% with messages = get_flashed_messages(category_filter=['success', 'danger', 'warning']) %}
+                {% if messages %}
+                <div class="flash-messages" style="margin-top: 15px;">
+                {% for message in messages %}
+                    {# Asumsikan ada class flash-success, flash-danger, flash-warning dari CSS utama atau tambahkan di sini #}
+                    <p class="flash-{{ get_flashed_messages(with_categories=true)[0][0] }}">{{ message }}</p>
+                {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        {# Kolom Kanan: Data Pengguna #}
+        <div class="profile-data-section">
+            <div class="profile-field">
+                <span class="profile-field-label">Username</span>
+                <div class="profile-field-value">{{ current_user.username }}</div>
+            </div>
+
+            <div class="profile-field">
+                <span class="profile-field-label">Peran</span>
+                <div class="profile-field-value">{{ current_user.role.capitalize() }}</div>
+            </div>
+
+            {% if current_user.role == 'siswa' %}
+            <div class="profile-field">
+                <span class="profile-field-label">Kelas</span>
+                <div class="profile-field-value">{{ current_user.kelas if current_user.kelas else '-' }}</div>
+            </div>
+            <div class="profile-field">
+                <span class="profile-field-label">Jurusan</span>
+                <div class="profile-field-value">{{ current_user.jurusan if current_user.jurusan else '-' }}</div>
+            </div>
+            {% endif %}
+
+            <div class="profile-field">
+                <span class="profile-field-label">Saldo</span>
+                <div class="profile-field-value">{{ current_user.balance|rupiah }}</div>
+            </div>
+
+            <div class="profile-field">
+                <span class="profile-field-label">Status Akun</span>
+                <div class="profile-field-value">{% if current_user.is_active %}<span style="color:green; font-weight:bold;">Aktif</span>{% else %}<span style="color:red; font-weight:bold;">Nonaktif</span>{% endif %}</div>
+            </div>
+
+            {# Hapus Tombol Save #}
+
+            <div class="back-to-dash" style="display: flex; gap: 18px; justify-content: center; align-items: center;">
+                <a href="{{ url_for('dashboard') }}"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+                <a href="{{ url_for('logout') }}" style="color: #e53935; font-weight: 500;">
+                   <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+           </div>
+
+        </div> {# Akhir profile-data-section #}
+    </div> {# Akhir profile-container #}
+
+     {# Hapus Navigasi Bawah #}
+
+</body>
+</html>

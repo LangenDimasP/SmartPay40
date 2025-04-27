@@ -1,0 +1,111 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Edit Pengguna - {{ user_to_edit.username }}{% endblock %}
+
+{% block admin_content %}
+    <h2>Edit Pengguna: {{ user_to_edit.username }}</h2>
+
+    {# Flash messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <p class="flash-{{ category }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+            <hr>
+        {% endif %}
+    {% endwith %}
+
+    {# Form mengirim data ke route yg sama dengan method POST #}
+    <form method="POST" action="{{ url_for('admin_edit_user', user_id=user_to_edit.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label for="username">Username:</label><br>
+            {# Isi value dengan data user saat ini #}
+            <input type="text" id="username" name="username" value="{{ user_to_edit.username }}" required>
+        </div>
+
+        <div>
+            <label for="role">Peran:</label><br>
+            {# Menonaktifkan perubahan peran jika targetnya admin #}
+            {% if user_to_edit.role == 'admin' %}
+                <select id="role" name="role" disabled>
+                    <option value="admin" selected>Admin (Tidak bisa diubah)</option>
+                </select>
+                {# Kirim value asli via hidden input jika field disabled #}
+                <input type="hidden" name="role" value="admin">
+                <small>Peran Admin tidak dapat diubah.</small>
+            {% else %}
+                {# Jika bukan admin, boleh diubah antara siswa/penjual #}
+                <select id="role" name="role" required onchange="toggleStudentFieldsEdit()">
+                    <option value="siswa" {% if user_to_edit.role == 'siswa' %}selected{% endif %}>Siswa</option>
+                    <option value="penjual" {% if user_to_edit.role == 'penjual' %}selected{% endif %}>Penjual Kantin</option>
+                </select>
+            {% endif %}
+        </div>
+
+        {# Fields Kelas & Jurusan (terkait dengan JS) #}
+        {# ID elemen dibuat unik (-edit) agar tidak konflik dengan form register jika dibuka bersamaan #}
+        <div id="kelas-jurusan-fields-edit" style="display: {% if user_to_edit.role == 'siswa' %}block{% else %}none{% endif %};">
+            <hr style="margin: 15px 0; border-style: dashed;">
+             <p><strong>Informasi Tambahan Siswa:</strong> (Hanya isi jika Peran adalah Siswa)</p>
+            <div>
+                <label for="kelas-edit">Kelas:</label><br>
+                <select id="kelas-edit" name="kelas">
+                    <option value="" {% if not user_to_edit.kelas %}selected{% endif %} disabled>-- Pilih Kelas --</option>
+                    {# Tandai kelas saat ini sebagai selected #}
+                    <option value="X" {% if user_to_edit.kelas == 'X' %}selected{% endif %}>X</option>
+                    <option value="XI" {% if user_to_edit.kelas == 'XI' %}selected{% endif %}>XI</option>
+                    <option value="XII" {% if user_to_edit.kelas == 'XII' %}selected{% endif %}>XII</option>
+                </select>
+            </div>
+            <div>
+                <label for="jurusan-edit">Jurusan:</label><br>
+                <select id="jurusan-edit" name="jurusan">
+                     <option value="" {% if not user_to_edit.jurusan %}selected{% endif %} disabled>-- Pilih Jurusan --</option>
+                     {# Tandai jurusan saat ini sebagai selected #}
+                    <option value="RPL" {% if user_to_edit.jurusan == 'RPL' %}selected{% endif %}>RPL</option>
+                    <option value="DKV1" {% if user_to_edit.jurusan == 'DKV1' %}selected{% endif %}>DKV1</option>
+                    <option value="DKV2" {% if user_to_edit.jurusan == 'DKV2' %}selected{% endif %}>DKV2</option>
+                    <option value="AK" {% if user_to_edit.jurusan == 'AK' %}selected{% endif %}>AK</option>
+                    <option value="MP" {% if user_to_edit.jurusan == 'MP' %}selected{% endif %}>MP</option>
+                    <option value="BR" {% if user_to_edit.jurusan == 'BR' %}selected{% endif %}>BR</option>
+                </select>
+            </div>
+            <hr style="margin: 15px 0; border-style: dashed;">
+        </div>
+
+        <p><small>Info lain seperti Saldo, Status Aktif, dan Password tidak diubah di halaman ini.</small></p>
+
+        <br>
+        <button type="submit">Simpan Perubahan</button>
+        {# Tombol Batal kembali ke daftar user #}
+        <a href="{{ url_for('admin_users') }}" class="btn" style="margin-left: 10px; background-color: #6c757d; color: white; padding: 10px 20px;">Batal</a>
+    </form>
+
+    {# Script JS untuk show/hide kelas/jurusan saat peran diubah #}
+    <script>
+        function toggleStudentFieldsEdit() {
+            const roleSelect = document.getElementById('role'); // Ambil select Peran
+            const studentFieldsDiv = document.getElementById('kelas-jurusan-fields-edit'); // Ambil div field siswa
+            const kelasSelect = document.getElementById('kelas-edit');
+            const jurusanSelect = document.getElementById('jurusan-edit');
+
+            // Cek apakah elemen ada sebelum akses value (untuk role admin yg disabled)
+            if (roleSelect && roleSelect.value === 'siswa') {
+                studentFieldsDiv.style.display = 'block';
+                kelasSelect.required = true; // Wajib jika siswa
+                jurusanSelect.required = true; // Wajib jika siswa
+            } else {
+                studentFieldsDiv.style.display = 'none';
+                kelasSelect.required = false; // Tidak wajib jika bukan siswa
+                jurusanSelect.required = false;
+                // Jangan reset value di form edit agar admin tahu nilai sebelumnya
+            }
+        }
+        // Panggil saat halaman dimuat untuk set tampilan awal
+        document.addEventListener('DOMContentLoaded', toggleStudentFieldsEdit);
+    </script>
+
+{% endblock admin_content %}

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Transaksi - {{ current_user.username }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* === CSS Internal Halaman Riwayat Transaksi Siswa (Layout Baru) === */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Font lebih modern */ }
+        body { background-color: #f0f2f5;
+            padding-bottom: 50px; /* Warna latar body */ }
+
+        /* Header Halaman */
+        .history-header {
+            background-color: #7c4dff; /* Warna ungu sesuai contoh */
+            color: white;
+            padding: 35px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 0 0 50px 50px; /* Lengkung bawah */
+        }
+        .history-header a.back-link { color: white; text-decoration: none; font-size: 1.4em; margin-right: 15px; transition: transform 0.2s ease; }
+        .history-header a.back-link:hover { transform: translateX(-3px); }
+        .history-header h1 { font-size: 1.2em; margin: 0; font-weight: 600; letter-spacing: 0.5px; }
+
+        /* Kontainer Utama */
+        .history-container {
+            max-width: 950px; /* Lebar max konten sedikit lebih besar */
+            margin: 30px auto; /* Tengahkan + jarak atas/bawah */
+            padding: 0 15px;
+        }
+
+        /* Styling Flash Message */
+        .flash-messages p { padding: 12px 15px; margin-bottom: 20px; border-radius: 6px; border: 1px solid transparent; font-size: 0.95em; }
+        .flash-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .flash-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
+        .flash-warning { color: #664d03; background-color: #fff3cd; border-color: #ffecb5; }
+        .flash-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+
+        /* Kartu Filter */
+        .filter-card {
+            margin-bottom: 30px; padding: 20px 25px; background-color: #ffffff;
+            border-radius: 12px; /* Radius lebih besar */
+            border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .filter-form { /* Form di dalam kartu */
+             display: flex; align-items: flex-end; flex-wrap: wrap; gap: 18px; /* Jarak antar elemen filter */
+         }
+        .filter-form div { display: flex; flex-direction: column; flex-grow: 1; min-width: 150px; /* Lebar minimum elemen filter */}
+        .filter-form label { margin-bottom: 7px; font-weight: 500; font-size: 0.85em; color: #555; text-transform: uppercase; }
+        .filter-form input[type="date"], .filter-form select {
+            padding: 10px 12px; border: 1px solid #d1d1d1; border-radius: 6px; /* Radius lebih kecil */
+            font-size: 0.95em; background-color: #f9f9f9; /* Warna BG input */
+            width: 100%; /* Input mengisi div */
+        }
+        .filter-form select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237C4DFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 0.8rem center; background-size: 0.65em auto; padding-right: 2.5rem; }
+        .filter-form .filter-actions { flex-grow: 0; flex-direction: row; gap: 10px;} /* Tombol filter & reset */
+        .filter-form button, .filter-form a.btn { padding: 9px 18px; font-size: 0.9em; cursor: pointer; border-radius: 6px; text-decoration: none; display: inline-block; line-height: 1.5; font-weight: 500;}
+        .btn-filter-submit { background-color: #7c4dff; color: white; border: none; }
+        .btn-filter-submit:hover { background-color: #673ab7; }
+        .btn-filter-reset { background-color: #e0e0e0; color: #555; border: 1px solid #ccc; }
+        .btn-filter-reset:hover { background-color: #d5d5d5; }
+
+        /* Kartu Tabel Riwayat */
+        .history-card {
+            background-color: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border: 1px solid #e0e0e0; overflow: hidden; /* Sembunyikan border tabel jika pakai wrapper */
+        }
+        .history-table th:nth-child(3),
+        .history-table th:nth-child(4) {
+            text-align: left;
+        }
+        .history-table-wrapper { overflow-x: auto; } /* Hanya wrapper yg scrollable */
+        .history-table { width: 100%; border-collapse: collapse; }
+        .history-table th, .history-table td { padding: 14px 18px; /* Padding lebih besar */ border-bottom: 1px solid #f0f0f0; text-align: left; }
+        .history-table thead th { background-color: #f9f9f9; font-weight: 600; color: #444; font-size: 0.9em; text-transform: none; letter-spacing: 0; position: sticky; top: 0; z-index: 1;} /* Hapus uppercase */
+        .history-table tbody tr:last-child td { border-bottom: none; }
+        .history-table tbody tr:hover { background-color: #fdfaff; } /* Hover ungu sangat muda */
+        .history-table td { font-size: 0.98em; vertical-align: middle; }
+
+        .tx-time { font-size: 0.9em; color: #777; white-space: nowrap; }
+        .tx-description { font-weight: 500; color: #333;}
+        .tx-description small { font-weight: normal; color: #777; font-size: 0.85em; display: block; margin-top: 3px;}
+        .tx-amount { text-align: right; font-weight: 700; white-space: nowrap; font-size: 1em; }
+        .tx-amount.positive { color: #2e7d32; } /* Hijau lebih gelap */
+        .tx-amount.negative { color: #c62828; } /* Merah lebih gelap */
+        .tx-balance { text-align: right; color: #555; font-size: 0.95em; white-space: nowrap;}
+        .no-history { text-align: center; padding: 50px; color: #777; font-style: italic;}
+        .back-link-bottom { margin-top: 30px; text-align: center; padding-bottom: 20px;}
+        .back-link-bottom a { color: #7c4dff; text-decoration: none; font-weight: 500;}
+        .back-link-bottom a:hover { text-decoration: underline; }
+
+        .bottom-nav {
+                    background-color: #ffffff;
+                    display: flex;
+                    width: 70%;
+                    justify-content: space-around;
+                    padding: 15px 0;
+                    border-radius: 30px 30px 0 0;
+                    margin: 0 auto;
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                    position: fixed;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    bottom: 0;
+                    z-index: 100;
+                }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #666; text-decoration: none; font-size: 12px; flex-grow: 1; }
+        .nav-item.active { color: #7c4dff; font-weight: bold; }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; }
+        .scan-button { flex-grow: 1; display: flex; justify-content: center; align-items: center; margin-top: -30px; z-index: 11;}
+        .scan-button a { background-color: #7c4dff; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4); border: 3px solid white; }
+        .scan-button a:hover { background-color: #5e35b1; }
+
+         /* Responsif Tabel */
+         @media (max-width: 768px) {
+             .history-table thead { display: none; }
+             .history-table tbody, .history-table tr, .history-table td { display: block; width: 100%; }
+             .history-table tr { border: none; border-bottom: 1px solid #eee; margin-bottom: 0; border-radius: 0; background-color: #fff; }
+             .history-table tr:last-child { border-bottom: none; }
+             .history-card { border-radius: 0; box-shadow: none; border: none; padding: 0; background: none;} /* Hapus style card di mobile */
+             .history-table-wrapper { border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.07); border: 1px solid #e0e0e0;} /* Beri style ke wrapper */
+             .history-table td { text-align: right; padding-left: 40% !important; position: relative; border: none; padding-top: 12px; padding-bottom: 12px; min-height: 45px; border-bottom: 1px solid #f5f5f5; }
+             .history-table tr:last-child td:last-child { border-bottom: none; }
+             .history-table td::before {
+                 content: attr(data-label); position: absolute; left: 15px; width: 35%;
+                 padding-right: 10px; font-weight: 600; text-align: left; color: #555; font-size: 0.8em; top: 50%; transform: translateY(-50%);
+             }
+             .history-table td[data-label="Waktu"],
+             .history-table td[data-label="Keterangan"] { text-align: left; }
+             .history-table td[data-label="Jumlah"],
+             .history-table td[data-label="Saldo Setelah"] { text-align: right; }
+             .filter-form { flex-direction: column; align-items: stretch; } /* Filter jadi vertikal */
+             .filter-form div { min-width: 100%; }
+             .filter-form .filter-actions { flex-direction: row; margin-top: 10px; }
+         }
+    </style>
+</head>
+<body>
+    {# Header Halaman #}
+    <div class="history-header">
+        <a href="{{ url_for('dashboard') }}" class="back-link" title="Kembali ke Dashboard"><i class="fas fa-arrow-left"></i></a>
+        <h1>Riwayat Transaksi</h1>
+    </div>
+
+    <div class="history-container">
+        {# Flash messages #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %} <p class="flash-{{ category }}">{{ message }}</p> {% endfor %}
+                </div>
+             {% endif %}
+         {% endwith %}
+
+        {# Kartu Filter #}
+        <div class="filter-card">
+            <form method="GET" action="{{ url_for('riwayat_siswa') }}" class="filter-form">
+                <div>
+                    <label for="start_date">Dari Tanggal:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ filter_start_date }}">
+                </div>
+                <div>
+                    <label for="end_date">Sampai Tanggal:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ filter_end_date }}">
+                </div>
+                <div>
+                    <label for="filter_type">Tipe Transaksi:</label>
+                    <select id="filter_type" name="filter_type">
+                        <option value="all" {% if selected_type_filter == 'all' %}selected{% endif %}>Semua</option>
+                        <option value="payment" {% if selected_type_filter == 'payment' %}selected{% endif %}>Pembayaran (-)</option>
+                        <option value="topup" {% if selected_type_filter == 'topup' %}selected{% endif %}>Top Up (+)</option>
+                    </select>
+                </div>
+                <div class="filter-actions"> {# Div khusus untuk tombol #}
+                    <label>&nbsp;</label> {# Agar sejajar #}
+                    <button type="submit" class="btn btn-filter-submit"><i class="fas fa-filter"></i> Filter</button>
+                    <a href="{{ url_for('riwayat_siswa') }}" class="btn btn-filter-reset">Reset</a>
+                </div>
+            </form>
+        </div>
+
+        {# Kartu Tabel Riwayat Transaksi #}
+        <div class="history-card">
+            <div class="history-table-wrapper">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Waktu (WIB)</th>
+                            <th>Keterangan</th>
+                            <th style="text-align: left;">Jumlah</th>
+                            <th style="text-align: left;">Saldo Setelah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if transactions %}
+                            {% for tx in transactions %}
+                            <tr>
+                                <td data-label="Waktu"><span class="tx-time">{{ tx.timestamp | wib }}</span></td>
+                                <td data-label="Keterangan">
+                                    <span class="tx-description">
+                                    {% if tx.user_id == current_user.id %} {# Outgoing #}
+                                        {% if tx.type == 'payment' %} Bayar ke {{ tx.related_user.username if tx.related_user else 'N/A' }}
+                                        {% else %} {{ tx.type.capitalize() }}
+                                        {% endif %}
+                                    {% elif tx.related_user_id == current_user.id %} {# Incoming #}
+                                        {% if tx.type == 'topup' %} Top Up dari {{ tx.user.username if tx.user else 'Admin' }}
+                                        {% else %} {{ tx.type.capitalize() }} Diterima
+                                        {% endif %}
+                                    {% endif %}
+                                    </span>
+                                    {% if tx.description %}<small><em>{{ tx.description }}</em></small>{% endif %}
+                                </td>
+                                <td data-label="Jumlah" class="tx-amount {% if tx.user_id == current_user.id and tx.type == 'payment' %}negative{% else %}positive{% endif %}">
+                                    {% if tx.user_id == current_user.id and tx.type == 'payment' %}- {% else %}+ {% endif %}
+                                    {{ tx.amount|rupiah }}
+                                </td>
+                                <td data-label="Saldo Setelah" class="tx-balance">
+                                    {{ tx.user_balance_after|rupiah }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="no-history">
+                                    Tidak ada transaksi ditemukan untuk periode atau filter yang dipilih.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div> {# Akhir history-table-wrapper #}
+        </div> {# Akhir history-card #}
+
+        {# TODO: Tambahkan Pagination di sini jika perlu #}
+
+    </div> {# Akhir history-container #}
+
+    <div class="bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item"> {# Tidak active di halaman ini #}
+            <i class="fas fa-home"></i> Home
+        </a>
+        <div class="scan-button">
+            <a href="{{ url_for('pay_vendor') }}" title="Scan QR" > {# Tombol scan/bayar aktif di halaman ini #}
+                <i class="fas fa-qrcode"></i>
+            </a>
+        </div>
+        <a href="{{ url_for('history') }}" class="nav-item active">
+            <i class="fas fa-receipt"></i> Riwayat
+        </a>
+    </div>
+</body>
+</html>

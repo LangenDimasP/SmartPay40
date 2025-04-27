@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel{% endblock %} - DimasCash</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+   <meta name="theme-color" content="#7c4dff">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/static/service-worker.js')
+              .then(function(reg) { console.log('ServiceWorker registered:', reg); })
+              .catch(function(err) { console.log('ServiceWorker registration failed:', err); });
+          });
+        }
+        </script>
+    <style>
+        /* Existing styles remain unchanged */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .admin-sidebar {
+            width: 260px;
+            background-color: #ffffff;
+            height: 100dvh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 20px 15px;
+            box-shadow: 3px 0px 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .admin-sidebar .logo-area .dimascash-text {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: black;
+            letter-spacing: 1px;
+            display: inline-block;
+        }
+        .admin-sidebar .logo-area img {
+            max-height: 55px;
+        }
+        .admin-sidebar .sidebar-section-title {
+            font-size: 1.3em;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            margin: 10px 0 10px 10px;
+            font-weight: 600;
+        }
+        .admin-sidebar nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .admin-sidebar nav li a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #555;
+            font-weight: 500;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .admin-sidebar nav li a .nav-icon {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ede7f6;
+            color: #7c4dff;
+            border-radius: 8px;
+            margin-right: 15px;
+            font-size: 0.8em;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .admin-sidebar nav li a .nav-text {
+            flex-grow: 1;
+        }
+        .admin-sidebar nav li a:hover,
+        .admin-sidebar nav li a.active {
+            background-color: #7c4dff;
+            color: #ffffff;
+        }
+        .admin-sidebar nav li a:hover .nav-icon,
+        .admin-sidebar nav li a.active .nav-icon {
+            background-color: #ffffff;
+            color: #7c4dff;
+        }
+        .admin-sidebar .logout-link {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .admin-sidebar .logout-link a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            text-decoration: none;
+            color: #dc3545;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .admin-sidebar .logout-link a .nav-icon {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8d7da;
+            color: #dc3545;
+            border-radius: 8px;
+            margin-right: 15px;
+            font-size: 0.8em;
+        }
+        .admin-sidebar .logout-link a:hover {
+            background-color: #dc3545;
+            color: #ffffff;
+        }
+        .admin-sidebar .logout-link a:hover .nav-icon {
+            background-color: #ffffff;
+            color: #dc3545;
+        }
+        .admin-content {
+            margin-left: 260px;
+            padding: 30px 40px;
+            width: calc(100% - 260px);
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        @media (max-width: 992px) {
+            .admin-sidebar {
+                width: 70px;
+                padding: 20px 5px;
+            }
+            .admin-sidebar .logo-area img {
+                max-height: 30px;
+            }
+            .admin-sidebar .sidebar-section-title {
+                display: none;
+            }
+            .admin-sidebar .nav-text {
+                display: none;
+            }
+            .admin-sidebar nav li a {
+                justify-content: center;
+                padding: 10px;
+            }
+            .admin-sidebar nav li a .nav-icon {
+                margin-right: 0;
+            }
+            .admin-sidebar .logout-link a .nav-text {
+                display: none;
+            }
+            .admin-sidebar .logout-link a {
+                justify-content: center;
+                padding: 10px;
+            }
+            .admin-sidebar .logout-link a .nav-icon {
+                margin-right: 0;
+            }
+            .admin-sidebar .logo-area .dimascash-text {
+                display: none;
+            }
+            .admin-content {
+                margin-left: 70px;
+                width: calc(100% - 70px);
+                padding: 25px;
+            }
+        }
+        @media (max-width: 768px) {
+            .admin-content {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <aside class="admin-sidebar">
+        <div title="beranda" class="logo-area" style="text-align: left; margin-bottom: 10px; padding-bottom: 20px; border-bottom: 1px solid #eee; margin: 0 auto;">
+            <a href="{{ url_for('admin_dashboard_content') }}" style="display: flex; align-items: center; gap: 5px; text-decoration: none;">
+                <img src="{{ url_for('static', filename='images/hanya_logo.png') }}" alt="DimasCash Logo" style="max-height: 55px;">
+                <span class="dimascash-text">Dimascash</span>
+            </a>
+        </div>
+        <nav>
+            <ul>
+                <li>
+                    <a title="Dashboard" href="{{ url_for('admin_dashboard_content') }}" class="{% if active_page == 'admin_dashboard_content' %}active{% endif %}">
+                        <span class="nav-icon"><i class="fas fa-tachometer-alt"></i></span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a title="Users" href="{{ url_for('admin_users') }}" class="{% if active_page == 'admin_users' %}active{% endif %}">
+                        <span class="nav-icon"><i class="fas fa-users"></i></span>
+                        <span class="nav-text">Pengguna</span>
+                    </a>
+                </li>
+                <li>
+                    <a title="Transactions" href="{{ url_for('admin_transactions') }}" class="{% if active_page == 'admin_transactions' %}active{% endif %}">
+                        <span class="nav-icon"><i class="fas fa-exchange-alt"></i></span>
+                        <span class="nav-text">Transaksi</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="sidebar-section-title">Admin Panel</div>
+        <nav>
+            <ul>
+                <li>
+                    <a title="Registration Account" href="{{ url_for('admin_register_user') }}" class="{% if active_page == 'admin_register_user' %}active{% endif %}">
+                      <span class="nav-icon"><i class="fas fa-user-plus"></i></span>
+                      <span class="nav-text">Tambah Akun</span>
+                    </a>
+                </li>
+                <li>
+                    <a title="Topup Request" href="{{ url_for('admin_pending_topups') }}" class="{% if active_page == 'admin_pending_topups' %}active{% endif %}">
+                        <span class="nav-icon"><i class="fas fa-inbox"></i></span>
+                        <span class="nav-text">Topup Request</span>
+                    </a>
+                </li>
+                <li>
+                    <a title="Topup" href="{{ url_for('admin_topup') }}" class="{% if active_page == 'admin_topup' %}active{% endif %}">
+                        <span class="nav-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                        <span class="nav-text">Topup Manual</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="logout-link">
+            <a title="Logout" href="{{ url_for('logout') }}">
+                <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </aside>
+    <div class="admin-content">
+        {% block admin_content %}{% endblock %}
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
