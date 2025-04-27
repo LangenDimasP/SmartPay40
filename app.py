@@ -6,6 +6,7 @@ from flask_wtf.csrf import CSRFProtect
 import qrcode
 import logging
 import io
+from decouple import config
 from flask import session
 import secrets
 from datetime import date, datetime, time, timedelta

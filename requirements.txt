@@ -1,0 +1,6 @@
+flask
+flask-login
+flask-sqlalchemy
+gunicorn
+python-decouple
+psycopg2-binary
