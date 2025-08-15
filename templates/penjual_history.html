@@ -16,7 +16,7 @@
         }
         .pagination-active {
             background-color: #7c4dff;
-            color: white;
+            color: #7c4dff;
         }
         .date-input:focus {
             border-color: #7c4dff;
@@ -40,7 +40,7 @@
                 </div>
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-history text-purple-600 text-2xl"></i>
-                    <span class="text-sm font-medium text-gray-500">Total Transaksi: <span class="font-bold text-purple-600">123</span></span>
+                    <span class="text-sm font-medium text-gray-500">Total Transaksi: <span class="font-bold text-purple-600">{{ total_transaksi }}</span></span>
                 </div>
             </div>
 
@@ -85,13 +85,19 @@
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-semibold text-gray-800">Daftar Transaksi</h3>
                         <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-500">Urutkan:</span>
-                            <select class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                <option>Terbaru</option>
-                                <option>Terlama</option>
-                                <option>Jumlah Tertinggi</option>
-                                <option>Jumlah Terendah</option>
-                            </select>
+                            <form method="GET" id="sortForm" class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-500">Urutkan:</span>
+                                <select name="sort" class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    onchange="document.getElementById('sortForm').submit()">
+                                    <option value="desc" {% if request.args.get('sort', 'desc') == 'desc' %}selected{% endif %}>Terbaru</option>
+                                    <option value="asc" {% if request.args.get('sort') == 'asc' %}selected{% endif %}>Terlama</option>
+                                    <option value="max" {% if request.args.get('sort') == 'max' %}selected{% endif %}>Jumlah Tertinggi</option>
+                                    <option value="min" {% if request.args.get('sort') == 'min' %}selected{% endif %}>Jumlah Terendah</option>
+                                </select>
+                                <!-- Kirim juga filter tanggal jika ada -->
+                                <input type="hidden" name="start_date" value="{{ filter_start_date }}">
+                                <input type="hidden" name="end_date" value="{{ filter_end_date }}">
+                            </form>
                         </div>
                     </div>
                     
@@ -119,45 +125,68 @@
                                             <i class="fas fa-info-circle mr-2"></i> Keterangan
                                         </div>
                                     </th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Aksi
-                                    </th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                                                        <tbody class="bg-white divide-y divide-gray-200">
                                 {% for trans in transactions %}
                                 <tr class="transaction-card transition duration-150 ease-in-out hover:bg-gray-50">
+                                    <!-- Kolom Waktu -->
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ trans.timestamp|wib }}</div>
                                         <div class="text-xs text-gray-500">{{ trans.timestamp.strftime('%d-%m-%Y %H:%M') }}</div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                                    <!-- Kolom Pembeli/Penarikan -->
+                                                                        <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                                <i class="fas fa-user text-purple-600"></i>
+                                            <div class="flex-shrink-0 h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                                                {% if trans.type == 'withdrawal' %}
+                                                    <i class="fas fa-money-bill-transfer text-orange-600 text-xl"></i>
+                                                {% elif trans.user and trans.user.profile_pic_filename %}
+                                                    <img src="{{ url_for('static', filename='profile_pics/' ~ trans.user.profile_pic_filename) }}?v={{ trans.user.profile_pic_filename }}" alt="Foto Profil" class="h-10 w-10 object-cover">
+                                                {% else %}
+                                                    <i class="fas fa-user text-purple-600 text-xl"></i>
+                                                {% endif %}
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ trans.user.username if trans.user else 'Unknown' }}</div>
-                                                <div class="text-xs text-gray-500">ID: {{ trans.user.id if trans.user else 'N/A' }}</div>
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {% if trans.type == 'withdrawal' %}
+                                                        Penarikan Saldo
+                                                    {% else %}
+                                                        {{ trans.user.username if trans.user else 'Unknown' }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="text-xs text-gray-500">
+                                                    {% if trans.type == 'withdrawal' %}
+                                                        &mdash;
+                                                    {% else %}
+                                                        ID: {{ trans.user.id if trans.user else 'N/A' }}
+                                                    {% endif %}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
+                                    <!-- Kolom Jumlah -->
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            {{ trans.amount|rupiah }}
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                            {% if trans.type in ['withdrawal', 'cashout_vendor'] %}bg-red-100 text-red-600
+                                            {% else %}bg-green-100 text-green-800{% endif %}">
+                                            {% if trans.type in ['withdrawal', 'cashout_vendor'] %}
+                                                -{{ trans.amount|rupiah }}
+                                            {% else %}
+                                                {{ trans.amount|rupiah }}
+                                            {% endif %}
                                         </span>
                                     </td>
+                                    <!-- Kolom Keterangan -->
                                     <td class="px-6 py-4">
-                                        <div class="text-sm text-gray-900">{{ trans.description }}</div>
+                                        <div class="text-sm text-gray-900">
+                                            {% if trans.type == 'withdrawal' %}
+                                                Penarikan saldo ke rekening penjual
+                                            {% else %}
+                                                {{ trans.description }}
+                                            {% endif %}
+                                        </div>
                                         <div class="text-xs text-gray-500">ID Transaksi: {{ trans.id }}</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button class="text-purple-600 hover:text-purple-900 mr-3">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="text-gray-600 hover:text-gray-900">
-                                            <i class="fas fa-print"></i>
-                                        </button>
                                     </td>
                                 </tr>
                                 {% else %}
@@ -183,10 +212,10 @@
                 <div class="text-sm text-gray-500">
                     Menampilkan <span class="font-medium">{{ pagination.first_item }}</span> sampai <span class="font-medium">{{ pagination.last_item }}</span> dari <span class="font-medium">{{ pagination.total }}</span> transaksi
                 </div>
-                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px no-underline" aria-label="Pagination">
                     {% if pagination.has_prev %}
                     <a href="{{ url_for('history_vendor', page=pagination.prev_num, start_date=filter_start_date, end_date=filter_end_date) }}" 
-                       class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                       class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 no-underline">
                         <i class="fas fa-chevron-left mr-1"></i> Sebelumnya
                     </a>
                     {% endif %}
@@ -194,11 +223,11 @@
                     {% for page_num in pagination.iter_pages() %}
                     {% if page_num %}
                         <a href="{{ url_for('history_vendor', page=page_num, start_date=filter_start_date, end_date=filter_end_date) }}" 
-                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {% if page_num == pagination.page %} pagination-active {% else %} text-gray-700 hover:bg-gray-50 {% endif %}">
+                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {% if page_num == pagination.page %} pagination-active {% else %} text-gray-700 hover:bg-gray-50 no-underline{% endif %}">
                             {{ page_num }}
                         </a>
                     {% else %}
-                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 no-underline">
                             ...
                         </span>
                     {% endif %}
@@ -206,7 +235,7 @@
                     
                     {% if pagination.has_next %}
                     <a href="{{ url_for('history_vendor', page=pagination.next_num, start_date=filter_start_date, end_date=filter_end_date) }}" 
-                       class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                       class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 no-underline">
                         Selanjutnya <i class="fas fa-chevron-right ml-1"></i>
                     </a>
                     {% endif %}

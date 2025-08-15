@@ -1,0 +1,50 @@
+{% extends 'penjual_base.html' %}
+
+{% block penjual_title %}Profil Penjual{% endblock %}
+
+{% block penjual_content %}
+<div class="card mx-auto" style="max-width:400px;">
+    <div class="card-body text-center">
+        <i class="fas fa-user-circle fa-4x mb-3" style="color:#7c4dff"></i>
+        <h4 class="card-title mb-2">{{ current_user.nama_toko or current_user.username }}</h4>
+        <p class="text-muted mb-1">Username: {{ current_user.username }}</p>
+        <p class="text-muted mb-1">Nama Toko: {{ current_user.nama_toko or '-' }}</p>
+        <p class="text-muted mb-1">Role: {{ current_user.role|capitalize }}</p>
+        <p class="text-muted mb-3">Status: 
+            {% if current_user.is_active %}
+                <span class="badge bg-success">Aktif</span>
+            {% else %}
+                <span class="badge bg-danger">Nonaktif</span>
+            {% endif %}
+        </p>
+
+        <!-- Tombol Logout -->
+        <a href="{{ url_for('logout') }}" class="btn btn-danger mt-4 d-flex align-items-center justify-content-center mx-auto" style="max-width: 200px;">
+            <i class="fas fa-sign-out-alt me-2"></i>
+            Logout
+        </a>
+    </div>
+</div>
+
+<style>
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    transform: translateY(-2px);
+}
+
+.me-2 {
+    margin-right: 8px;
+}
+</style>
+{% endblock %}

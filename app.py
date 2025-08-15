@@ -1,33 +1,41 @@
 # Tambahkan impor yang diperlukan di bagian atas
+from sqlalchemy import or_, func, and_  # Pastikan 'and_' juga diimport
+from flask_login import login_required, current_user
+from flask import request, render_template, redirect, url_for, flash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template, url_for, request, redirect, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_wtf.csrf import CSRFProtect
+from pyngrok import ngrok
 import qrcode
 import logging
 import io
+from flask import make_response, request
+from weasyprint import HTML
 from decouple import config
 from flask import session
 import secrets
 from datetime import date, datetime, time, timedelta
-from sqlalchemy import func, or_ # Pastikan func dan or_ diimport
+from sqlalchemy import func, or_  # Pastikan func dan or_ diimport
 from sqlalchemy import or_
 from flask import send_file
-import math # Tambahkan import math jika belum ada di bagian atas
+import math  # Tambahkan import math jika belum ada di bagian atas
 # Impor untuk Login Manager & UserMixin
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 # Impor untuk Password Hashing
-from werkzeug.utils import secure_filename # Untuk mengamankan nama file
-import uuid # Untuk membuat nama file unik
+from werkzeug.utils import secure_filename  # Untuk mengamankan nama file
+import uuid  # Untuk membuat nama file unik
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
-import os # Digunakan untuk secret key
+import os  # Digunakan untuk secret key
 
 app = Flask(__name__)
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 csrf = CSRFProtect(app)
 wib_tz = pytz.timezone("Asia/Jakarta")
 utc_tz = pytz.timezone("UTC")
-
 # === Konfigurasi Upload Foto Profil ===
 # Tentukan path absolut ke folder statis
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -40,9 +48,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ======================================
 
 # === Fungsi Helper untuk Cek Ekstensi ===
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def format_rupiah(value):
     """Memformat angka menjadi string format Rupiah (Rp xxx.xxx)."""
@@ -60,14 +71,16 @@ def format_rupiah(value):
             # Format dulu ke US (,) ribuan (.) desimal
             us_formatted = "{:,.2f}".format(val)
             # Tukar: Koma jadi TEMP, Titik jadi Koma, TEMP jadi Titik
-            id_formatted = us_formatted.replace(",", "TEMP_SEP").replace(".", ",").replace("TEMP_SEP", ".")
+            id_formatted = us_formatted.replace(",", "TEMP_SEP").replace(
+                ".", ",").replace("TEMP_SEP", ".")
             formatted_value = id_formatted
 
         return "Rp " + formatted_value
     except (ValueError, TypeError, OverflowError):
         # Jika input tidak valid (None, string non-angka, dll)
-        return "Rp -" # Tampilkan strip atau format default lain
-    
+        return "Rp -"  # Tampilkan strip atau format default lain
+
+
 app.jinja_env.filters['rupiah'] = format_rupiah
 
 
@@ -75,19 +88,17 @@ try:
     # Untuk Python 3.9+ (built-in)
     from zoneinfo import ZoneInfo
 except ImportError:
-    # Fallback untuk Python < 3.9 (perlu install: pip install backports.zoneinfo)
-    # Atau bisa pakai pytz: pip install pytz -> from pytz import timezone
-    # Jika pakai pytz: ZoneInfo("Asia/Jakarta") -> timezone("Asia/Jakarta")
-    # Jika pakai simple timedelta: hilangkan bagian zoneinfo, cukup tambah 7 jam
-    # Untuk sekarang kita anggap Python 3.9+
-     print("WARNING: zoneinfo module not found. Timezone features might be limited.")
-     # Sediakan alternatif sederhana jika zoneinfo tidak ada
-     class ZoneInfo: # Dummy class
-         def __init__(self, key): pass
+    print("WARNING: zoneinfo module not found. Timezone features might be limited.")
+    # Sediakan alternatif sederhana jika zoneinfo tidak ada
+
+    class ZoneInfo:  # Dummy class
+        def __init__(self, key): pass
 
 # ... (import lain, app, db, model, dll) ...
 
 # === Fungsi Custom Filter untuk Format WIB ===
+
+
 def format_wib(utc_dt):
     """Mengkonversi datetime UTC ke string format WIB."""
     if not utc_dt:
@@ -95,7 +106,8 @@ def format_wib(utc_dt):
     try:
         utc_tz = pytz.timezone("UTC")
         wib_tz = pytz.timezone("Asia/Jakarta")
-        utc_dt_aware = utc_dt.replace(tzinfo=utc_tz) if not utc_dt.tzinfo else utc_dt
+        utc_dt_aware = utc_dt.replace(
+            tzinfo=utc_tz) if not utc_dt.tzinfo else utc_dt
         wib_dt = utc_dt_aware.astimezone(wib_tz)
         return wib_dt.strftime('%d %b %Y, %H:%M:%S') + " WIB"
     except Exception as e:
@@ -107,6 +119,7 @@ def format_wib(utc_dt):
             return str(utc_dt) + " UTC (Error)"
 # === Akhir Fungsi Custom Filter ===
 
+
 # Registrasikan filter (SETELAH app = Flask(__name__) dan SETELAH definisi fungsi format_wib)
 app.jinja_env.filters['wib'] = format_wib
 
@@ -114,7 +127,8 @@ app.jinja_env.filters['wib'] = format_wib
 # Dibutuhkan Flask untuk mengamankan session (data login) dan flash messages.
 # Ganti 'isi-dengan-kunci-rahasia-super-aman-dan-unik' dengan string acak yang panjang.
 # Di aplikasi nyata, ini tidak boleh ditulis langsung di kode.
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'isi-dengan-kunci-rahasia-super-aman-dan-unik')
+app.config['SECRET_KEY'] = os.environ.get(
+    'SECRET_KEY', 'isi-dengan-kunci-rahasia-super-aman-dan-unik')
 # --------------------------
 
 # --- Konfigurasi Database ---
@@ -131,11 +145,14 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 # Pesan flash yang akan ditampilkan saat pengguna diarahkan
 login_manager.login_message = "Anda harus login untuk mengakses halaman ini."
-login_manager.login_message_category = "warning" # Kategori pesan (untuk styling CSS nanti)
+# Kategori pesan (untuk styling CSS nanti)
+login_manager.login_message_category = "warning"
 # --------------------------
 
 # --- User Loader Callback ---
 # Fungsi ini digunakan oleh Flask-Login untuk memuat user dari ID yang disimpan di session.
+
+
 @login_manager.user_loader
 def load_user(user_id):
     # Ambil user dari database berdasarkan ID
@@ -144,17 +161,20 @@ def load_user(user_id):
 
 # --- Model Database (Update User) ---
 # Tambahkan , UserMixin setelah db.Model
+
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(10), nullable=False) # 'siswa', 'penjual', 'admin'
+    role = db.Column(db.String(10), nullable=False)
     balance = db.Column(db.Float, nullable=False, default=0.0)
-    # === TAMBAHKAN DUA KOLOM BARU INI ===
-    profile_pic_filename = db.Column(db.String(100), nullable=True, default=None) # Nama file foto profil
-    kelas = db.Column(db.String(5), nullable=True)  # Untuk menyimpan 'X', 'XI', atau 'XII'
-    jurusan = db.Column(db.String(10), nullable=True) # Untuk menyimpan 'RPL', 'DKV1', dll.
-    is_active = db.Column(db.Boolean, nullable=False, default=True) # Defaultnya True (Aktif)
+    profile_pic_filename = db.Column(db.String(100), nullable=True, default=None)
+    kelas = db.Column(db.String(5), nullable=True)
+    jurusan = db.Column(db.String(10), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    active_border_id = db.Column(db.Integer, db.ForeignKey('border.id'), nullable=True)
+    active_border = db.relationship('Border', backref=db.backref('users', lazy=True))
     # =====================================
 
     # Method set_password, check_password, __repr__ tetap sama
@@ -166,13 +186,14 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f'<User {self.username} - {self.role}>'
-    
+
 
 # --- Class Transaction (TERPISAH dari User) ---
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    related_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    related_user_id = db.Column(
+        db.Integer, db.ForeignKey('user.id'), nullable=True)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     type = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Float, nullable=False)
@@ -181,7 +202,8 @@ class Transaction(db.Model):
     description = db.Column(db.String(200), nullable=True)
 
     # Relasi
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('transactions', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref(
+        'transactions', lazy='dynamic'))
     related_user = db.relationship('User', foreign_keys=[related_user_id])
 
     # ---> __repr__ untuk Transaction <---
@@ -202,37 +224,78 @@ class Transaction(db.Model):
         return f'<User {self.username} - {self.role}>'
 # --------------------------
 
+
 class TopUpRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False) # Jumlah yg direquest
-    request_timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow) # Waktu request dibuat
-    status = db.Column(db.String(20), nullable=False, default='pending') # Status: 'pending', 'approved', 'rejected'
-    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # ID Admin yg menyetujui/menolak
-    processed_timestamp = db.Column(db.DateTime, nullable=True) # Waktu request diproses admin
+    student_id = db.Column(
+        db.Integer, db.ForeignKey('user.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)  # Jumlah yg direquest
+    request_timestamp = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow)  # Waktu request dibuat
+    # Status: 'pending', 'approved', 'rejected'
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    admin_id = db.Column(db.Integer, db.ForeignKey(
+        'user.id'), nullable=True)  # ID Admin yg menyetujui/menolak
+    # Waktu request diproses admin
+    processed_timestamp = db.Column(db.DateTime, nullable=True)
 
     # Relasi untuk memudahkan akses data student/admin
-    student = db.relationship('User', foreign_keys=[student_id], backref=db.backref('topup_requests', lazy='dynamic'))
+    student = db.relationship('User', foreign_keys=[
+                              student_id], backref=db.backref('topup_requests', lazy='dynamic'))
     admin = db.relationship('User', foreign_keys=[admin_id])
 
     def __repr__(self):
         # Representasi string objek (berguna untuk debugging)
         return f'<TopUpRequest {self.id} - Stud: {self.student_id} Amt: {self.amount} Stat: {self.status}>'
 
+
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True) # Penerima notif
-    message = db.Column(db.String(255), nullable=False) # Isi pesan notifikasi
-    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True) # Waktu notif dibuat
-    is_read = db.Column(db.Boolean, nullable=False, default=False) # Status dibaca (default: belum)
-    related_link = db.Column(db.String(200), nullable=True) # Opsional: Link terkait notif (misal ke riwayat)
+    user_id = db.Column(db.Integer, db.ForeignKey(
+        'user.id'), nullable=False, index=True)  # Penerima notif
+    message = db.Column(db.String(255), nullable=False)  # Isi pesan notifikasi
+    timestamp = db.Column(db.DateTime, nullable=False,
+                          default=datetime.utcnow, index=True)  # Waktu notif dibuat
+    # Status dibaca (default: belum)
+    is_read = db.Column(db.Boolean, nullable=False, default=False)
+    # Opsional: Link terkait notif (misal ke riwayat)
+    related_link = db.Column(db.String(200), nullable=True)
 
     # Relasi ke User (agar mudah akses user dari notif)
-    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', order_by='Notification.timestamp.desc()'))
+    user = db.relationship('User', backref=db.backref(
+        'notifications', lazy='dynamic', order_by='Notification.timestamp.desc()'))
 
     def __repr__(self):
         return f'<Notification {self.id} for User {self.user_id} - Read: {self.is_read}>'
-    
+
+
+# Tambahkan setelah class Notification
+
+class Border(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    image_path = db.Column(db.String(200), nullable=False)
+    required_transactions = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.String(200), nullable=True)
+    jurusan = db.Column(db.String(50))  # Tambahkan kolom jurusan
+
+
+class UserBorder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    border_id = db.Column(db.Integer, db.ForeignKey(
+        'border.id'), nullable=False)
+    unlocked_at = db.Column(db.DateTime, nullable=False,
+                            default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, nullable=False, default=False)
+
+    # Relasi
+    user = db.relationship(
+        'User', backref=db.backref('user_borders', lazy=True))
+    border = db.relationship(
+        'Border', backref=db.backref('user_borders', lazy=True))
+
+
 # --- Routes (Halaman Web) ---
 # (Route index tetap sama)
 @app.route('/')
@@ -248,11 +311,13 @@ def index():
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
 @app.errorhandler(400)
 def bad_request(e):
     logger.error(f"Bad Request: {e}")
     flash("Permintaan tidak valid. Silakan coba lagi.", "danger")
     return redirect(request.url), 400
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -266,24 +331,33 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        remember = True if request.form.get('remember') else False
+
         user = User.query.filter_by(username=username).first()
 
-        if user and user.check_password(password):
-            if not user.is_active:
-                flash('Akun Anda saat ini tidak aktif. Silakan hubungi admin.', 'danger')
-                return redirect(url_for('login'))
-            login_user(user)
-            flash('Login berhasil! Selamat datang.', 'success')
-            if user.role == 'admin':
-                return redirect(url_for('admin_dashboard_content'))
-            elif user.role == 'penjual':
-                return redirect(url_for('penjual_dashboard'))
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Login Gagal. Cek username dan password Anda.', 'danger')
+        # Cek apakah username ada
+        if not user:
+            flash('Username tidak ditemukan!', 'error')
             return redirect(url_for('login'))
 
+        # Jika username ada, cek passwordnya
+        if not check_password_hash(user.password_hash, password):
+            flash('Password salah!', 'error')
+            return redirect(url_for('login'))
+
+        # Jika username dan password benar
+        login_user(user, remember=remember)
+
+        # Redirect berdasarkan role
+        if user.role == 'admin':
+            return redirect(url_for('admin_dashboard_content'))
+        elif user.role == 'vendor':
+            return redirect(url_for('penjual_dashboard'))
+        else:
+            return redirect(url_for('dashboard'))
+
     return render_template('login.html')
+
 
 @app.route('/penjual/dashboard')
 @login_required
@@ -295,7 +369,8 @@ def penjual_dashboard():
     # Zona Waktu WIB
     now_wib = datetime.now(wib_tz)
     today_wib = now_wib.date()
-    today_wib_start_local = datetime.combine(today_wib, time.min).replace(tzinfo=wib_tz)
+    today_wib_start_local = datetime.combine(
+        today_wib, time.min).replace(tzinfo=wib_tz)
     tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
     today_start_utc = today_wib_start_local.astimezone(utc_tz)
     tomorrow_start_utc = tomorrow_wib_start_local.astimezone(utc_tz)
@@ -303,6 +378,8 @@ def penjual_dashboard():
     # Statistik Harian
     todays_earnings = 0.0
     todays_transaction_count = 0
+    total_transaksi = Transaction.query.filter_by(
+        related_user_id=current_user.id, type='payment').count()
     try:
         sum_result = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.related_user_id == current_user.id,
@@ -334,9 +411,11 @@ def penjual_dashboard():
     # Jumlah Notifikasi Belum Dibaca (opsional, jika ada model Notification)
     unread_count = 0
     try:
-        unread_count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+        unread_count = Notification.query.filter_by(
+            user_id=current_user.id, is_read=False).count()
     except Exception as e:
-        print(f"Error fetching notifications for vendor {current_user.id}: {e}")
+        print(
+            f"Error fetching notifications for vendor {current_user.id}: {e}")
 
     # Data untuk Grafik (7 hari terakhir)
     chart_labels = []
@@ -344,8 +423,10 @@ def penjual_dashboard():
     for i in range(6, -1, -1):
         day = today_wib - timedelta(days=i)
         chart_labels.append(day.strftime('%d %b'))
-        start = datetime.combine(day, time.min).replace(tzinfo=wib_tz).astimezone(utc_tz)
-        end = datetime.combine(day, time.max).replace(tzinfo=wib_tz).astimezone(utc_tz)
+        start = datetime.combine(day, time.min).replace(
+            tzinfo=wib_tz).astimezone(utc_tz)
+        end = datetime.combine(day, time.max).replace(
+            tzinfo=wib_tz).astimezone(utc_tz)
         sum_result = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.related_user_id == current_user.id,
             Transaction.type == 'payment',
@@ -367,7 +448,7 @@ def penjual_dashboard():
         'chart_data': chart_data
     }
 
-    return render_template('penjual_dashboard.html', **data)
+    return render_template('penjual_dashboard.html', **data, total_transaksi=total_transaksi)
 
 
 @app.route('/penjual/history')
@@ -377,11 +458,12 @@ def history_vendor():
         flash("Akses ditolak. Halaman ini hanya untuk penjual.", "danger")
         return redirect(url_for('dashboard'))
 
-    # Parameter filter
+    # Parameter filter & sorting
     page = request.args.get('page', 1, type=int)
     per_page = 10
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
+    sort = request.args.get('sort', 'desc')
 
     # Zona Waktu
     now_wib = datetime.now(wib_tz)
@@ -391,24 +473,27 @@ def history_vendor():
 
     # Parsing tanggal
     try:
-        start_dt = date.fromisoformat(start_date_str) if start_date_str else default_start_dt
+        start_dt = date.fromisoformat(
+            start_date_str) if start_date_str else default_start_dt
     except ValueError:
         start_dt = default_start_dt
     try:
-        end_dt = date.fromisoformat(end_date_str) if end_date_str else default_end_dt
+        end_dt = date.fromisoformat(
+            end_date_str) if end_date_str else default_end_dt
     except ValueError:
         end_dt = default_end_dt
     if start_dt > end_dt:
         start_dt, end_dt = default_start_dt, default_end_dt
 
     # Konversi ke UTC
-    start_wib_day_local = datetime.combine(start_dt, time.min).replace(tzinfo=wib_tz)
-    end_wib_day_local = datetime.combine(end_dt, time.max).replace(tzinfo=wib_tz)
+    start_wib_day_local = datetime.combine(
+        start_dt, time.min).replace(tzinfo=wib_tz)
+    end_wib_day_local = datetime.combine(
+        end_dt, time.max).replace(tzinfo=wib_tz)
     start_utc = start_wib_day_local.astimezone(utc_tz)
     end_utc = end_wib_day_local.astimezone(utc_tz)
 
-    # Query transaksi
-    query = Transaction.query.options(
+    payment_query = Transaction.query.options(
         db.joinedload(Transaction.user)
     ).filter(
         Transaction.related_user_id == current_user.id,
@@ -417,38 +502,70 @@ def history_vendor():
         Transaction.timestamp <= end_utc
     )
 
+    withdrawal_query = Transaction.query.options(
+        db.joinedload(Transaction.user)
+    ).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.type.in_(['withdrawal', 'cashout_vendor']),
+        Transaction.timestamp >= start_utc,
+        Transaction.timestamp <= end_utc
+    )
+
+    # Gabungkan kedua query
+    all_query = payment_query.union_all(withdrawal_query)
+
+    # Sorting
+    if sort == 'asc':
+        all_query = all_query.order_by(Transaction.timestamp.asc())
+    elif sort == 'max':
+        all_query = all_query.order_by(Transaction.amount.desc())
+    elif sort == 'min':
+        all_query = all_query.order_by(Transaction.amount.asc())
+    else:  # default 'desc'
+        all_query = all_query.order_by(Transaction.timestamp.desc())
+
     # Pagination
-    transactions_pagination = query.order_by(Transaction.timestamp.desc()).paginate(page=page, per_page=per_page)
+    transactions_pagination = all_query.paginate(page=page, per_page=per_page)
+    total_transaksi = all_query.count()
 
     return render_template(
         'penjual_history.html',
         transactions=transactions_pagination.items,
         pagination=transactions_pagination,
         filter_start_date=start_dt.strftime('%Y-%m-%d'),
-        filter_end_date=end_dt.strftime('%Y-%m-%d')
+        filter_end_date=end_dt.strftime('%Y-%m-%d'),
+        total_transaksi=total_transaksi
     )
 
+
+@app.route('/penjual/profile')
+@login_required
+def penjual_profile():
+    if current_user.role != 'penjual':
+        flash('Akses tidak diizinkan.', 'danger')
+        return redirect(url_for('penjual_dashboard'))
+    return render_template('penjual_profile.html')
+
 # --- Route Logout ---
+
+
 @app.route('/logout')
-@login_required # Decorator: hanya user yang sudah login bisa akses route ini
+@login_required  # Decorator: hanya user yang sudah login bisa akses route ini
 def logout():
-    logout_user() # Fungsi dari Flask-Login untuk menghapus sesi user
+    logout_user()  # Fungsi dari Flask-Login untuk menghapus sesi user
     flash('Anda telah berhasil logout.', 'info')
-    return redirect(url_for('index')) # Kembali ke halaman utama
+    return redirect(url_for('index'))  # Kembali ke halaman utama
+
 
 # --- Route Dashboard ---
 # Pastikan SEMUA import ini ada di bagian atas app.py
-from flask import request, render_template, redirect, url_for, flash
-from flask_login import login_required, current_user
-from sqlalchemy import or_, func, and_ # Pastikan 'and_' juga diimport
-from datetime import date, datetime, time, timedelta
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
     # Fallback sederhana jika zoneinfo tidak ada
     from datetime import timezone, timedelta as ZoneInfo
     print("Warning: zoneinfo module not found, using simple timedelta fallback for WIB.")
-    wib = None # Tandai bahwa zoneinfo tidak tersedia
+    wib = None  # Tandai bahwa zoneinfo tidak tersedia
 else:
     try:
         wib = ZoneInfo("Asia/Jakarta")
@@ -463,80 +580,78 @@ else:
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Dapatkan waktu WIB saat ini
-    now_wib = datetime.now(wib_tz)
+    if current_user.role != 'siswa':
+        return redirect(url_for('admin_dashboard_content'))
+    
+    # Get recent transactions
+    recent_transactions = (Transaction.query
+        .filter(or_(
+            Transaction.user_id == current_user.id,
+            Transaction.related_user_id == current_user.id
+        ))
+        .order_by(Transaction.timestamp.desc())
+        .limit(5)
+        .all())
 
-    # === LOGIKA UNTUK SISWA ===
-    if current_user.role == 'siswa':
-        todays_spending = 0.0
-        recent_transactions = []
-        unread_count = 0
-        recent_notifications = []
+    # Calculate today's spending
+    today = datetime.now().date()
+    todays_spending = (Transaction.query
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.type == 'payment',
+            func.date(Transaction.timestamp) == today
+        )
+        .with_entities(func.sum(Transaction.amount))
+        .scalar() or 0)
 
-        try:
-            # Kalkulasi Pengeluaran Harian
-            today_wib = now_wib.date()
-            today_wib_start_local = datetime.combine(today_wib, time.min).replace(tzinfo=wib_tz)
-            tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
-            today_start_utc_for_calc = today_wib_start_local.astimezone(utc_tz)
-            tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(utc_tz)
+    # Get notifications
+    recent_notifications = (Notification.query
+        .filter(Notification.user_id == current_user.id)
+        .order_by(Notification.timestamp.desc())
+        .limit(5)
+        .all())
 
-            sum_result_spending = db.session.query(func.sum(Transaction.amount)).filter(
-                Transaction.user_id == current_user.id,
-                Transaction.type == 'payment',
-                Transaction.timestamp >= today_start_utc_for_calc,
-                Transaction.timestamp < tomorrow_start_utc_for_calc
-            ).scalar()
-            if sum_result_spending is not None:
-                todays_spending = float(sum_result_spending)
+    # Filter border notifications
+    filtered_notifications = []
+    for notif in recent_notifications:
+        # Jika bukan notifikasi border, tampilkan
+        if 'border' not in notif.message.lower():
+            filtered_notifications.append(notif)
+        # Jika notifikasi border, cek jurusan
+        elif current_user.jurusan.lower() in notif.message.lower():
+            filtered_notifications.append(notif)
 
-            # Ambil 3 Transaksi Terbaru
-            recent_transactions = Transaction.query.options(
-                db.joinedload(Transaction.user),
-                db.joinedload(Transaction.related_user)
-            ).filter(
-                or_(
-                    Transaction.user_id == current_user.id,
-                    and_(Transaction.related_user_id == current_user.id, Transaction.type == 'topup')
-                )
-            ).order_by(Transaction.timestamp.desc()).limit(3).all()
+    # Count unread notifications
+    unread_count = (Notification.query
+        .filter(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False
+        )
+        .count())
 
-            # Ambil Data Notifikasi
-            try:
-                unread_count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-                recent_notifications = current_user.notifications.limit(2).all()
-            except Exception as notif_e:
-                print(f"Error fetching notifications for student {current_user.id}: {notif_e}")
+    return render_template('siswa/dashboard_siswa.html',
+                            recent_transactions=recent_transactions,
+                            todays_spending=todays_spending,
+                            unread_count=unread_count,
+                            recent_notifications=filtered_notifications,
+                            active_page='dashboard',)
 
-        except Exception as e:
-            print(f"Error processing student dashboard data for {current_user.username}: {e}")
-            flash("Gagal memuat data dashboard.", "warning")
-            todays_spending = 0.0
-            recent_transactions = []
-            unread_count = 0
-            recent_notifications = []
-
-        # Render template siswa
-        return render_template('/siswa/dashboard_siswa.html',
-                               todays_spending=todays_spending,
-                               recent_transactions=recent_transactions,
-                               unread_count=unread_count,
-                               recent_notifications=recent_notifications)
 
 @app.route('/admin/topup', methods=['GET', 'POST'])
-@login_required # Harus login
+@login_required  # Harus login
 def admin_topup():
     # 1. Otorisasi: Pastikan yang akses adalah admin
     if current_user.role != 'admin':
         flash("Akses ditolak. Fitur ini hanya untuk admin.", "danger")
-        return redirect(url_for('dashboard')) # Arahkan ke dashboard biasa
+        return redirect(url_for('dashboard'))  # Arahkan ke dashboard biasa
 
     if request.method == 'POST':
         user_id_to_topup = request.form.get('user_id')
         amount_str = request.form.get('amount')
 
         # 2. Validasi Input Server-side
-        student = User.query.get(user_id_to_topup) # Cari user berdasarkan ID dari form
+        # Cari user berdasarkan ID dari form
+        student = User.query.get(user_id_to_topup)
         amount = 0.0
         error_message = None
 
@@ -547,7 +662,7 @@ def admin_topup():
         else:
             try:
                 amount = float(amount_str)
-                if amount <= 0: # Atau bisa set minimum topup, misal amount < 100
+                if amount <= 0:  # Atau bisa set minimum topup, misal amount < 100
                     error_message = "Jumlah top up harus lebih dari 0."
             except ValueError:
                 error_message = "Jumlah top up harus berupa angka."
@@ -556,13 +671,14 @@ def admin_topup():
         if error_message:
             flash(error_message, "danger")
             # Kita perlu kirim lagi daftar siswa ke template saat render ulang form
-            students = User.query.filter_by(role='siswa').order_by(User.username).all()
+            students = User.query.filter_by(
+                role='siswa').order_by(User.username).all()
             return render_template('/admin/admin_topup.html', students=students)
 
         # 3. Proses Top Up (Jika Validasi Lolos)
         try:
             balance_before = student.balance
-            student.balance += amount # Tambahkan saldo siswa
+            student.balance += amount  # Tambahkan saldo siswa
             balance_after = student.balance
 
             # 4. Buat Catatan Transaksi
@@ -572,17 +688,19 @@ def admin_topup():
                 type='topup',
                 amount=amount,
                 # user_balance_before/after tetap merujuk ke saldo siswa
-                user_balance_before=balance_before, # Saldo siswa sebelum
+                user_balance_before=balance_before,  # Saldo siswa sebelum
                 user_balance_after=balance_after,   # Saldo siswa sesudah
-                description=f"Top up saldo untuk {student.username} oleh Admin" # Deskripsi lebih baik
+                # Deskripsi lebih baik
+                description=f"Top up saldo untuk {student.username} oleh Admin"
             )
             db.session.add(new_transaction)
             db.session.commit()
 
-            flash(f"Top up untuk {student.username} sebesar {format_rupiah(amount)} berhasil. Saldo baru: {format_rupiah(student.balance)}", "success")
+            flash(
+                f"Top up untuk {student.username} sebesar {format_rupiah(amount)} berhasil. Saldo baru: {format_rupiah(student.balance)}", "success")
 
         except Exception as e:
-            db.session.rollback() # Batalkan jika ada error saat commit
+            db.session.rollback()  # Batalkan jika ada error saat commit
             flash(f"Terjadi kesalahan saat proses top up: {str(e)}", "danger")
 
         # Arahkan kembali ke halaman top up setelah proses selesai (baik sukses/gagal)
@@ -596,6 +714,7 @@ def admin_topup():
 
 # --- Route untuk Admin Dashboard (Opsional tapi bagus) ---
 
+
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard_content():
@@ -607,12 +726,16 @@ def admin_dashboard_content():
     total_admins = User.query.filter_by(role='admin').count()
     total_vendors = User.query.filter_by(role='penjual').count()
     total_students = User.query.filter_by(role='siswa').count()
-    active_vendors = User.query.filter_by(role='penjual', is_active=True).count()
-    active_students = User.query.filter_by(role='siswa', is_active=True).count()
+    active_vendors = User.query.filter_by(
+        role='penjual', is_active=True).count()
+    active_students = User.query.filter_by(
+        role='siswa', is_active=True).count()
 
     # Statistik saldo
-    total_student_balance = db.session.query(db.func.coalesce(db.func.sum(User.balance), 0)).filter_by(role='siswa', is_active=True).scalar()
-    total_vendor_balance = db.session.query(db.func.coalesce(db.func.sum(User.balance), 0)).filter_by(role='penjual', is_active=True).scalar()
+    total_student_balance = db.session.query(db.func.coalesce(db.func.sum(
+        User.balance), 0)).filter_by(role='siswa', is_active=True).scalar()
+    total_vendor_balance = db.session.query(db.func.coalesce(db.func.sum(
+        User.balance), 0)).filter_by(role='penjual', is_active=True).scalar()
 
     # Statistik aktivitas hari ini
     today = datetime.utcnow().date()
@@ -649,9 +772,12 @@ def admin_dashboard_content():
         start = datetime.combine(d, datetime.min.time())
         end = datetime.combine(d, datetime.max.time())
         chart_labels.append(d.strftime('%d %b'))
-        chart_topup.append(Transaction.query.filter(Transaction.type == 'topup', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
-        chart_payment.append(Transaction.query.filter(Transaction.type == 'payment', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
-        chart_cashout.append(Transaction.query.filter(Transaction.type == 'cashout_vendor', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_topup.append(Transaction.query.filter(Transaction.type == 'topup',
+                           Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_payment.append(Transaction.query.filter(Transaction.type == 'payment',
+                             Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_cashout.append(Transaction.query.filter(Transaction.type == 'cashout_vendor',
+                             Transaction.timestamp >= start, Transaction.timestamp <= end).count())
 
     return render_template(
         '/admin/dashboard_admin_content.html',
@@ -663,8 +789,10 @@ def admin_dashboard_content():
         now=datetime.utcnow(),
         active_page='admin_dashboard_content'
     )
+
+
 @app.route('/pay', methods=['POST'])
-@login_required # Harus login untuk bayar
+@login_required  # Harus login untuk bayar
 def pay():
     # 1. Otorisasi: Pastikan yang bayar adalah siswa
     if current_user.role != 'siswa':
@@ -676,9 +804,9 @@ def pay():
     amount_str = request.form.get('amount')
 
     # 3. Validasi Input
-    vendor = User.query.get(vendor_id) # Cari penjual berdasarkan ID
+    vendor = User.query.get(vendor_id)  # Cari penjual berdasarkan ID
     amount = 0.0
-    error_message = None # Variabel untuk menampung pesan error
+    error_message = None  # Variabel untuk menampung pesan error
 
     if not vendor or vendor.role != 'penjual':
         error_message = "Penjual yang dipilih tidak valid."
@@ -687,7 +815,7 @@ def pay():
     else:
         try:
             amount = float(amount_str)
-            if amount <= 0: # Harus positif
+            if amount <= 0:  # Harus positif
                 error_message = "Jumlah pembayaran harus lebih dari 0."
         except ValueError:
             error_message = "Jumlah pembayaran harus berupa angka."
@@ -707,7 +835,7 @@ def pay():
     try:
         # Catat saldo sebelum transfer
         student_balance_before = current_user.balance
-        vendor_balance_before = vendor.balance # Saldo penjual sebelum
+        vendor_balance_before = vendor.balance  # Saldo penjual sebelum
 
         # Lakukan transfer saldo
         current_user.balance -= amount
@@ -724,9 +852,10 @@ def pay():
             amount=amount,                   # Jumlah yang dibayar
             user_balance_before=student_balance_before,
             user_balance_after=student_balance_after,
-            description=f"Pembayaran ke penjual: {vendor.username}" # Deskripsi
+            # Deskripsi
+            description=f"Pembayaran ke penjual: {vendor.username}"
         )
-        db.session.add(payment_transaction) # Tambahkan transaksi ke sesi
+        db.session.add(payment_transaction)  # Tambahkan transaksi ke sesi
 
         # (Opsional) Buat juga record transaksi dari sisi Penjual jika perlu detail di history penjual
         # vendor_transaction = Transaction(...) # type='penerimaan' atau sejenisnya
@@ -736,14 +865,18 @@ def pay():
         # Ini penting dilakukan dalam satu blok try-commit agar atomik
         db.session.commit()
 
-        flash(f"Pembayaran sebesar Rp {'%.2f' % amount} kepada {vendor.username} BERHASIL!", "success")
+        flash(
+            f"Pembayaran sebesar Rp {'%.2f' % amount} kepada {vendor.username} BERHASIL!", "success")
 
     except Exception as e:
-        db.session.rollback() # Jika terjadi error saat commit, batalkan semua perubahan di sesi ini
-        flash(f"GAGAL melakukan pembayaran: Terjadi kesalahan sistem. ({str(e)})", "danger")
+        # Jika terjadi error saat commit, batalkan semua perubahan di sesi ini
+        db.session.rollback()
+        flash(
+            f"GAGAL melakukan pembayaran: Terjadi kesalahan sistem. ({str(e)})", "danger")
 
     # Redirect kembali ke dashboard setelah selesai (sukses atau gagal)
     return redirect(url_for('dashboard'))
+
 
 @app.route('/cashout', methods=['POST'])
 @login_required
@@ -781,12 +914,14 @@ def cash_out():
         db.session.add(cashout_transaction)
         db.session.commit()
 
-        flash(f"Penarikan tunai sebesar {format_rupiah(amount_to_cash_out)} berhasil diproses!", "success")
+        flash(
+            f"Penarikan tunai sebesar {format_rupiah(amount_to_cash_out)} berhasil diproses!", "success")
     except Exception as e:
         db.session.rollback()
         flash(f"Gagal melakukan penarikan tunai: {str(e)}", "danger")
 
     return redirect(url_for('penjual_dashboard'))
+
 
 @app.route('/my_qr_code.png')
 @login_required
@@ -812,9 +947,11 @@ def my_qr_code():
     img_io.seek(0)
     return send_file(img_io, mimetype='image/png')
 
+
 @app.context_processor
 def inject_now():
     return {'now': datetime.utcnow()}
+
 
 @app.route('/admin/users')
 @login_required
@@ -846,7 +983,8 @@ def admin_users():
         query = query.filter(User.username.ilike(f"%{filter_username}%"))
 
     # Pagination
-    users_pagination = query.order_by(User.id.asc()).paginate(page=page, per_page=per_page)
+    users_pagination = query.order_by(
+        User.id.asc()).paginate(page=page, per_page=per_page)
 
     return render_template(
         '/admin/admin_users.html',
@@ -855,6 +993,7 @@ def admin_users():
         filter_kelas=filter_kelas,
         filter_jurusan=filter_jurusan,
         filter_username=filter_username, active_page='admin_users')
+
 
 @app.route('/admin/transactions')
 @login_required
@@ -886,10 +1025,12 @@ def admin_transactions():
 
     # Filter berdasarkan username
     if username:
-        query = query.join(User, Transaction.user_id == User.id).filter(User.username.ilike(f"%{username}%"))
+        query = query.join(User, Transaction.user_id == User.id).filter(
+            User.username.ilike(f"%{username}%"))
 
     # Pagination
-    transactions_pagination = query.order_by(Transaction.timestamp.desc()).paginate(page=page, per_page=per_page)
+    transactions_pagination = query.order_by(
+        Transaction.timestamp.desc()).paginate(page=page, per_page=per_page)
 
     return render_template(
         '/admin/admin_transactions.html',
@@ -900,6 +1041,7 @@ def admin_transactions():
         selected_type_filter=filter_type,
         filter_username=username, active_page='admin_transactions')
 
+
 @app.route('/print/daily_summary')
 @login_required
 def print_daily_summary():
@@ -909,17 +1051,23 @@ def print_daily_summary():
         return redirect(url_for('dashboard'))
 
     # 2. Dapatkan Zona Waktu & Tanggal Hari Ini (WIB)
-    try: wib = ZoneInfo("Asia/Jakarta")
-    except Exception: wib = None
-    now_wib = datetime.now(wib) if wib else datetime.utcnow() + timedelta(hours=7)
+    try:
+        wib = ZoneInfo("Asia/Jakarta")
+    except Exception:
+        wib = None
+    now_wib = datetime.now(
+        wib) if wib else datetime.utcnow() + timedelta(hours=7)
     today_wib = now_wib.date()
 
     # 3. Tentukan Batas Waktu UTC untuk Query Hari Ini (WIB)
-    today_wib_start_local = datetime.combine(today_wib, time.min);
-    if wib: today_wib_start_local = today_wib_start_local.replace(tzinfo=wib)
+    today_wib_start_local = datetime.combine(today_wib, time.min)
+    if wib:
+        today_wib_start_local = today_wib_start_local.replace(tzinfo=wib)
     tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
-    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
-    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
+    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo(
+        "UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
+    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo(
+        "UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
 
     # 4. Hitung Total Pendapatan Hari Ini
     todays_earnings = 0.0
@@ -930,7 +1078,8 @@ def print_daily_summary():
             Transaction.timestamp >= today_start_utc_for_calc,
             Transaction.timestamp < tomorrow_start_utc_for_calc
         ).scalar()
-        if sum_result is not None: todays_earnings = float(sum_result)
+        if sum_result is not None:
+            todays_earnings = float(sum_result)
     except Exception as e:
         print(f"Error menghitung pendapatan harian untuk print: {e}")
         # Tetap lanjutkan meskipun gagal hitung total
@@ -939,16 +1088,17 @@ def print_daily_summary():
     daily_transactions = []
     try:
         daily_transactions = Transaction.query.options(
-            db.joinedload(Transaction.user) # Load data siswa pembayar
+            db.joinedload(Transaction.user)  # Load data siswa pembayar
         ).filter(
-            Transaction.related_user_id == current_user.id, # Penjual sebagai penerima
+            Transaction.related_user_id == current_user.id,  # Penjual sebagai penerima
             Transaction.type == 'payment',                  # Hanya pembayaran
             Transaction.timestamp >= today_start_utc_for_calc,
             Transaction.timestamp < tomorrow_start_utc_for_calc
-        ).order_by(Transaction.timestamp.asc()).all() # Urutkan dari pagi ke sore
+            # Urutkan dari pagi ke sore
+        ).order_by(Transaction.timestamp.asc()).all()
     except Exception as e:
-         print(f"Error mengambil transaksi harian untuk print: {e}")
-         flash("Gagal mengambil rincian transaksi untuk dicetak.", "warning")
+        print(f"Error mengambil transaksi harian untuk print: {e}")
+        flash("Gagal mengambil rincian transaksi untuk dicetak.", "warning")
 
     # 6. Siapkan data untuk dikirim ke template cetak
     report_data = {
@@ -962,7 +1112,85 @@ def print_daily_summary():
     }
 
     # 7. Render template khusus untuk cetak
-    return render_template('vendor_daily_print.html', **report_data)
+    return render_template('vendor_daily_print.html', **report_data, )
+
+
+@app.route('/print/daily_summary/pdf')
+@login_required
+def print_daily_summary_pdf():
+    # 1. Otorisasi: Pastikan yang akses adalah penjual
+    if current_user.role != 'penjual':
+        flash("Hanya penjual yang dapat mengakses fitur ini.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # 2. Dapatkan Zona Waktu & Tanggal Hari Ini (WIB)
+    try:
+        wib = ZoneInfo("Asia/Jakarta")
+    except Exception:
+        wib = None
+    now_wib = datetime.now(
+        wib) if wib else datetime.utcnow() + timedelta(hours=7)
+    today_wib = now_wib.date()
+
+    # 3. Tentukan Batas Waktu UTC untuk Query Hari Ini (WIB)
+    today_wib_start_local = datetime.combine(today_wib, time.min)
+    if wib:
+        today_wib_start_local = today_wib_start_local.replace(tzinfo=wib)
+    tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
+    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo(
+        "UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
+    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo(
+        "UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
+
+    # 4. Hitung Total Pendapatan Hari Ini
+    todays_earnings = 0.0
+    try:
+        sum_result = db.session.query(func.sum(Transaction.amount)).filter(
+            Transaction.related_user_id == current_user.id,
+            Transaction.type == 'payment',
+            Transaction.timestamp >= today_start_utc_for_calc,
+            Transaction.timestamp < tomorrow_start_utc_for_calc
+        ).scalar()
+        if sum_result is not None:
+            todays_earnings = float(sum_result)
+    except Exception as e:
+        print(f"Error menghitung pendapatan harian untuk print: {e}")
+        # Tetap lanjutkan meskipun gagal hitung total
+
+    # 5. Ambil Daftar Transaksi Pembayaran Diterima Hari Ini
+    daily_transactions = []
+    try:
+        daily_transactions = Transaction.query.options(
+            db.joinedload(Transaction.user)  # Load data siswa pembayar
+        ).filter(
+            Transaction.related_user_id == current_user.id,  # Penjual sebagai penerima
+            Transaction.type == 'payment',                  # Hanya pembayaran
+            Transaction.timestamp >= today_start_utc_for_calc,
+            Transaction.timestamp < tomorrow_start_utc_for_calc
+            # Urutkan dari pagi ke sore
+        ).order_by(Transaction.timestamp.asc()).all()
+    except Exception as e:
+        print(f"Error mengambil transaksi harian untuk print: {e}")
+        flash("Gagal mengambil rincian transaksi untuk dicetak.", "warning")
+
+    # 6. Siapkan data untuk dikirim ke template cetak
+    report_data = {
+        "vendor_name": current_user.username,
+        "report_date_str": today_wib.strftime('%A, %d %B %Y'),
+        "total_earnings": todays_earnings,
+        "transactions": daily_transactions,
+        "print_time_wib": format_wib(datetime.utcnow())
+    }
+
+    # 7. Render template khusus untuk cetak
+    html = render_template('vendor_daily_print.html', **report_data)
+    # Generate PDF dari HTML
+    pdf = HTML(string=html, base_url=request.base_url).write_pdf()
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename=laporan_harian.pdf'
+    return response
+
 
 @app.route('/admin/users/toggle_active/<int:user_id>', methods=['POST'])
 @login_required
@@ -990,7 +1218,8 @@ def toggle_user_active(user_id):
         status_text = "diaktifkan" if user_to_toggle.is_active else "dinonaktifkan"
         # Simpan perubahan ke database
         db.session.commit()
-        flash(f"Akun '{user_to_toggle.username}' berhasil {status_text}.", "success")
+        flash(
+            f"Akun '{user_to_toggle.username}' berhasil {status_text}.", "success")
     except Exception as e:
         # Jika gagal simpan, batalkan perubahan
         db.session.rollback()
@@ -998,6 +1227,7 @@ def toggle_user_active(user_id):
 
     # 5. Redirect kembali ke halaman daftar pengguna
     return redirect(url_for('admin_users'))
+
 
 @app.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -1018,8 +1248,10 @@ def admin_edit_user(user_id):
     # Jika method POST (artinya form disubmit)
     if request.method == 'POST':
         # Ambil data baru dari form
-        new_username = request.form.get('username').strip() # .strip() hapus spasi awal/akhir
-        new_role = request.form.get('role') # Ambil role (akan None jika field disabled)
+        # .strip() hapus spasi awal/akhir
+        new_username = request.form.get('username').strip()
+        # Ambil role (akan None jika field disabled)
+        new_role = request.form.get('role')
         new_kelas = request.form.get('kelas')
         new_jurusan = request.form.get('jurusan')
 
@@ -1037,7 +1269,7 @@ def admin_edit_user(user_id):
                 error = True
         else:
             # Jika targetnya admin, pastikan rolenya tidak berubah
-            new_role = 'admin' # Tetapkan kembali sebagai admin
+            new_role = 'admin'  # Tetapkan kembali sebagai admin
 
         # Validasi Kelas/Jurusan jika rolenya siswa
         kelas_final = None
@@ -1057,7 +1289,8 @@ def admin_edit_user(user_id):
 
         # Cek keunikan username JIKA username diubah
         if new_username != user_to_edit.username:
-            existing_user = User.query.filter(User.username == new_username, User.id != user_id).first()
+            existing_user = User.query.filter(
+                User.username == new_username, User.id != user_id).first()
             if existing_user:
                 flash(f"Username '{new_username}' sudah digunakan.", "danger")
                 error = True
@@ -1067,11 +1300,13 @@ def admin_edit_user(user_id):
             try:
                 user_to_edit.username = new_username
                 user_to_edit.role = new_role
-                user_to_edit.kelas = kelas_final # Akan None jika bukan siswa
-                user_to_edit.jurusan = jurusan_final # Akan None jika bukan siswa
+                user_to_edit.kelas = kelas_final  # Akan None jika bukan siswa
+                user_to_edit.jurusan = jurusan_final  # Akan None jika bukan siswa
                 db.session.commit()
-                flash(f"Data pengguna '{new_username}' berhasil diperbarui.", "success")
-                return redirect(url_for('admin_users')) # Kembali ke daftar pengguna
+                flash(
+                    f"Data pengguna '{new_username}' berhasil diperbarui.", "success")
+                # Kembali ke daftar pengguna
+                return redirect(url_for('admin_users'))
             except Exception as e:
                 db.session.rollback()
                 flash(f"Gagal memperbarui data: {str(e)}", "danger")
@@ -1080,7 +1315,8 @@ def admin_edit_user(user_id):
 
     # Method GET (atau jika POST gagal validasi): Tampilkan form edit
     # Kirim data user yg diedit ke template agar form bisa terisi
-    return render_template('admin_edit_users.html', user_to_edit=user_to_edit)
+    return render_template('admin/admin_edit_users.html', user_to_edit=user_to_edit)
+
 
 @app.route('/history')
 @login_required
@@ -1098,19 +1334,22 @@ def history():
 
     return render_template('history.html', transactions=transactions)
 
+
 @app.route('/pay_vendor', methods=['GET', 'POST'])
 @login_required
 def pay_vendor():
     if current_user.role != 'siswa':
-        logger.warning(f"Unauthorized access to /pay_vendor by user {current_user.username}, role: {current_user.role}")
+        logger.warning(
+            f"Unauthorized access to /pay_vendor by user {current_user.username}, role: {current_user.role}")
         flash("Hanya siswa yang dapat mengakses halaman pembayaran.", "danger")
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
         vendor_id = request.form.get('vendor_id')
         amount_str = request.form.get('amount')
-        logger.debug(f"Processing payment: vendor_id={vendor_id}, amount={amount_str}")
-        
+        logger.debug(
+            f"Processing payment: vendor_id={vendor_id}, amount={amount_str}")
+
         vendor = User.query.get(vendor_id)
         amount = 0.0
         error_message = None
@@ -1130,7 +1369,6 @@ def pay_vendor():
 
         # --- Validasi Saldo ---
         if not error_message:
-            # Refresh data user untuk saldo terbaru sebelum cek
             db.session.refresh(current_user)
             if current_user.balance < amount:
                 error_message = f"Saldo Anda tidak mencukupi! Saldo saat ini: {format_rupiah(current_user.balance)}"
@@ -1139,8 +1377,9 @@ def pay_vendor():
         if error_message:
             logger.warning(f"Payment validation failed: {error_message}")
             flash(error_message, "danger")
-            vendors = User.query.filter_by(role='penjual', is_active=True).order_by(User.username).all()
-            return render_template('/siswa/pay_vendor.html', vendors=vendors)
+            vendors = User.query.filter_by(
+                role='penjual', is_active=True).order_by(User.username).all()
+            return render_template('/siswa/pay_vendor.html', vendors=vendors, active_page='pay_vendor')
 
         # --- Proses Transaksi & Notifikasi ---
         try:
@@ -1167,88 +1406,187 @@ def pay_vendor():
 
             # 2. Add Notifikasi Pembayaran ke session
             notif_message = f"Pembayaran sebesar {format_rupiah(amount)} ke {vendor.username} berhasil."
-            new_notif = Notification(user_id=current_user.id, message=notif_message)
+            new_notif = Notification(
+                user_id=current_user.id, message=notif_message)
             db.session.add(new_notif)
 
-            # 3. Commit SEMUA perubahan sekaligus
-            db.session.commit()
-            logger.info(f"Payment successful: user={current_user.username}, vendor={vendor.username}, amount={amount}")
+            # 3. Check and unlock new borders (termasuk border jurusan)
+            check_and_unlock_borders(current_user.id)
 
-            # Flash pesan sukses
-            flash(f"Pembayaran sebesar {format_rupiah(amount)} kepada {vendor.username} BERHASIL!", "success")
+            # 4. Commit SEMUA perubahan sekaligus
+            db.session.commit()
+            logger.info(
+                f"Payment successful: user={current_user.username}, vendor={vendor.username}, amount={amount}")
+
+            flash(
+                f"Pembayaran sebesar {format_rupiah(amount)} kepada {vendor.username} BERHASIL!", "success")
             return redirect(url_for('dashboard'))
 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error processing payment for user {current_user.username}: {e}")
+            logger.error(
+                f"Error processing payment for user {current_user.username}: {e}")
             flash("GAGAL melakukan pembayaran: Terjadi kesalahan sistem.", "danger")
             return redirect(url_for('pay_vendor'))
 
     # --- Method GET ---
-    else:
-        vendors = User.query.filter_by(role='penjual', is_active=True).order_by(User.username).all()
-        logger.debug(f"Rendering /siswa/pay_vendor.html with {len(vendors)} vendors")
-        return render_template('/siswa/pay_vendor.html', vendors=vendors)
-    
+    vendors = User.query.filter_by(
+        role='penjual', is_active=True).order_by(User.username).all()
+    logger.debug(
+        f"Rendering /siswa/pay_vendor.html with {len(vendors)} vendors")
+    return render_template('/siswa/pay_vendor.html', vendors=vendors, active_page='pay_vendor')
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    # Proses upload jika method POST
     if request.method == 'POST':
-        # Cek apakah ada file di request
         if 'profile_pic' not in request.files:
-            flash('Tidak ada bagian file.', 'warning')
-            return redirect(request.url) # Kembali ke profile page
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'No file uploaded'})
+            flash('Tidak ada file yang dipilih', 'danger')
+            return redirect(url_for('profile'))
+
         file = request.files['profile_pic']
-        # Jika user tidak pilih file, browser mungkin submit empty part
         if file.filename == '':
-            flash('Tidak ada file yang dipilih.', 'warning')
-            return redirect(request.url)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'message': 'No file selected'})
+            flash('Tidak ada file yang dipilih', 'danger')
+            return redirect(url_for('profile'))
 
-        # Jika file ada dan valid
-        if file and allowed_file(file.filename): # Pastikan fungsi allowed_file() ada
-            # Buat nama file aman dan unik
-            filename_secure = secure_filename(file.filename)
-            ext = filename_secure.rsplit('.', 1)[1].lower()
-            unique_filename = f"{current_user.id}_{uuid.uuid4().hex}.{ext}"
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename) # Pastikan UPLOAD_FOLDER dikonfig
-
+        if file and allowed_file(file.filename):
             try:
-                # Hapus file lama jika ada
+                # Hapus foto lama jika ada
                 if current_user.profile_pic_filename:
-                     old_file_path = os.path.join(app.config['UPLOAD_FOLDER'], current_user.profile_pic_filename)
-                     if os.path.exists(old_file_path):
-                         os.remove(old_file_path)
-                         print(f"Deleted old profile pic: {old_file_path}")
+                    old_pic = os.path.join(app.config['UPLOAD_FOLDER'], current_user.profile_pic_filename)
+                    if os.path.exists(old_pic):
+                        os.remove(old_pic)
 
-                # Simpan file baru
+                # Generate unique filename
+                timestamp = int(datetime.now().timestamp())
+                filename = secure_filename(f"{current_user.id}_{timestamp}.jpg")
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+                # Simpan file
                 file.save(file_path)
-                print(f"Saved new profile pic: {file_path}")
 
-                # Update nama file di database user
-                current_user.profile_pic_filename = unique_filename
+                # Update database
+                current_user.profile_pic_filename = filename
                 db.session.commit()
-                flash('Foto profil berhasil diperbarui!', 'success')
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': True,
+                        'message': 'Profile picture updated successfully'
+                    })
+
+                flash('Foto profil berhasil diperbarui', 'success')
+                return redirect(url_for('profile'))
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Error saving file or updating db: {e}")
-                flash('Terjadi kesalahan saat mengupload foto.', 'danger')
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': f'Error: {str(e)}'
+                    })
+                flash('Gagal mengupload foto profil', 'danger')
+                return redirect(url_for('profile'))
 
-            return redirect(url_for('profile')) # Redirect kembali ke halaman profil
         else:
-            flash('Tipe file tidak diizinkan (hanya .png, .jpg, .jpeg, .gif).', 'danger')
-            return redirect(request.url)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid file type'
+                })
+            flash('Tipe file tidak diizinkan', 'danger')
+            return redirect(url_for('profile'))
 
-    # Method GET: tampilkan halaman profil
-    # current_user otomatis tersedia via Flask-Login
-    # Pastikan template 'profile.html' sudah ada
-    return render_template('/siswa/profile.html')
+    # Ambil semua border yang tersedia
+    available_borders = Border.query.all()
 
-@app.route('/riwayat_siswa') # Nama route baru
+    # Hitung total transaksi user
+    total_transactions = Transaction.query.filter(
+        or_(
+            Transaction.user_id == current_user.id,
+            and_(
+                Transaction.related_user_id == current_user.id,
+                Transaction.type == 'payment'
+            )
+        )
+    ).count()
+
+    # Cek border yang sudah terbuka berdasarkan total transaksi dan jurusan
+    unlocked_border_ids = []
+    for border in available_borders:
+        # Border tanpa jurusan (umum) atau sesuai jurusan user
+        if (border.jurusan is None or border.jurusan == current_user.jurusan) and \
+           total_transactions >= border.required_transactions:
+            user_border = UserBorder.query.filter_by(
+                user_id=current_user.id,
+                border_id=border.id
+            ).first()
+            
+            if not user_border:
+                user_border = UserBorder(
+                    user_id=current_user.id,
+                    border_id=border.id,
+                    unlocked_at=datetime.utcnow()
+                )
+                db.session.add(user_border)
+                
+            unlocked_border_ids.append(border.id)
+    
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Terjadi kesalahan saat memperbarui status border: {str(e)}", "danger")
+
+
+    return render_template('siswa/profile.html',
+                         available_borders=available_borders,
+                         unlocked_border_ids=unlocked_border_ids,
+                         total_transactions=total_transactions,
+                         active_page='profile')
+
+# Tambahkan route baru
+
+
+@app.route('/change_border/<int:border_id>', methods=['POST'])
 @login_required
-def riwayat_siswa(): # Nama fungsi baru
+def change_border(border_id):
+    try:
+        border = Border.query.get_or_404(border_id)
+        
+        # Jika request untuk melepas border
+        if 'remove_border' in request.form:
+            # Gunakan text() untuk raw SQL
+            db.session.execute(
+                db.text("UPDATE user SET active_border_id = NULL WHERE id = :user_id"),
+                {"user_id": current_user.id}
+            )
+            current_user.active_border_id = None
+            current_user.active_border = None
+            flash("Border berhasil dilepas!", "success")
+        else:
+            # Set border baru
+            current_user.active_border_id = border_id
+            current_user.active_border = border
+            flash(f"Border berhasil diubah ke {border.name}!", "success")
+        
+        db.session.commit()
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Gagal mengubah border: {str(e)}", "danger")
+    
+    return redirect(url_for('profile'))
+
+
+@app.route('/riwayat_siswa')  # Nama route baru
+@login_required
+def riwayat_siswa():  # Nama fungsi baru
     # Pastikan hanya siswa
     if current_user.role != 'siswa':
         flash("Halaman ini hanya untuk siswa.", "danger")
@@ -1257,49 +1595,68 @@ def riwayat_siswa(): # Nama fungsi baru
     # --- Ambil & Proses Filter ---
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
-    selected_type_filter = request.args.get('filter_type', 'all') # Default 'all'
+    selected_type_filter = request.args.get(
+        'filter_type', 'all')  # Default 'all'
 
     # Zona Waktu & Tanggal Default (misal: 30 hari terakhir)
-    try: wib = ZoneInfo("Asia/Jakarta")
-    except Exception: wib = None
-    now_wib = datetime.now(wib) if wib and isinstance(wib, ZoneInfo) else datetime.utcnow() + timedelta(hours=7)
+    try:
+        wib = ZoneInfo("Asia/Jakarta")
+    except Exception:
+        wib = None
+    now_wib = datetime.now(wib) if wib and isinstance(
+        wib, ZoneInfo) else datetime.utcnow() + timedelta(hours=7)
     today_wib = now_wib.date()
-    default_start_dt = today_wib - timedelta(days=29) # Default 30 hari
+    default_start_dt = today_wib - timedelta(days=29)  # Default 30 hari
     default_end_dt = today_wib
 
     # Parsing tanggal input
-    try: start_dt = date.fromisoformat(start_date_str) if start_date_str else default_start_dt
-    except ValueError: start_dt = default_start_dt
-    try: end_dt = date.fromisoformat(end_date_str) if end_date_str else default_end_dt
-    except ValueError: end_dt = default_end_dt
-    if start_dt > end_dt: start_dt, end_dt = default_start_dt, default_end_dt # Reset jika tidak valid
+    try:
+        start_dt = date.fromisoformat(
+            start_date_str) if start_date_str else default_start_dt
+    except ValueError:
+        start_dt = default_start_dt
+    try:
+        end_dt = date.fromisoformat(
+            end_date_str) if end_date_str else default_end_dt
+    except ValueError:
+        end_dt = default_end_dt
+    if start_dt > end_dt:
+        start_dt, end_dt = default_start_dt, default_end_dt  # Reset jika tidak valid
 
     # Konversi ke batas UTC untuk query (Awal hari start -> Akhir hari end)
-    start_wib_day_local = datetime.combine(start_dt, time.min);
-    if wib and isinstance(wib, ZoneInfo): start_wib_day_local = start_wib_day_local.replace(tzinfo=wib)
+    start_wib_day_local = datetime.combine(start_dt, time.min)
+    if wib and isinstance(wib, ZoneInfo):
+        start_wib_day_local = start_wib_day_local.replace(tzinfo=wib)
     end_wib_day_local = datetime.combine(end_dt, time.max)
-    if wib and isinstance(wib, ZoneInfo): end_wib_day_local = end_wib_day_local.replace(tzinfo=wib)
-    start_utc_for_query = start_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else start_wib_day_local - timedelta(hours=7)
-    end_utc_for_query = end_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else end_wib_day_local - timedelta(hours=7)
+    if wib and isinstance(wib, ZoneInfo):
+        end_wib_day_local = end_wib_day_local.replace(tzinfo=wib)
+    start_utc_for_query = start_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(
+        wib, ZoneInfo) else start_wib_day_local - timedelta(hours=7)
+    end_utc_for_query = end_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(
+        wib, ZoneInfo) else end_wib_day_local - timedelta(hours=7)
 
     # --- Query Transaksi Siswa dengan Filter ---
     base_query = Transaction.query.options(
-        db.joinedload(Transaction.user), db.joinedload(Transaction.related_user)
+        db.joinedload(Transaction.user), db.joinedload(
+            Transaction.related_user)
     ).filter(
-        or_( # Transaksi yg dia lakukan ATAU topup yg dia terima
+        or_(  # Transaksi yg dia lakukan ATAU topup yg dia terima
             Transaction.user_id == current_user.id,
-            and_(Transaction.related_user_id == current_user.id, Transaction.type == 'topup')
+            and_(Transaction.related_user_id ==
+                 current_user.id, Transaction.type == 'topup')
         )
-    ).filter( # Filter tanggal
+    ).filter(  # Filter tanggal
         Transaction.timestamp >= start_utc_for_query,
         Transaction.timestamp <= end_utc_for_query
     )
 
     # Filter Tipe (jika bukan 'all')
     if selected_type_filter == 'payment':
-        base_query = base_query.filter(Transaction.user_id == current_user.id, Transaction.type == 'payment')
+        base_query = base_query.filter(
+            Transaction.user_id == current_user.id, Transaction.type == 'payment')
     elif selected_type_filter == 'topup':
-        base_query = base_query.filter(Transaction.related_user_id == current_user.id, Transaction.type == 'topup')
+        base_query = base_query.filter(
+            Transaction.related_user_id == current_user.id, Transaction.type == 'topup')
 
     # Ambil semua hasil, urutkan terbaru di atas
     # TODO: Implementasi Pagination jika data sangat banyak
@@ -1310,8 +1667,10 @@ def riwayat_siswa(): # Nama fungsi baru
                            transactions=transactions,
                            filter_start_date=start_dt.strftime('%Y-%m-%d'),
                            filter_end_date=end_dt.strftime('%Y-%m-%d'),
-                           selected_type_filter=selected_type_filter)
+                           selected_type_filter=selected_type_filter,
+                           active_page='riwayat_siswa')
 # === Akhir Route Profil ===
+
 
 @app.route('/request_topup', methods=['GET', 'POST'])
 @login_required
@@ -1322,11 +1681,14 @@ def request_topup():
         return redirect(url_for('dashboard'))
 
     # Cek apakah siswa ini sudah punya request yang statusnya 'pending'
-    pending_request = TopUpRequest.query.filter_by(student_id=current_user.id, status='pending').first()
+    pending_request = TopUpRequest.query.filter_by(
+        student_id=current_user.id, status='pending').first()
 
     # Proses form jika method POST
     if request.method == 'POST':
-        print(f"Received POST request to /request_topup from user {current_user.id}: {request.form}")  # Logging untuk debug
+        # Logging untuk debug
+        print(
+            f"Received POST request to /request_topup from user {current_user.id}: {request.form}")
 
         # Jika sudah ada pending, jangan izinkan buat request baru
         if pending_request:
@@ -1367,12 +1729,15 @@ def request_topup():
                 )
                 db.session.add(new_request)
                 db.session.commit()
-                print(f"Top-up request created: {amount} for user {current_user.id}")
-                flash(f'Request top up sebesar {format_rupiah(amount)} berhasil dibuat. Silakan lakukan pembayaran tunai sejumlah tersebut di Bank Mini.', 'success')
+                print(
+                    f"Top-up request created: {amount} for user {current_user.id}")
+                flash(
+                    f'Request top up sebesar {format_rupiah(amount)} berhasil dibuat. Silakan lakukan pembayaran tunai sejumlah tersebut di Bank Mini.', 'success')
                 return redirect(url_for('request_topup'))
             except Exception as e:
                 db.session.rollback()
-                print(f"Error creating top-up request for user {current_user.id}: {e}")
+                print(
+                    f"Error creating top-up request for user {current_user.id}: {e}")
                 flash('Gagal membuat request top up, silakan coba lagi.', 'danger')
                 return redirect(url_for('request_topup'))
 
@@ -1384,13 +1749,14 @@ def request_topup():
     else:
         # Ambil juga beberapa request terakhir (misal 5) untuk ditampilkan
         recent_requests = TopUpRequest.query.filter_by(student_id=current_user.id)\
-                                           .order_by(TopUpRequest.request_timestamp.desc())\
-                                           .limit(5).all()
+            .order_by(TopUpRequest.request_timestamp.desc())\
+            .limit(5).all()
 
         return render_template('/siswa/topup_siswa.html',
                                pending_request=pending_request,
                                recent_requests=recent_requests)
 # ==========================================
+
 
 @app.route('/admin/pending_topups')
 @login_required
@@ -1405,40 +1771,46 @@ def admin_pending_topups():
         # Sekaligus ambil data siswa terkait (joinedload untuk efisiensi)
         # Urutkan berdasarkan request paling lama (ascending)
         pending_requests = TopUpRequest.query.options(
-            db.joinedload(TopUpRequest.student) # Eager load data siswa
+            db.joinedload(TopUpRequest.student)  # Eager load data siswa
         ).filter_by(status='pending').order_by(TopUpRequest.request_timestamp.asc()).all()
     except Exception as e:
-         print(f"Error mengambil request topup pending: {e}")
-         flash("Gagal memuat daftar request top up.", "danger")
-         pending_requests = [] # List kosong jika error
+        print(f"Error mengambil request topup pending: {e}")
+        flash("Gagal memuat daftar request top up.", "danger")
+        pending_requests = []  # List kosong jika error
 
     # Render template baru, kirim data request pending
     return render_template('/admin/admin_pending_topups.html', requests=pending_requests, active_page='admin_pending_topups')
+
 
 @app.route('/admin/approve_topup/<int:request_id>', methods=['POST'])
 @login_required
 def admin_approve_topup(request_id):
     # 1. Otorisasi: Pastikan hanya admin
     if current_user.role != 'admin':
-        logger.warning(f"Unauthorized access to /admin/approve_topup/{request_id} by user {current_user.username}")
+        logger.warning(
+            f"Unauthorized access to /admin/approve_topup/{request_id} by user {current_user.username}")
         flash("Anda tidak memiliki izin.", "danger")
         return redirect(url_for('dashboard'))
 
     # 2. Cari request top up berdasarkan ID
     topup_request = TopUpRequest.query.get_or_404(request_id)
-    logger.debug(f"Processing top-up request ID {request_id}, status: {topup_request.status}")
+    logger.debug(
+        f"Processing top-up request ID {request_id}, status: {topup_request.status}")
 
     # 3. Validasi Status: Pastikan masih 'pending'
     if topup_request.status != 'pending':
-        logger.info(f"Top-up request ID {request_id} already processed, status: {topup_request.status}")
-        flash(f"Request top up ini sudah diproses sebelumnya (Status: {topup_request.status}).", "warning")
+        logger.info(
+            f"Top-up request ID {request_id} already processed, status: {topup_request.status}")
+        flash(
+            f"Request top up ini sudah diproses sebelumnya (Status: {topup_request.status}).", "warning")
         return redirect(url_for('admin_pending_topups'))
 
     # 4. Cari data siswa
     student = User.query.get(topup_request.student_id)
     if not student:
         logger.error(f"Student not found for top-up request ID {request_id}")
-        flash(f"Data siswa untuk request ID {request_id} tidak ditemukan.", "danger")
+        flash(
+            f"Data siswa untuk request ID {request_id} tidak ditemukan.", "danger")
         return redirect(url_for('admin_pending_topups'))
 
     # 5. Proses Inti: Update Saldo, Buat Transaksi, Update Request, Buat Notifikasi
@@ -1473,10 +1845,12 @@ def admin_approve_topup(request_id):
 
         # Commit semua perubahan
         db.session.commit()
-        logger.info(f"Top-up request ID {request_id} approved for student {student.username}, amount: {amount_to_add}")
+        logger.info(
+            f"Top-up request ID {request_id} approved for student {student.username}, amount: {amount_to_add}")
 
         # Beri pesan sukses
-        flash(f"Request Top Up untuk {student.username} sebesar {format_rupiah(amount_to_add)} berhasil disetujui.", "success")
+        flash(
+            f"Request Top Up untuk {student.username} sebesar {format_rupiah(amount_to_add)} berhasil disetujui.", "success")
 
     except Exception as e:
         db.session.rollback()
@@ -1487,6 +1861,7 @@ def admin_approve_topup(request_id):
 
 # === Akhir Fungsi Route Approve Top Up ===
 
+
 @app.route('/notifications/mark_read', methods=['POST'])
 @login_required
 def mark_notifications_read():
@@ -1496,7 +1871,8 @@ def mark_notifications_read():
 
     try:
         # Cari semua notifikasi milik user ini yang belum dibaca
-        unread_notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).all()
+        unread_notifications = Notification.query.filter_by(
+            user_id=current_user.id, is_read=False).all()
 
         # Jika ada yang belum dibaca, ubah statusnya
         if unread_notifications:
@@ -1504,19 +1880,23 @@ def mark_notifications_read():
                 notif.is_read = True
             # Commit perubahan ke database
             db.session.commit()
-            print(f"Marked {len(unread_notifications)} notifications as read for user {current_user.id}")
+            print(
+                f"Marked {len(unread_notifications)} notifications as read for user {current_user.id}")
         else:
-             print(f"No unread notifications to mark as read for user {current_user.id}")
+            print(
+                f"No unread notifications to mark as read for user {current_user.id}")
 
         # Kirim response sukses ke Javascript
         return jsonify(success=True)
 
     except Exception as e:
         db.session.rollback()
-        print(f"Error marking notifications as read for user {current_user.id}: {e}")
+        print(
+            f"Error marking notifications as read for user {current_user.id}: {e}")
         # Kirim response gagal ke Javascript
         return jsonify(success=False, message="Gagal update status notifikasi"), 500
 # =================================================
+
 
 @app.route('/detail_notif')
 @login_required
@@ -1529,20 +1909,9 @@ def detail_notif():
     # Ambil SEMUA notifikasi user ini (sudah diurut terbaru di atas oleh backref)
     all_notifications = current_user.notifications.all()
 
-    # Tandai SEMUA notifikasi sebagai sudah dibaca saat halaman ini dibuka
-    # (Alternatif selain mark on open panel)
-    # try:
-    #     unread = Notification.query.filter_by(user_id=current_user.id, is_read=False).all()
-    #     if unread:
-    #         for n in unread:
-    #             n.is_read = True
-    #         db.session.commit()
-    # except Exception as e:
-    #     db.session.rollback()
-    #     print(f"Error marking all as read on detail page: {e}")
-
-    return render_template('/siswa/detail_notif.html', notifications=all_notifications)
+    return render_template('/siswa/detail_notif.html', notifications=all_notifications, active_page='detail_notif')
     # === BARU: Model untuk Notifikasi Pengguna ===
+
 
 @app.route('/admin/register_user', methods=['GET', 'POST'])
 @login_required
@@ -1619,6 +1988,337 @@ def admin_register_user():
 
     # Method GET: tampilkan form
     return render_template('/admin/admin_register_user.html', active_page='admin_register_user')
+
+
+@app.route('/top_board')
+def top_board():
+    # Dapatkan waktu WIB saat ini
+    now_wib = datetime.now(wib_tz)
+    today_wib = now_wib.date()
+
+    # Tentukan batas waktu UTC untuk hari ini (WIB)
+    today_wib_start_local = datetime.combine(
+        today_wib, time.min).replace(tzinfo=wib_tz)
+    tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
+    today_start_utc = today_wib_start_local.astimezone(utc_tz)
+    tomorrow_start_utc = tomorrow_wib_start_local.astimezone(utc_tz)
+
+    try:
+        # Query untuk menghitung total pembayaran per siswa hari ini
+        top_spenders = db.session.query(
+            User.id,
+            User.username,
+            User.kelas,
+            User.jurusan,
+            func.sum(Transaction.amount).label('total_spent')
+        ).join(
+            Transaction, Transaction.user_id == User.id
+        ).filter(
+            User.role == 'siswa',
+            User.is_active == True,
+            Transaction.type == 'payment',
+            Transaction.timestamp >= today_start_utc,
+            Transaction.timestamp < tomorrow_start_utc
+        ).group_by(
+            User.id, User.username, User.kelas, User.jurusan
+        ).order_by(
+            func.sum(Transaction.amount).desc()
+        ).limit(10).all()  # Ambil top 10 siswa
+
+        # Format data untuk template
+        leaderboard = []
+        for rank, spender in enumerate(top_spenders, 1):
+            leaderboard.append({
+                'rank': rank,
+                'username': spender.username,
+                'kelas': spender.kelas or '-',
+                'jurusan': spender.jurusan or '-',
+                'total_spent': format_rupiah(spender.total_spent)
+            })
+
+    except Exception as e:
+        print(f"Error fetching top board data: {e}")
+        flash("Gagal memuat data Top Board.", "warning")
+        leaderboard = []
+
+    # Render template Top Board
+    return render_template(
+        'top_board.html',
+        leaderboard=leaderboard,
+        date_str=today_wib.strftime('%A, %d %B %Y'),
+        current_user_role=current_user.role if current_user.is_authenticated else None,
+        active_page='top_board'
+    )
+
+
+@app.route('/update_password', methods=['POST'])
+@login_required
+def update_password():
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    # Cek password saat ini menggunakan password_hash
+    if not check_password_hash(current_user.password_hash, current_password):
+        flash('Password saat ini salah!', 'danger')
+        return redirect(url_for('profile'))
+
+    # Cek konfirmasi password
+    if new_password != confirm_password:
+        flash('Password baru dan konfirmasi tidak cocok!', 'danger')
+        return redirect(url_for('profile'))
+
+    # Update password menggunakan method set_password
+    try:
+        current_user.set_password(new_password)  # Gunakan method set_password
+        db.session.commit()
+        flash('Password berhasil diupdate!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Gagal update password: {str(e)}', 'danger')
+
+    return redirect(url_for('profile'))
+
+
+@app.route('/admin/profile')
+@login_required
+def admin_profile():
+    if current_user.role != 'admin':
+        flash('Anda tidak memiliki akses ke halaman ini!', 'error')
+        return redirect(url_for('dashboard'))
+    return render_template('admin/admin_profile.html', active_page='admin_profile')
+
+
+@app.route('/admin/update-password', methods=['POST'])
+@login_required
+def admin_update_password():
+    if current_user.role != 'admin':
+        flash('Anda tidak memiliki akses ke halaman ini!', 'error')
+        return redirect(url_for('dashboard'))
+
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+
+    # Validasi password saat ini
+    if not check_password_hash(current_user.password_hash, current_password):
+        flash('Password saat ini salah!', 'error')
+        return redirect(url_for('admin_profile'))
+
+    # Validasi password baru
+    if new_password != confirm_password:
+        flash('Password baru dan konfirmasi tidak cocok!', 'error')
+        return redirect(url_for('admin_profile'))
+
+    try:
+        current_user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        flash('Password berhasil diupdate!', 'success')
+    except:
+        db.session.rollback()
+        flash('Gagal update password. Silakan coba lagi.', 'error')
+
+    return redirect(url_for('admin_profile'))
+
+# Tambahkan setelah definisi model
+
+
+def initialize_borders():
+    default_borders = [
+        {
+            'name': 'Basic',
+            'image_path': 'borders/basic.png',
+            'required_transactions': 0,
+            'description': 'Border dasar untuk semua pengguna'
+        },
+        {
+            'name': 'Bronze',
+            'image_path': 'borders/bronze.png',
+            'required_transactions': 10,
+            'description': 'Selesaikan 10 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Silver',
+            'image_path': 'borders/silver.png',
+            'required_transactions': 25,
+            'description': 'Selesaikan 25 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Gold',
+            'image_path': 'borders/gold.png',
+            'required_transactions': 50,
+            'description': 'Selesaikan 50 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Platinum',
+            'image_path': 'borders/platinum.png',
+            'required_transactions': 100,
+            'description': 'Selesaikan 100 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Diamond',
+            'image_path': 'borders/diamond.png',
+            'required_transactions': 200,
+            'description': 'Selesaikan 200 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Master',
+            'image_path': 'borders/master.png',
+            'required_transactions': 350,
+            'description': 'Selesaikan 350 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Grandmaster',
+            'image_path': 'borders/grandmaster.png',
+            'required_transactions': 500,
+            'description': 'Selesaikan 500 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Elite',
+            'image_path': 'borders/elite.png',
+            'required_transactions': 750,
+            'description': 'Selesaikan 750 transaksi untuk membuka border ini'
+        },
+        {
+            'name': 'Legend',
+            'image_path': 'borders/legend.png',
+            'required_transactions': 1000,
+            'description': 'Selesaikan 1000 transaksi untuk membuka border ini'
+        },
+        {   
+            'name': 'RPL Border',
+            'image_path': 'borders/rpl.png',
+            'required_transactions': 3,
+            'jurusan': 'RPL',
+            'description': 'Border khusus untuk siswa RPL, buka dengan 3 transaksi'
+        },
+        {   
+            'name': 'DKV 1 Border',
+            'image_path': 'borders/dkv1.png',
+            'required_transactions': 3,
+            'jurusan': 'DKV 1',
+            'description': 'Border khusus untuk siswa DKV 1, buka dengan 3 transaksi'
+        },
+        {   
+            'name': 'DKV 2 Border',
+            'image_path': 'borders/dkv2.png',
+            'required_transactions': 3,
+            'jurusan': 'DKV 2',
+            'description': 'Border khusus untuk siswa DKV 2, buka dengan 3 transaksi'
+        },
+        {   
+            'name': 'AK Border',
+            'image_path': 'borders/ak.png',
+            'required_transactions': 3,
+            'jurusan': 'AK',
+            'description': 'Border khusus untuk siswa AK, buka dengan 3 transaksi'
+        },
+        {   
+            'name': 'MP Border',
+            'image_path': 'borders/mp.png',
+            'required_transactions': 3,
+            'jurusan': 'MP',
+            'description': 'Border khusus untuk siswa MP, buka dengan 3 transaksi'
+        },
+        {   
+            'name': 'BR Border',
+            'image_path': 'borders/br.png',
+            'required_transactions': 3,
+            'jurusan': 'BR',
+            'description': 'Border khusus untuk siswa BR, buka dengan 3 transaksi'
+        }
+    ]
+
+    for border_data in default_borders:
+        if not Border.query.filter_by(name=border_data['name']).first():
+            new_border = Border(**border_data)
+            db.session.add(new_border)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        print(f"Error initializing borders: {e}")
+        db.session.rollback()
+
+# Tambahkan setelah initialize_borders()
+
+
+def check_and_unlock_borders(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return
+
+    # Hitung total transaksi pembayaran user
+    total_transactions = Transaction.query.filter(
+        Transaction.user_id == user_id,
+        Transaction.type == 'payment'
+    ).count()
+
+    borders = Border.query.all()
+    for border in borders:
+        # Border jurusan: hanya cek jika jurusan user sama
+        if border.jurusan and border.jurusan != user.jurusan:
+            continue
+
+        # Jika jumlah transaksi mencukupi dan border belum dimiliki
+        if (total_transactions >= border.required_transactions and
+                not UserBorder.query.filter_by(user_id=user_id, border_id=border.id).first()):
+            # Buat record UserBorder baru
+            new_user_border = UserBorder(
+                user_id=user_id,
+                border_id=border.id,
+                unlocked_at=datetime.utcnow()
+            )
+            db.session.add(new_user_border)
+
+            # Buat notifikasi untuk user
+            notification = Notification(
+                user_id=user_id,
+                message=f"Selamat! Anda telah membuka border baru: {border.name}!"
+            )
+            db.session.add(notification)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        print(f"Error unlocking borders: {e}")
+        db.session.rollback()
+
+
+
+def add_border_column():
+    with app.app_context():
+        try:
+            # Tambahkan kolom baru jika belum ada
+            insp = db.inspect(db.engine)
+            has_column = False
+            for column in insp.get_columns('border'):
+                if column['name'] == 'jurusan':
+                    has_column = True
+                    break
+                    
+            if not has_column:
+                # Tambah kolom jurusan ke tabel border
+                db.session.execute(db.text('ALTER TABLE border ADD COLUMN jurusan VARCHAR(50)'))
+                db.session.commit()
+                print("Successfully added jurusan column to border table")
+                
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error adding jurusan column: {e}")
+
+if __name__ == '__main__':
+    with app.app_context():
+        # Buat tabel jika belum ada (tidak menghapus yang sudah ada)
+        db.create_all()
+        
+        # Tambah kolom jurusan jika belum ada
+        add_border_column()
+        
+        # Update atau tambah border baru
+        initialize_borders()
+        
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
 
 # !!! PENTING: Hapus atau komentari route @app.route('/pay', methods=['POST']) yang lama

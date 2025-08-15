@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+
+{% block head %}
+<title>{% block title %}Siswa{% endblock %}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css ">
+<!-- Tambahkan setelah link Font Awesome -->
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+        background-color: white;
+        display: flex;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 100%;
+        width: 100%;
+    }
+    .dashboard-container {
+        width: 100%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+    }
+    .student-content {
+        margin-left: 260px;
+        padding: 0;
+        width: calc(100% - 260px);
+        height: 100vh;
+        overflow-y: auto;
+        position: fixed;
+        top: 0;
+    }
+    .student-sidebar {
+        width: 260px;
+        background-color: #ffffff;
+        height: 100dvh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        padding: 20px 15px;
+        box-shadow: 3px 0px 15px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        z-index: 100;
+    }
+    .student-sidebar .logo-area .dimascash-text {
+        font-size: 1.3em;
+        font-weight: bold;
+        color: black;
+        letter-spacing: 1px;
+        display: inline-block;
+    }
+    .student-sidebar .logo-area img {
+        max-height: 55px;
+    }
+    .student-sidebar nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .student-sidebar nav li a {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        margin-bottom: 5px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #555;
+        font-weight: 500;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .student-sidebar nav li a .nav-icon {
+        width: 30px;
+        height: 30px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #ede7f6;
+        color: #7c4dff;
+        border-radius: 8px;
+        margin-right: 15px;
+        font-size: 0.8em;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .student-sidebar nav li a .nav-text {
+        flex-grow: 1;
+    }
+    .student-sidebar nav li a:hover,
+    .student-sidebar nav li a.active {
+        background-color: #7c4dff;
+        color: #ffffff;
+    }
+    .student-sidebar nav li a:hover .nav-icon,
+    .student-sidebar nav li a.active .nav-icon {
+        background-color: #ffffff;
+        color: #7c4dff;
+    }
+    .student-sidebar .logout-link {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    .student-sidebar .logout-link a {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        text-decoration: none;
+        color: #dc3545;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .student-sidebar .logout-link a .nav-icon {
+        width: 30px;
+        height: 30px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f8d7da;
+        color: #dc3545;
+        border-radius: 8px;
+        margin-right: 15px;
+        font-size: 0.8em;
+    }
+    .student-sidebar .logout-link a:hover {
+        background-color: #dc3545;
+        color: #ffffff;
+    }
+    .student-sidebar .logout-link a:hover .nav-icon {
+        background-color: #ffffff;
+        color: #dc3545;
+    }
+    @media (max-width: 992px) {
+        .student-sidebar {
+            width: 70px;
+            padding: 20px 5px;
+        }
+        .student-sidebar .logo-area img {
+            max-height: 30px;
+        }
+        .student-sidebar .nav-text {
+            display: none;
+        }
+        .student-sidebar nav li a {
+            justify-content: center;
+            padding: 10px;
+        }
+        .student-sidebar nav li a .nav-icon {
+            margin-right: 0;
+        }
+        .student-sidebar .logout-link a .nav-text {
+            display: none;
+        }
+        .student-sidebar .logout-link a {
+            justify-content: center;
+            padding: 10px;
+        }
+        .student-sidebar .logout-link a .nav-icon {
+            margin-right: 0;
+        }
+        .student-sidebar .logo-area .dimascash-text {
+            display: none;
+        }
+        .student-content {
+            margin-left: 70px;
+            width: calc(100% - 70px);
+        }
+    }
+
+    .student-bottom-nav {
+        display: none;
+    }
+
+        @media (max-width: 768px) {
+        .student-sidebar {
+            display: none;
+        }
+    
+        .student-content {
+            width: 100%;
+            position: fixed;
+            margin: 0 !important;
+            padding: 0 0 90px 0 !important;
+            top: 0 !important;
+            height: 100vh;
+        }
+    
+        .student-bottom-nav {
+            position: fixed;
+            width: 100%;
+            max-width: 1000px;
+            height: 70px;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px 10px 0 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+    
+        .student-bottom-nav ul {
+            display: flex;
+            width: 350px;
+            padding: 0;
+            margin: 0;
+        }
+    
+        .student-bottom-nav ul li {
+            position: relative;
+            list-style: none;
+            width: 70px;
+            height: 70px;
+            z-index: 1;
+        }
+    
+        .student-bottom-nav ul li a {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            width: 100%;
+            text-align: center;
+            font-weight: 500;
+            color: #333;
+            text-decoration: none;
+        }
+    
+        .student-bottom-nav ul li a .icon {
+            position: relative;
+            display: block;
+            line-height: 75px;
+            font-size: 1.5em;
+            text-align: center;
+            color: #333;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+        }
+    
+        .student-bottom-nav ul li.active a .icon {
+            transform: translateY(-32px);
+            color: white;
+            font-weight: 600;
+        }
+    
+        .student-bottom-nav ul li a .nav-label {
+            position: absolute;
+            color: #7c4dff;
+            font-weight: 400;
+            font-size: 0.75em;
+            letter-spacing: 0.05em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, transform;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+    
+        .student-bottom-nav ul li.active a .nav-label {
+            opacity: 1;
+            transform: translateY(10px);
+        }
+    
+        .student-bottom-nav .indicator {
+            position: absolute;
+            top: -50%;
+            width: 70px;
+            height: 70px;
+            background: #7c4dff;
+            border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+    
+        .student-bottom-nav ul li:nth-child(1).active ~ .indicator {
+            transform: translateX(calc(70px * 0));
+        }
+    
+        .student-bottom-nav ul li:nth-child(2).active ~ .indicator {
+            transform: translateX(calc(70px * 1));
+        }
+    
+        .student-bottom-nav ul li:nth-child(3).active ~ .indicator {
+            transform: translateX(calc(70px * 2));
+        }
+    
+        .student-bottom-nav ul li:nth-child(4).active ~ .indicator {
+            transform: translateX(calc(70px * 3));
+        }
+    
+        .student-bottom-nav ul li:nth-child(5).active ~ .indicator {
+            transform: translateX(calc(70px * 4));
+        }
+    }
+
+</style>
+{% endblock head %}
+
+{% block body %}
+<aside class="student-sidebar">
+    <div title="beranda" class="logo-area" style="text-align: left; margin-bottom: 10px; padding-bottom: 20px; border-bottom: 1px solid #eee; margin: 0 auto;">
+        <a href="{{ url_for('dashboard') }}" style="display: flex; align-items: center; gap: 5px; text-decoration: none;">
+            <img src="{{ url_for('static', filename='images/hanya_logo.png') }}" alt="DimasCash Logo" style="max-height: 55px;">
+            <span class="dimascash-text">SmartPay</span>
+        </a>
+    </div>
+    <nav>
+        <ul>
+            <li>
+                <a title="Dashboard" href="{{ url_for('dashboard') }}" class="{% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon"><i class="fas fa-home"></i></span>
+                    <span class="nav-text">Beranda</span>
+                </a>
+            </li>
+            <li>
+                <a title="Scan QR" href="{{ url_for('pay_vendor') }}" class="{% if active_page == 'pay_vendor' %}active{% endif %}">
+                    <span class="nav-icon"><i class="fas fa-qrcode"></i></span>
+                    <span class="nav-text">Scan QR</span>
+                </a>
+            </li>
+            <li>
+                <a title="Riwayat" href="{{ url_for('riwayat_siswa') }}" class="{% if active_page == 'riwayat_siswa' %}active{% endif %}">
+                    <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                    <span class="nav-text">Riwayat</span>
+                </a>
+            </li>
+            <li>
+                <a title="Top Board" href="{{ url_for('top_board') }}" class="{% if active_page == 'top_board' %}active{% endif %}">
+                    <span class="nav-icon"><i class="fas fa-trophy"></i></span>
+                    <span class="nav-text">Top Board</span>
+                </a>
+            </li>
+            <li>
+                <a title="Profile" href="{{ url_for('profile') }}" class="{% if active_page == 'profile' %}active{% endif %}">
+                    <span class="nav-icon"><i class="fas fa-user"></i></span>
+                    <span class="nav-text">Profile</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="logout-link">
+        <a title="Logout" href="{{ url_for('logout') }}">
+            <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
+            <span class="nav-text">Logout</span>
+        </a>
+    </div>
+</aside>
+
+<div class="student-content">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Bottom Navbar Mobile -->
+<nav class="student-bottom-nav">
+    <ul>
+        <li class="list {% if active_page == 'dashboard' %}active{% endif %}">
+            <a href="{{ url_for('dashboard') }}">
+                <span class="icon">
+                    <ion-icon name="home-outline"></ion-icon>
+                </span>
+                <span class="nav-label">Beranda</span>
+            </a>
+        </li>
+        <li class="list {% if active_page == 'top_board' %}active{% endif %}">
+            <a href="{{ url_for('top_board') }}">
+                <span class="icon">
+                    <ion-icon name="trophy-outline"></ion-icon>
+                </span>
+                <span class="nav-label">Top Board</span>
+            </a>
+        </li>
+        <li class="list {% if active_page == 'pay_vendor' %}active{% endif %}">
+            <a href="{{ url_for('pay_vendor') }}">
+                <span class="icon">
+                    <ion-icon name="qr-code-outline"></ion-icon>
+                </span>
+                <span class="nav-label">Scan QR</span>
+            </a>
+        </li>
+        <li class="list {% if active_page == 'riwayat_siswa' %}active{% endif %}">
+            <a href="{{ url_for('riwayat_siswa') }}">
+                <span class="icon">
+                    <ion-icon name="receipt-outline"></ion-icon>
+                </span>
+                <span class="nav-label">Riwayat</span>
+            </a>
+        </li>
+        <li class="list {% if active_page == 'profile' %}active{% endif %}">
+            <a href="{{ url_for('profile') }}">
+                <span class="icon">
+                    <ion-icon name="person-outline"></ion-icon>
+                </span>
+                <span class="nav-label">Profil</span>
+            </a>
+        </li>
+        <div class="indicator"></div>
+    </ul>
+</nav>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const list = document.querySelectorAll('.student-bottom-nav .list');
+    const indicator = document.querySelector('.indicator');
+    
+    // Set initial position based on active menu
+    const activeIndex = Array.from(list).findIndex(item => item.classList.contains('active'));
+    if (activeIndex >= 0) {
+        localStorage.setItem('lastNavPosition', activeIndex);
+        indicator.style.transform = `translateX(calc(70px * ${activeIndex}))`;
+    }
+
+    // Add animation class to indicator
+    indicator.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    list.forEach((item, index) => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent immediate navigation
+            
+            const link = this.querySelector('a');
+            const href = link.getAttribute('href');
+            
+            // Get current position
+            const currentPos = localStorage.getItem('lastNavPosition') || 0;
+            
+            // Save new position
+            localStorage.setItem('lastNavPosition', index);
+            
+            // Animate indicator
+            indicator.style.transform = `translateX(calc(70px * ${index}))`;
+            
+            // Update active class
+            list.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            
+            // Wait for animation to complete before navigating
+            setTimeout(() => {
+                window.location.href = href;
+            }, 300); // Match the transition duration (0.3s = 300ms)
+        });
+    });
+});
+</script>
+{% endblock body %}

@@ -1,0 +1,206 @@
+{% extends 'base_siswa.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Board - Kantin Sekolah</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --main-color: #7c4dff;
+            --main-color-light: #9e7fff;
+            --main-color-dark: #5c27ff;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f7ff;
+        }
+        .top-board-header{
+            background: linear-gradient(135deg, #7c4dff 0%, #5e35b1 100%);
+            color: white;
+            padding: 30px 25px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 0 0 40px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .card {
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(124, 77, 255, 0.1), 0 4px 6px -2px rgba(124, 77, 255, 0.05);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .main-btn {
+            background-color: var(--main-color);
+            transition: all 0.3s ease;
+        }
+        
+        .main-btn:hover {
+            background-color: var(--main-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
+        }
+        
+        .title-gradient {
+            background: linear-gradient(90deg, #7c4dff, #5c27ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+        }
+        
+        .gold { color: #FFD700; text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+        .silver { color: #C0C0C0; text-shadow: 0 0 5px rgba(192, 192, 192, 0.5); }
+        .bronze { color: #CD7F32; text-shadow: 0 0 5px rgba(205, 127, 50, 0.5); }
+        
+        .table-row:nth-child(1) { background-color: rgba(124, 77, 255, 0.1); }
+        .table-row:nth-child(2) { background-color: rgba(124, 77, 255, 0.05); }
+        .table-row:nth-child(3) { background-color: rgba(124, 77, 255, 0.03); }
+        
+        .table-header {
+            background: linear-gradient(135deg, #7c4dff, #6a3aeb);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .flash-message {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="top-board-header">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="{{ url_for('index') }}" class="text-white text-xl font-bold flex items-center">
+                <i class="fas fa-trophy mr-2"></i>
+                <span>Top Board</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Konten Utama -->
+    <div class="container mx-0 my-auto p-4">
+        <div class="card bg-white p-6 mb-8">
+            <h1 class="text-4xl font-bold text-center mb-2 title-gradient">
+                <i class="fas fa-crown mr-2"></i>Top Board
+            </h1>
+            <h2 class="text-2xl font-semibold text-center mb-6 text-gray-600">Peringkat Pembelanja Harian</h2>
+            <p class="text-center text-gray-600 mb-6 flex justify-center items-center">
+                <i class="far fa-calendar-alt mr-2 text-purple-600"></i>
+                <span>Tanggal: {{ date_str }}</span>
+            </p>
+
+            {% if leaderboard %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead>
+                            <tr class="table-header text-white">
+                                <th class="py-4 px-6 text-left rounded-tl-lg">Peringkat</th>
+                                <th class="py-4 px-6 text-left">Nama</th>
+                                <th class="py-4 px-6 text-left">Kelas</th>
+                                <th class="py-4 px-6 text-left">Jurusan</th>
+                                <th class="py-4 px-6 text-left rounded-tr-lg">Total Belanja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in leaderboard %}
+                                <tr class="table-row border-b hover:bg-purple-50 transition-colors duration-150">
+                                    <td class="py-4 px-6 font-bold">
+                                        {% if entry.rank == 1 %}
+                                            <span class="gold flex items-center">
+                                                <span class="text-2xl mr-2">🥇</span> {{ entry.rank }}
+                                            </span>
+                                        {% elif entry.rank == 2 %}
+                                            <span class="silver flex items-center">
+                                                <span class="text-2xl mr-2">🥈</span> {{ entry.rank }}
+                                            </span>
+                                        {% elif entry.rank == 3 %}
+                                            <span class="bronze flex items-center">
+                                                <span class="text-2xl mr-2">🥉</span> {{ entry.rank }}
+                                            </span>
+                                        {% else %}
+                                            <span class="flex items-center pl-2">
+                                                <span class="text-purple-400 mr-2">#</span>{{ entry.rank }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-4 px-6 font-medium">{{ entry.username }}</td>
+                                    <td class="py-4 px-6">{{ entry.kelas }}</td>
+                                    <td class="py-4 px-6">{{ entry.jurusan }}</td>
+                                    <td class="py-4 px-6 font-semibold text-purple-700">{{ entry.total_spent }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-10 bg-purple-50 rounded-lg">
+                    <i class="fas fa-shopping-cart text-purple-300 text-5xl mb-4"></i>
+                    <p class="text-lg text-gray-600">Belum ada transaksi hari ini. Ayo belanja di kantin!</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tombol Kembali -->
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed top-4 right-4 z-50">
+                {% for category, message in messages %}
+                    <div class="flash-message bg-{{ 'green-500' if category == 'success' else 'red-500' if category == 'danger' else 'yellow-500' }} text-white p-4 rounded-lg shadow-lg mb-2 flex items-center">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'exclamation-triangle' }} mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <script>
+        // Auto-hide flash messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateX(100%)';
+                    message.style.transition = 'all 0.5s ease-in-out';
+                    setTimeout(function() {
+                        message.style.display = 'none';
+                    }, 500);
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>
+{% endblock %}

@@ -17,15 +17,14 @@
         background-color: #f7f7ff !important;
     }
 
-    .register-container {
-        display: flex;
-        background-color: white;
-        border-radius: 12px;
-        width: 100%;
-        min-height: calc(100vh - 60px); /* Adjust for padding in admin-content */
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        margin: 0;
-    }
+.register-container {
+    display: flex;
+    background-color: #f7f7ff;
+    width: 100%;
+    min-height: calc(100vh - 60px); /* Adjust for padding in admin-content */
+    justify-content: center;   /* Tengah horizontal */
+    align-items: center;       /* Tengah vertikal */
+}
 
     .register-section {
         padding: 40px;
@@ -252,7 +251,7 @@
     <div class="register-section">
         <div class="register-header">
             <h2 class="register-title">Registrasi</h2>
-            <p class="register-subtitle">Daftar untuk mendapatkan akses ke Kantin Digital</p>
+            <p class="register-subtitle">Daftarkan untuk mendapatkan akses ke Kantin Digital</p>
         </div>
         
         <!-- Flash Messages -->
@@ -343,23 +342,9 @@
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-primary">Daftar Sekarang</button>
+            <button type="submit" class="btn btn-primary">Buat Akun Sekarang</button>
         </form>
-        
-        <p class="login-prompt">
-            Sudah punya akun? <a href="{{ url_for('login') }}" class="login-link">Login di sini</a>
-        </p>
-    </div>
     
-    <!-- Welcome Section -->
-    <div class="welcome-section">
-        <h1 class="welcome-title">WELCOME</h1>
-        <h2 class="welcome-subtitle">KANTIN DIGITAL</h2>
-        <p class="welcome-text">Bergabunglah dengan platform kantin digital sekolah untuk mempermudah transaksi jual beli makanan di sekolah dengan praktis dan efisien.</p>
-        
-        <!-- Decorative Elements -->
-        <div class="decorative-circle circle-1"></div>
-        <div class="decorative-circle circle-2"></div>
     </div>
 </div>
 {% endblock %}

@@ -237,8 +237,49 @@
         transform: translateX(-5px);
     }
 
+    .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.add-topup-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-purple);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(124, 77, 255, 0.2);
+}
+
+.add-topup-btn:hover {
+    background: var(--dark-purple);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
+}
+
+.add-topup-btn i {
+    font-size: 0.9em;
+}
+
     /* Responsive Adjustments */
     @media (max-width: 768px) {
+            .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .add-topup-btn {
+        width: 100%;
+        justify-content: center;
+    }
         .pending-topup-container {
             padding: 15px;
         }
@@ -323,7 +364,12 @@
 
 {% block admin_content %}
 <div class="pending-topup-container">
-    <h2>Request Top Up Pending</h2>
+    <div class="page-header">
+        <h2>Request Top Up Pending</h2>
+        <a href="{{ url_for('admin_topup') }}" class="add-topup-btn">
+            <i class="fas fa-plus"></i> Top Up Manual
+        </a>
+    </div>
     <p>Daftar permintaan top up saldo dari siswa yang menunggu persetujuan Anda setelah pembayaran tunai diterima.</p>
     <hr />
 

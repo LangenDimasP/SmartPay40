@@ -6,7 +6,7 @@
     <title>{% block title %}Admin Panel{% endblock %} - DimasCash</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
    <meta name="theme-color" content="#7c4dff">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js" defer></script>
@@ -48,21 +48,21 @@
             z-index: 100;
         }
         .admin-sidebar .logo-area .dimascash-text {
-            font-size: 1.3em;
+            font-size: 1.2em;
             font-weight: bold;
             color: black;
             letter-spacing: 1px;
             display: inline-block;
         }
         .admin-sidebar .logo-area img {
-            max-height: 55px;
+            max-height: 30px;
         }
         .admin-sidebar .sidebar-section-title {
-            font-size: 1.3em;
+            font-size: 0.8em;
             color: #a0a0a0;
             text-transform: uppercase;
             margin: 10px 0 10px 10px;
-            font-weight: 600;
+            font-weight: 500;
         }
         .admin-sidebar nav ul {
             list-style: none;
@@ -202,7 +202,7 @@
         <div title="beranda" class="logo-area" style="text-align: left; margin-bottom: 10px; padding-bottom: 20px; border-bottom: 1px solid #eee; margin: 0 auto;">
             <a href="{{ url_for('admin_dashboard_content') }}" style="display: flex; align-items: center; gap: 5px; text-decoration: none;">
                 <img src="{{ url_for('static', filename='images/hanya_logo.png') }}" alt="DimasCash Logo" style="max-height: 55px;">
-                <span class="dimascash-text">Dimascash</span>
+                <span class="dimascash-text">SmartPay</span>
             </a>
         </div>
         <nav>
@@ -239,15 +239,15 @@
                 <li>
                     <a title="Topup Request" href="{{ url_for('admin_pending_topups') }}" class="{% if active_page == 'admin_pending_topups' %}active{% endif %}">
                         <span class="nav-icon"><i class="fas fa-inbox"></i></span>
-                        <span class="nav-text">Topup Request</span>
+                        <span class="nav-text">Topup</span>
                     </a>
                 </li>
-                <li>
-                    <a title="Topup" href="{{ url_for('admin_topup') }}" class="{% if active_page == 'admin_topup' %}active{% endif %}">
-                        <span class="nav-icon"><i class="fas fa-hand-holding-usd"></i></span>
-                        <span class="nav-text">Topup Manual</span>
-                    </a>
-                </li>
+                        <li>
+            <a title="Profile" href="{{ url_for('admin_profile') }}" class="{% if active_page == 'admin_profile' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-user-circle"></i></span>
+                <span class="nav-text">Profil Admin</span>
+            </a>
+        </li>
             </ul>
         </nav>
         <div class="logout-link">
