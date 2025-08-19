@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Riwayat Transaksi Penjual</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .gradient-bg {
@@ -49,7 +48,7 @@
                 <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                     <i class="fas fa-filter text-purple-600 mr-2"></i> Filter Transaksi
                 </h2>
-                <form method="GET" class="space-y-4 md:space-y-0 md:grid md:grid-cols-4 md:gap-4">
+               <form method="GET" class="space-y-4 md:space-y-0 md:grid md:grid-cols-5 md:gap-4">
                     <div>
                         <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai</label>
                         <div class="relative">
@@ -66,13 +65,22 @@
                             <i class="fas fa-calendar-alt absolute right-3 top-3 text-gray-400"></i>
                         </div>
                     </div>
+                        <div>
+        <label for="transaction_id" class="block text-sm font-medium text-gray-700 mb-1">ID Transaksi</label>
+        <div class="relative">
+            <input type="number" class="date-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                   id="transaction_id" name="transaction_id" value="{{ filter_transaction_id or '' }}" placeholder="Cari ID...">
+            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+        </div>
+    </div>
                     <div class="flex items-end">
-                        <button type="submit" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition duration-300 w-full flex items-center justify-center">
+                        <button type="submit" class="bg-[#7c4dff] text-white px-6 py-2 rounded-lg hover:opacity-90 transition duration-300 w-full flex items-center justify-center">
                             <i class="fas fa-search mr-2"></i> Terapkan Filter
                         </button>
                     </div>
                     <div class="flex items-end">
-                        <button type="reset" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition duration-300 w-full flex items-center justify-center">
+                        <button type="button" onclick="window.location='{{ url_for('history_vendor') }}'"
+                                class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition duration-300 w-full flex items-center justify-center">
                             <i class="fas fa-redo mr-2"></i> Reset
                         </button>
                     </div>
@@ -133,16 +141,26 @@
                                     <!-- Kolom Waktu -->
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">{{ trans.timestamp|wib }}</div>
-                                        <div class="text-xs text-gray-500">{{ trans.timestamp.strftime('%d-%m-%Y %H:%M') }}</div>
                                     </td>
-                                                                    <!-- Kolom Pembeli/Penarikan -->
-                                                                        <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                                            <div class="flex-shrink-0 h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative">
                                                 {% if trans.type == 'withdrawal' %}
                                                     <i class="fas fa-money-bill-transfer text-orange-600 text-xl"></i>
-                                                {% elif trans.user and trans.user.profile_pic_filename %}
-                                                    <img src="{{ url_for('static', filename='profile_pics/' ~ trans.user.profile_pic_filename) }}?v={{ trans.user.profile_pic_filename }}" alt="Foto Profil" class="h-10 w-10 object-cover">
+                                                {% elif trans.user %}
+                                                    <div class="relative w-10 h-10 flex items-center justify-center">
+                                                        {% if trans.user.profile_pic_filename %}
+                                                            <img src="{{ url_for('static', filename='profile_pics/' ~ trans.user.profile_pic_filename) }}?v={{ trans.user.profile_pic_filename }}"
+                                                                 alt="Foto Profil" class="absolute left-1/2 top-1/2 w-8 h-8 -translate-x-1/2 -translate-y-1/2 rounded-full object-cover bg-white z-10">
+                                                        {% else %}
+                                                            <i class="fas fa-user absolute left-1/2 top-1/2 text-purple-600 text-xl -translate-x-1/2 -translate-y-1/2 z-10"></i>
+                                                        {% endif %}
+                                                        {% if trans.user.active_border and trans.user.active_border.image_path %}
+                                                            <div class="absolute inset-0 rounded-full pointer-events-none z-20"
+                                                                 style="border: 4px solid transparent; border-image: url('{{ url_for('static', filename=trans.user.active_border.image_path) }}') 100 fill stretch; box-sizing: border-box;">
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
                                                 {% else %}
                                                     <i class="fas fa-user text-purple-600 text-xl"></i>
                                                 {% endif %}

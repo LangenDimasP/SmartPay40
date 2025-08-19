@@ -135,7 +135,7 @@
                     
                     <div class="flex justify-center">
                         <div class="p-4 bg-white rounded-lg border border-gray-200 pulse">
-                            <img id="qrImage" src="{{ qr_code_url }}" alt="Kode QR Penjual" class="w-48 h-48 mx-auto">
+                            <img id="qrImage" src="{{ url_for('my_qr_code_only') }}" alt="Kode QR Penjual" class="w-48 h-48 mx-auto">
                         </div>
                     </div>
                     
@@ -157,18 +157,33 @@
                     <div class="space-y-4">
                         <form method="POST" action="{{ url_for('cash_out') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="block w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md {% if balance <= 0 or not is_active %}opacity-50 cursor-not-allowed{% endif %}" {% if balance <= 0 or not is_active %}disabled{% endif %}>
-                                <div class="flex items-center">
-                                    <div class="p-2 bg-white bg-opacity-20 text-blue-600 rounded-full mr-4">
-                                        <i class="fa-solid fa-money-bill-transfer"></i>
+                            <div class="mb-4">
+                                <label for="amount_to_cash_out" class="block text-sm font-medium text-gray-700 mb-2">Nominal Penarikan (minimal Rp5.000)</label>
+                                <input type="number" min="5000" max="{{ balance|int }}" name="amount_to_cash_out" id="amount_to_cash_out"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                                    placeholder="Masukkan nominal (Rp)">
+                            </div>
+                            <div class="flex gap-3">
+                                <button type="submit"
+                                    class="flex-1 flex items-center justify-between px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md {% if balance < 5000 or not is_active %}opacity-50 cursor-not-allowed{% endif %}"
+                                    {% if balance < 5000 or not is_active %}disabled{% endif %}>
+                                    <div class="flex items-center">
+                                        <div class="p-2 bg-white bg-opacity-20 text-blue-600 rounded-full mr-4">
+                                            <i class="fa-solid fa-money-bill-transfer"></i>
+                                        </div>
+                                        <div class="text-left">
+                                            <p class="font-semibold">Tarik Saldo</p>
+                                            <p class="text-sm opacity-80">Transfer ke rekening Anda</p>
+                                        </div>
                                     </div>
-                                    <div class="text-left">
-                                        <p class="font-semibold">Tarik Semua Saldo</p>
-                                        <p class="text-sm opacity-80">Transfer ke rekening Anda</p>
-                                    </div>
-                                </div>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button type="button" id="withdrawAllBtn"
+                                    class="flex-1 flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-lg hover:from-green-600 hover:to-green-800 transition-all shadow-md {% if balance < 5000 or not is_active %}opacity-50 cursor-not-allowed{% endif %}"
+                                    {% if balance < 5000 or not is_active %}disabled{% endif %}>
+                                    <i class="fa-solid fa-coins mr-2"></i> Tarik Semua Saldo
+                                </button>
+                            </div>
                         </form>
                         
                         <a href="{{ url_for('print_daily_summary') }}" target="_blank" class="block w-full flex items-center justify-between px-6 py-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all no-underline">
@@ -341,14 +356,19 @@
     </script>
         <script>
     document.getElementById('downloadQrBtn').addEventListener('click', function() {
-        const img = document.getElementById('qrImage');
-        const url = img.src;
         const link = document.createElement('a');
-        link.href = url;
+        link.href = "{{ url_for('my_qr_code') }}";
         link.download = 'kode_qr_penjual.png';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    });
+    </script>
+        <script>
+    document.getElementById('withdrawAllBtn').addEventListener('click', function() {
+        const saldo = {{ balance|int }};
+        const input = document.getElementById('amount_to_cash_out');
+        input.value = saldo;
     });
     </script>
 {% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'base_siswa.html' %}
+{% block content %}
+<div class="max-w-md mx-auto mt-10 bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-bold mb-4 text-purple-700">Atur PIN Transfer</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if current_user.pin_transfer %}
+            <label class="block mb-2 font-medium text-gray-700">PIN Lama</label>
+            <input type="password" name="old_pin" maxlength="6" pattern="\d{6}" class="w-full p-3 border rounded-lg mb-2 text-lg text-center tracking-widest" placeholder="PIN Lama" required>
+            {% if get_flashed_messages(category_filter=['pin_lama_salah']) %}
+                <div class="text-red-600 text-sm mb-2">
+                    {% for msg in get_flashed_messages(category_filter=['pin_lama_salah']) %}
+                        {{ msg }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <label class="block mb-2 font-medium text-gray-700">PIN Baru (6 Digit Angka)</label>
+            <input type="password" name="pin" maxlength="6" pattern="\d{6}" required class="w-full p-3 border rounded-lg mb-4 text-lg text-center tracking-widest" placeholder="PIN Baru">
+        {% else %}
+            <label class="block mb-2 font-medium text-gray-700">Atur PIN (6 Digit Angka)</label>
+            <input type="password" name="pin" maxlength="6" pattern="\d{6}" required class="w-full p-3 border rounded-lg mb-4 text-lg text-center tracking-widest" placeholder="PIN Baru">
+        {% endif %}
+        <button type="submit" class="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 transition">Simpan PIN</button>
+    </form>
+    <p class="text-sm text-gray-500 mt-3">PIN ini digunakan saat melakukan transfer saldo.</p>
+</div>
+{% endblock %}

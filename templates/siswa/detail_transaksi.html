@@ -1,0 +1,117 @@
+{% extends 'base_siswa.html' %}
+{% block title %}Detail Transaksi{% endblock %}
+{% block content %}
+<div class="bg-gray-100 flex items-center justify-center min-h-screen p-4 font-sans">
+    <div class="w-full max-w-sm bg-white rounded-lg shadow-lg p-6 border-t-8 border-[#7c4dff]">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Detail Transaksi</h1>
+            <p class="text-gray-500 text-sm mt-1">E-Receipt</p>
+        </div>
+
+        <!-- Status Transaksi -->
+        <div class="flex flex-col items-center justify-center mb-6">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <p class="text-lg font-semibold text-gray-700">
+                {% if transaksi.type == 'payment' %}
+                    Pembayaran Berhasil
+                {% elif transaksi.type == 'topup' %}
+                    Top Up Berhasil
+                {% elif transaksi.type == 'transfer' %}
+                    Transfer Berhasil
+                {% else %}
+                    Transaksi Berhasil
+                {% endif %}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">{{ transaksi.timestamp|wib }}</p>
+        </div>
+
+        <!-- Garis Pemisah -->
+        <div class="border-t border-dashed border-gray-300 my-4"></div>
+
+        <!-- Rincian Jumlah -->
+        <div class="text-center mb-6">
+            <p class="text-sm text-gray-600">
+                {% if transaksi.type == 'payment' %}
+                    Total Pembayaran
+                {% elif transaksi.type == 'topup' %}
+                    Total Terima
+                {% elif transaksi.type == 'transfer' %}
+                    {% if transaksi.user_id == current_user.id %}
+                        Total Dikirim
+                    {% elif transaksi.related_user_id == current_user.id %}
+                        Total Diterima
+                    {% else %}
+                        Total Transfer
+                    {% endif %}
+                {% endif %}
+            </p>
+            <p class="text-4xl font-bold 
+                {% if transaksi.type == 'payment' or (transaksi.type == 'transfer' and transaksi.user_id == current_user.id) %} text-red-600 {% else %} text-green-600 {% endif %}">
+                {% if transaksi.type == 'payment' or (transaksi.type == 'transfer' and transaksi.user_id == current_user.id) %}
+                    -{{ transaksi.amount|rupiah }}
+                {% else %}
+                    +{{ transaksi.amount|rupiah }}
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Detail Informasi Transaksi -->
+        <div class="space-y-3 text-sm text-gray-700">
+            <div class="flex justify-between">
+                <span class="font-medium text-gray-500">
+                    {% if transaksi.type == 'payment' %}
+                        Dibayar Kepada
+                    {% elif transaksi.type == 'topup' %}
+                        Diterima Dari
+                    {% elif transaksi.type == 'transfer' %}
+                        {% if transaksi.user_id == current_user.id %}
+                            Dikirim Ke
+                        {% elif transaksi.related_user_id == current_user.id %}
+                            Diterima Dari
+                        {% else %}
+                            Pengguna Terkait
+                        {% endif %}
+                    {% endif %}
+                </span>
+                <span class="font-semibold">
+                    {% if transaksi.type == 'payment' %}
+                        {{ transaksi.related_user.username if transaksi.related_user else 'MERCHANT' }}
+                    {% elif transaksi.type == 'topup' %}
+                        Admin
+                    {% elif transaksi.type == 'transfer' %}
+                        {% if transaksi.user_id == current_user.id %}
+                            {{ transaksi.related_user.username if transaksi.related_user else 'USER' }}
+                        {% elif transaksi.related_user_id == current_user.id %}
+                            {{ transaksi.user.username if transaksi.user else 'USER' }}
+                        {% else %}
+                            {{ transaksi.related_user.username if transaksi.related_user else transaksi.user.username if transaksi.user else 'USER' }}
+                        {% endif %}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-medium text-gray-500">ID User</span>
+                <span class="font-mono">{{ user_id_masked }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="font-medium text-gray-500">ID Transaksi</span>
+                <span class="font-mono">{{ transaksi.id }}</span>
+            </div>
+        </div>
+
+        <!-- Garis Pemisah -->
+        <div class="border-t border-dashed border-gray-300 my-6"></div>
+
+        <!-- Tombol Kembali -->
+        <div class="text-center">
+            <a href="{{ url_for('riwayat_siswa') }}" class="text-sm text-[#7c4dff] font-medium hover:underline">
+                Kembali ke Riwayat
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,762 +1,221 @@
 {% extends 'base_siswa.html' %}
 {% block content %}
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
-        body { background-color: #fff; }
-        /* Bagian Header Profil */
-        .profile-header {
-            position: relative;
-            padding: 30px;
-            display: flex;
-            align-items: center;
-        }
-        /* Foto Profil dan Upload */
-        .profile-picture-container {
-            position: relative;
-            margin-right: 30px;
-        }
-        .profile-picture-wrapper {
-    position: relative;
-    width: 134px;
-    height: 134px;
-    border-radius: 50%;
-    margin: 0 auto;
-}
-
-.profile-picture-wrapper.active-border {
-    border-image-source: url('{{ url_for("static", filename=current_user.active_border.image_path) }}');
-    border-image-slice: 100 fill;  /* Ubah nilai slice */
-    border-image-width: 15px;  /* Sesuaikan dengan ukuran border */
-    border-image-outset: 10px; /* Tambah outset agar border keluar */
-    border-image-repeat: stretch;
-    position: relative;
-    z-index: 2;
-}
-
-.profile-picture,
-.profile-picture-default {
-    width: 134px; /* Kurangi ukuran foto */
-    height: 134px;
-    border-radius: 50%;
-    object-fit: cover;
-    position: relative;
-    z-index: 1;
-    background: #fff;
-}
-.profile-picture-wrapper.active-border::after {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    border-radius: 50%;
-    z-index: 2;
-    pointer-events: none;
-    border-image: inherit;
-    border-image-slice: inherit;
-    border-image-width: inherit;
-    border-image-outset: inherit;
-    border-image-repeat: inherit;
-}
-
-.profile-picture-default {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #e0e0e0;
-}
-        .profile-picture-default i {
-            font-size: 70px;
-            color: #999;
-        }
-        /* Tombol Upload dan Update */
-        .upload-btn-wrapper {
-            position: absolute;
-            bottom: 0;
-            right: -15%;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index:3;
-        }
-        .upload-btn-wrapper input[type=file] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-        .btn-upload {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background-color: #7c4dff;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .btn-upload i {
-            font-size: 18px;
-        }
-        /* Update Notification */
-        .update-notification {
-            position: absolute;
-            top: 20px;
-            left: 70px;
-            background-color: #000;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        .update-notification:after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 20px;
-            border-width: 10px 10px 0;
-            border-style: solid;
-            border-color: #000 transparent;
-        }
-        /* User Info Header */
-        .user-header-info {
-            flex-grow: 1;
-        }
-        .user-name {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #7c4dff;
-        }
-        .user-location {
-            color: #888;
-            font-size: 16px;
-        }
-        /* Edit Button */
-        .edit-button {
-            background-color: #00a8cc;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-        }
-        .edit-button i {
-            margin-right: 5px;
-        }
-        /* Progress Bar */
-        .progress-container {
-            padding: 0 30px 15px;
-        }
-        .progress-bar {
-            display: flex;
-            width: 100%;
-            height: 8px;
-            background-color: #e0e0e0;
-            margin-bottom: 15px;
-        }
-        .progress-segment {
-            height: 100%;
-        }
-        .segment-active {
-            background-color: #7c4dff;
-        }
-        .segment-inactive {
-            background-color: #e0e0e0;
-        }
-        /* Stats Section */
-        .stats-container {
-            display: flex;
-            padding: 0 30px 20px;
-        }
-        .stat-item {
-            margin-right: 40px;
-        }
-        .stat-label {
-            color: #aaa;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-        .stat-value {
-            font-size: 24px;
-            color: #7c4dff;
-            font-weight: bold;
-        }
-        /* Profile Details */
-        .profile-details {
-            padding: 20px 30px;
-            border-top: 1px solid #eee;
-        }
-        .detail-grid {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            row-gap: 20px;
-            column-gap: 30px;
-        }
-        .detail-label {
-            font-size: 14px;
-            color: #888;
-        }
-        .detail-value {
-            font-size: 16px;
-            color: #333;
-        }
-        /* Flash Messages */
-        .flash-messages {
-            padding: 10px 30px;
-        }
-        .flash-success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        .flash-danger {
-            background-color: #ffebee;
-            color: #c62828;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        .flash-warning {
-            background-color: #fff8e1;
-            color: #ff8f00;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        .password-form {
-            padding: 20px 30px;
-            border-top: 1px solid #eee;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            color: #888;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        .form-group input {
-            width: 100%;
-            max-width: 300px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .btn-update-password {
-            background-color: #7c4dff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn-update-password:hover {
-            background-color: #6a3dd9;
-        }
-        /* Footer Actions */
-        .profile-footer {
-            padding: 20px 30px;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-        }
-        .back-button {
-            display: flex;
-            align-items: center;
-            color: #7c4dff;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .back-button i {
-            margin-right: 8px;
-        }
-        .logout-button {
-            display: flex;
-            align-items: center;
-            color: #e53935;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .logout-button i {
-            margin-right: 8px;
-        }
-        .border-selector-btn {
-            background-color: #7c4dff;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            margin: 20px auto;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: fit-content;
-        }
-        .border-selector-btn i {
-            font-size: 18px;
-        }
-        .border-container {
-            display: none;
-            padding: 0 30px;
-            margin-bottom: 30px;
-        }
-        .border-container.active {
-            display: block;
-        }
-        .border-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 25px;
-    margin: 20px 0;
-}
-        .border-item {
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-        .border-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .border-image {
-    width: 120px;
-    height: 120px;
-    object-fit: contain;
-    margin-bottom: 15px;
-}
-        .border-name {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        .border-status {
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-        .border-progress {
-            background: #eee;
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-bottom: 5px;
-        }
-        .progress-bar {
-            height: 100%;
-            background: #7c4dff;
-            transition: width 0.3s;
-        }
-        .progress-text {
-            font-size: 11px;
-            color: #666;
-        }
-        .border-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .border-info h3 {
-            color: #7c4dff;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        .border-info ul {
-            list-style: none;
-            padding: 0;
-        }
-        .border-info li {
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .border-info li i {
-            color: #7c4dff;
-        }
-        .border-modal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.6);
-    align-items: center;
-    justify-content: center;
-    padding-left: 250px; /* Tambahkan padding untuk sidebar */
-}
-.border-modal-content {
-    background: #fff;
-    padding: 30px;
-    border-radius: 16px;
-    width: 80%;
-    max-height: 85vh;
-    overflow-y: auto;
-    position: relative;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    margin-left: -125px;
-}
-        .border-close {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            background: none;
-            border: none;
-            font-size: 22px;
-            color: #888;
-            cursor: pointer;
-        }
-        .border-modal-title {
-            color: #7c4dff;
-            font-size: 24px;
-            margin-bottom: 20px;
-            padding-right: 40px;
-        }
-        #cropper-modal {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0,0,0,0.6);
-            align-items: center;
-            justify-content: center;
-        }
-        #cropper-modal > div {
-            background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            max-width: 90vw;
-            max-height: 90vh;
-        }
-        #cropper-modal > div > div:first-child {
-            text-align: right;
-        }
-        #close-cropper {
-            background: none;
-            border: none;
-            font-size: 22px;
-            color: #888;
-            cursor: pointer;
-        }
-        #cropper-image {
-            max-width: 70vw;
-            max-height: 60vh;
-        }
-        #cropper-modal > div > div:last-child {
-            margin-top: 16px;
-            text-align: center;
-        }
-        #crop-btn {
-            background: #7c4dff;
-            color: #fff;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-            .btn-danger {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-    
-    .btn-danger:hover {
-        background-color: #c82333;
-    }
-        /* Tambahkan atau ubah di bagian style */
-    .btn-gunakan {
-        background-color: #7c4dff;
-        color: #fff;
-        border: none;
-        padding: 7px 18px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s, box-shadow 0.2s;
-        box-shadow: 0 2px 8px rgba(124,77,255,0.10);
-        margin-top: 5px;
-    }
-    .btn-gunakan:hover, .btn-gunakan:focus {
-        background-color: #5e35b1;
-        box-shadow: 0 4px 16px rgba(124,77,255,0.18);
-        outline: none;
-    }
-        @media (max-width: 1200px) {
-            .border-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-        @media (max-width: 768px) {
-            .profile-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .profile-picture-container {
-                margin-right: 0;
-                margin-bottom: 20px;
-                align-self: center;
-            }
-            .user-header-info {
-                margin-bottom: 20px;
-                text-align: center;
-                width: 100%;
-            }
-            .edit-button {
-                align-self: center;
-            }
-            .detail-grid {
-                grid-template-columns: 1fr;
-            }
-    .border-modal {
-        padding-left: 0; /* Hapus padding sidebar untuk mobile */
-    }
-    
-    .border-modal-content {
-        width: 95%;
-        margin: 20px auto; /* Center content and add margin */
-        max-height: 60vh;
-        padding: 15px;
-        margin-left: 0; /* Reset margin left */
-    }
-
-    .border-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
-        gap: 10px;
-    }
-
-    .border-item {
-        padding: 12px;
-    }
-
-    .border-image {
-        width: 80px;
-        height: 80px;
-    }
-
-    .border-name {
-        font-size: 14px;
-    }
-
-    .border-info {
-        padding: 12px;
-    }
-
-    .border-info h3 {
-        font-size: 16px;
-    }
-
-    .border-info li {
-        font-size: 13px;
-    }
-}
-
-        @media (max-width: 480px) {
-    .border-grid {
-        grid-template-columns: 1fr; /* Single column for very small devices */
-    }
-    
-    .border-modal-content {
-        width: 100%;
-        margin: 0;
-        border-radius: 0;
-        max-height: 100vh;
-    }
-
-    .border-image {
-        width: 100px;
-        height: 100px;
-    }
-}
-    </style>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-    <div class="profile-main-container">
-        <div class="profile-header">
-            <div class="profile-picture-container">
-                <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data" id="profile-pic-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div class="profile-picture-wrapper{% if current_user.active_border %} active-border{% endif %}">
-    {% if current_user.profile_pic_filename %}
-        <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic_filename) }}?v={{ range(1, 1000) | random }}"
-             alt="Foto Profil {{ current_user.username }}" class="profile-picture">
-    {% else %}
-        <div class="profile-picture-default">
-            <i class="fas fa-user"></i>
-        </div>
-    {% endif %}
-    <div class="upload-btn-wrapper">
-        <button type="button" class="btn-upload" onclick="document.getElementById('profile-pic-input').click();">
-            <i class="fas fa-camera"></i>
-        </button>
-        <input id="profile-pic-input" type="file" name="profile_pic" accept="image/*">
-    </div>
+    <div class="container mx-auto p-4 md:p-6 relative">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden relative">
+            <!-- Profile Header -->
+            <div class="p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6">
+                <!-- Profile Picture Section -->
+                <div class="relative flex flex-col items-center mb-6 md:mb-0 md:mr-8">
+                    <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data" id="profile-pic-form" class="relative">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="relative w-36 h-36 mx-auto">
+                            {% if current_user.active_border %}
+                            <div
+                                class="absolute inset-0 rounded-full pointer-events-none"
+                                style="
+                                    border: 15px solid transparent;
+                                    border-image: url('{{ url_for('static', filename=current_user.active_border.image_path) }}') 100 fill stretch;
+                                    box-sizing: border-box;
+                                    z-index: 20;
+                                ">
+                            </div>
+                            {% endif %}
+                            <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic_filename) }}?v={{ range(1, 1000) | random }}"
+                                 alt="Foto Profil {{ current_user.username }}"
+                                 class="absolute left-1/2 top-1/2 w-32 h-32 -translate-x-1/2 -translate-y-1/2 rounded-full object-cover m-0 p-0 block bg-white"
+                                 style="z-index:10;">
+                        </div>
+                        <div class="absolute bottom-0 right-0 z-30">
+                            <button type="button" class="bg-purple-600 text-white w-10 h-10 rounded-full flex justify-center items-center shadow-md hover:bg-purple-700 transition" onclick="document.getElementById('profile-pic-input').click();">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <input id="profile-pic-input" type="file" name="profile_pic" accept="image/*" class="hidden">
+                        </div>
+                    </form>
+                    <div class="flex gap-3 mt-4">
+                        <button class="bg-purple-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-purple-700 transition" onclick="toggleBorders()">
+                            <i class="fas fa-border-style"></i> Pilih Border
+                        </button>
+                        <a href="{{ url_for('buat_laporan') }}" class="bg-blue-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-blue-700 transition">
+                            <i class="fas fa-file-alt"></i> Buat Laporan
+                        </a>
+                        <a href="{{ url_for('atur_pin') }}" class="bg-amber-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-amber-700 transition">
+                            <i class="fas fa-key"></i> Atur PIN
+                        </a>
+                    </div>
+                </div>
+            
+                <!-- User Info -->
+                <div class="flex-grow flex flex-col items-center md:items-start justify-center">
+                    <h1 class="text-3xl font-bold text-purple-600 break-all">{{ current_user.username }}</h1>
+                    <p class="text-gray-500 mt-1 break-all">
+                        {{ current_user.kelas if current_user.kelas else '' }}
+                        {{ ' ' if current_user.kelas and current_user.jurusan else '' }}
+                        {{ current_user.jurusan if current_user.jurusan else '' }}
+                    </p>
+                    <div class="mt-4 flex flex-col items-center">
+    <div id="user-qrcode" class="bg-white p-2 rounded-lg shadow border border-gray-200"></div>
+    <button id="download-qrcode" class="mt-2 bg-purple-600 text-white py-1 px-3 rounded font-medium text-sm hover:bg-purple-700 transition flex items-center gap-2">
+        <i class="fas fa-download"></i> Unduh QR Code
+    </button>
+    <div class="text-xs text-gray-500 mt-2">QR Code ID: {{ current_user.id }}</div>
 </div>
-                </form>
-                <button class="border-selector-btn" onclick="toggleBorders()">
-                    <i class="fas fa-border-style"></i> Pilih Border
-                </button>
+                </div>
+
             </div>
 
-            <div id="borderModal" class="border-modal">
-                <div class="border-modal-content">
-                    <button class="border-close" onclick="toggleBorders()">×</button>
-                    <h2 class="border-modal-title">Pilih Border Profil</h2>
-                    <div class="border-info">
-                        <h3>Cara Mendapatkan Border</h3>
-                        <ul>
-                            <li><i class="fas fa-info-circle"></i> Selesaikan transaksi untuk membuka border baru</li>
-                            <li><i class="fas fa-star"></i> Semakin banyak transaksi, semakin keren bordernya</li>
-                            <li><i class="fas fa-lock-open"></i> Border terbuka secara otomatis saat mencapai target</li>
-                        </ul>
-                    </div>
-                        <div class="border-grid">
-                            {% for border in available_borders %}
-                                <div class="border-item">
-                                    <img src="{{ url_for('static', filename=border.image_path) }}"
-                                         class="border-image"
-                                         alt="{{ border.name }}">
-                                    <div class="border-name">{{ border.name }}</div>
-                                    {% if border.id in unlocked_border_ids or border.name == "Basic" %}
-    <div class="border-status" style="color: #4caf50">
-        <i class="fas fa-check-circle"></i> Terbuka
-    </div>
-    <form action="{{ url_for('change_border', border_id=border.id) }}" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% if current_user.active_border_id == border.id %}
-            <button type="submit" name="remove_border" value="1" class="btn btn-sm btn-danger">
-                Lepas Border
-            </button>
-        {% else %}
-            <button type="submit" class="btn btn-sm btn-gunakan">
-                <i class="fas fa-check"></i> Gunakan
-            </button>
-        {% endif %}
-    </form>
-{% else %}
-    <div class="border-status" style="color: #f44336">
-        <i class="fas fa-lock"></i> Terkunci
-    </div>
-                                        <div class="border-progress">
-                                            <div class="progress-bar" style="width: {{ (total_transactions / border.required_transactions * 100) if total_transactions < border.required_transactions else 100 }}%"></div>
-                                        </div>
-                                        <div class="progress-text">
-                                            {{ total_transactions }}/{{ border.required_transactions }} transaksi
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                        </div>
+            <!-- Flash Messages -->
+            <div class="px-6 md:px-8 pb-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% if category == 'success' %}
+                        <div class="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-3">{{ message }}</div>
+                        {% elif category == 'danger' %}
+                        <div class="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-3">{{ message }}</div>
+                        {% elif category == 'warning' %}
+                        <div class="bg-yellow-100 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg text-sm mb-3">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            </div>
+
+            <!-- Stats Section -->
+            <div class="px-6 md:px-8 pb-6">
+                <div>
+                    <div class="text-sm text-gray-400 uppercase tracking-wider">SALDO</div>
+                    <div class="text-3xl font-bold text-purple-600">{{ current_user.balance|rupiah }}</div>
                 </div>
             </div>
-            <!-- Info User -->
-            <div class="user-header-info">
-                <h1 class="user-name">{{ current_user.username }}</h1>
-                <p class="user-location">{{ current_user.kelas if current_user.kelas else '' }}{{ ' ' if current_user.kelas and current_user.jurusan else '' }}{{ current_user.jurusan if current_user.jurusan else '' }}</p>
+
+            <!-- Profile Details -->
+            <div class="border-t border-gray-200 px-6 md:px-8 py-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <div class="grid grid-cols-[100px_1fr]">
+                        <div class="font-medium text-gray-500">ID</div>
+                        <div class="text-gray-800">{{ current_user.id }}</div>
+                    </div>
+                    <div class="grid grid-cols-[100px_1fr]">
+                        <div class="font-medium text-gray-500">Username</div>
+                        <div class="text-gray-800">{{ current_user.username }}</div>
+                    </div>
+                    <div class="grid grid-cols-[100px_1fr]">
+                        <div class="font-medium text-gray-500">Peran</div>
+                        <div class="text-gray-800">{{ current_user.role.capitalize() }}</div>
+                    </div>
+                    <div class="grid grid-cols-[100px_1fr]">
+                        <div class="font-medium text-gray-500">Status Akun</div>
+                        <div class="text-gray-800">
+                            {% if current_user.is_active %}
+                                <span class="font-bold text-green-600">Aktif</span>
+                            {% else %}
+                                <span class="font-bold text-red-600">Nonaktif</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Password Form -->
+            <div class="border-t border-gray-200 px-6 md:px-8 py-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Update Password</h2>
+                <form method="POST" action="{{ url_for('update_password') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="space-y-4 max-w-sm">
+                        <div>
+                            <label for="current_password" class="block text-sm font-medium text-gray-600 mb-1">Password Saat Ini</label>
+                            <input type="password" id="current_password" name="current_password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 transition">
+                        </div>
+                        <div>
+                            <label for="new_password" class="block text-sm font-medium text-gray-600 mb-1">Password Baru</label>
+                            <input type="password" id="new_password" name="new_password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 transition">
+                        </div>
+                        <div>
+                            <label for="confirm_password" class="block text-sm font-medium text-gray-600 mb-1">Konfirmasi Password Baru</label>
+                            <input type="password" id="confirm_password" name="confirm_password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 transition">
+                        </div>
+                        <button type="submit" class="bg-purple-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-300">Update Password</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-gray-200 px-6 md:px-8 py-4 bg-gray-50 text-right">
+                <a href="{{ url_for('logout') }}" class="font-medium text-red-600 hover:text-red-800 transition inline-flex items-center gap-2">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </div>
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(category_filter=['success', 'danger', 'warning']) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for message in messages %}
-                        <p class="flash-{{ get_flashed_messages(with_categories=true)[0][0] }}">{{ message }}</p>
+    </div>
+
+    <!-- Border Selection Modal -->
+    <div id="borderModal" class="hidden absolute top-0 left-0 w-full h-full z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[70vh] flex flex-col z-10">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold text-purple-600">Pilih Border Profil</h2>
+                <button class="text-gray-500 hover:text-gray-800 text-2xl" onclick="toggleBorders()">×</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div class="bg-purple-50 border border-purple-200 text-purple-800 rounded-lg p-4 mb-6">
+                    <h3 class="font-bold mb-2">Cara Mendapatkan Border</h3>
+                    <ul class="space-y-1 text-sm list-none">
+                        <li class="flex items-start gap-2"><i class="fas fa-info-circle text-purple-500 mt-1"></i> Selesaikan transaksi untuk membuka border baru</li>
+                        <li class="flex items-start gap-2"><i class="fas fa-star text-purple-500 mt-1"></i> Semakin banyak transaksi, semakin keren bordernya</li>
+                        <li class="flex items-start gap-2"><i class="fas fa-lock-open text-purple-500 mt-1"></i> Border terbuka secara otomatis saat mencapai target</li>
+                    </ul>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {% for border in available_borders %}
+                    <div class="border rounded-lg p-4 text-center flex flex-col items-center transition hover:shadow-md hover:-translate-y-1">
+                        <img src="{{ url_for('static', filename=border.image_path) }}" alt="{{ border.name }}" class="w-24 h-24 object-contain mb-3">
+                        <div class="font-semibold text-gray-800 mb-2">{{ border.name }}</div>
+                        {% if border.id in unlocked_border_ids or border.name == "Basic" %}
+                            <div class="text-sm text-green-600 mb-2 flex items-center gap-1"><i class="fas fa-check-circle"></i> Terbuka</div>
+                            <form action="{{ url_for('change_border', border_id=border.id) }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if current_user.active_border_id == border.id %}
+                                    <button type="submit" name="remove_border" value="1" class="text-xs bg-red-500 text-white py-1 px-3 rounded-full hover:bg-red-600 transition">Lepas Border</button>
+                                {% else %}
+                                    <button type="submit" class="text-xs bg-purple-600 text-white py-1 px-3 rounded-full hover:bg-purple-700 transition flex items-center gap-1"><i class="fas fa-check"></i> Gunakan</button>
+                                {% endif %}
+                            </form>
+                        {% else %}
+                            <div class="text-sm text-red-500 mb-2 flex items-center gap-1"><i class="fas fa-lock"></i> Terkunci</div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                                <div class="bg-purple-600 h-1.5 rounded-full" style="width: {{ (total_transactions / border.required_transactions * 100) if total_transactions < border.required_transactions else 100 }}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500">{{ total_transactions }}/{{ border.required_transactions }} transaksi</div>
+                        {% endif %}
+                    </div>
                     {% endfor %}
                 </div>
-            {% endif %}
-        {% endwith %}
-        <!-- Stats Section -->
-        <div class="stats-container">
-            <div class="stat-item">
-                <div class="stat-label">SALDO</div>
-                <div class="stat-value">{{ current_user.balance|rupiah }}</div>
             </div>
         </div>
-        <!-- Profile Details -->
-        <div class="profile-details">
-            <div class="detail-grid">
-                <div class="detail-label">Username</div>
-                <div class="detail-value">{{ current_user.username }}</div>
-                <div class="detail-label">Peran</div>
-                <div class="detail-value">{{ current_user.role.capitalize() }}</div>
-                <div class="detail-label">Status Akun</div>
-                <div class="detail-value">
-                    {% if current_user.is_active %}
-                        <span style="color: green; font-weight: bold;">Aktif</span>
-                    {% else %}
-                        <span style="color: red; font-weight: bold;">Nonaktif</span>
-                    {% endif %}
-                </div>
+    </div>
+
+    <!-- Cropper Modal -->
+    <div id="cropper-modal" class="hidden fixed inset-0 z-50 bg-black/60 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-4 max-w-lg w-full">
+            <div class="text-right mb-2">
+                <button id="close-cropper" class="text-gray-500 hover:text-gray-800 text-2xl">×</button>
             </div>
-        </div>
-        <div class="password-form">
-            <h2 style="margin-bottom: 20px; color: #333;">Update Password</h2>
-            <form method="POST" action="{{ url_for('update_password') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group">
-                    <label for="current_password">Password Saat Ini</label>
-                    <input type="password" id="current_password" name="current_password" required>
-                </div>
-                <div class="form-group">
-                    <label for="new_password">Password Baru</label>
-                    <input type="password" id="new_password" name="new_password" required>
-                </div>
-                <div class="form-group">
-                    <label for="confirm_password">Konfirmasi Password Baru</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required>
-                </div>
-                <button type="submit" class="btn-update-password">Update Password</button>
-            </form>
-        </div>
-        <!-- Footer dengan tombol kembali dan logout -->
-        <div class="profile-footer">
-            <a href="{{ url_for('logout') }}" class="logout-button">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
+            <div class="h-64 md:h-80 bg-gray-100 mb-4">
+                <img id="cropper-image" class="max-w-full max-h-full">
+            </div>
+            <div class="text-center">
+                <button id="crop-btn" class="bg-purple-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-purple-700 transition">Crop & Upload</button>
+            </div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -768,15 +227,12 @@
             const closeCropper = document.getElementById('close-cropper');
             let cropper;
 
-            // Periksa apakah semua elemen ada
             if (!input || !form || !cropperModal || !cropperImg || !cropBtn || !closeCropper) {
-                console.error('One or more DOM elements are missing.');
+                console.error('One or more DOM elements for the cropper are missing.');
                 return;
             }
 
-            // Intercept file input change
             input.addEventListener('change', function(e) {
-                e.preventDefault();
                 const file = e.target.files[0];
                 if (file && file.type.startsWith('image/')) {
                     const reader = new FileReader();
@@ -788,41 +244,29 @@
                             aspectRatio: 1,
                             viewMode: 1,
                             autoCropArea: 1,
-                            movable: true,
-                            zoomable: true,
-                            rotatable: false,
-                            scalable: false,
                             responsive: true,
                         });
                     };
                     reader.readAsDataURL(file);
-                } else {
-                    alert('Please select a valid image file.');
                 }
             });
-
-            // Close cropper modal
-            closeCropper.addEventListener('click', function() {
+            
+            function closeCropperModal() {
                 cropperModal.style.display = 'none';
                 if (cropper) cropper.destroy();
-                input.value = '';
-            });
+                input.value = ''; // Reset file input
+            }
 
-            // Close on outside click
+            closeCropper.addEventListener('click', closeCropperModal);
             cropperModal.addEventListener('click', function(e) {
                 if (e.target === cropperModal) {
-                    cropperModal.style.display = 'none';
-                    if (cropper) cropper.destroy();
-                    input.value = '';
+                    closeCropperModal();
                 }
             });
 
-            // Crop & upload
             cropBtn.addEventListener('click', function() {
-                if (!cropper) {
-                    alert('Cropper is not initialized.');
-                    return;
-                }
+                if (!cropper) return;
+                
                 cropper.getCroppedCanvas({
                     width: 400,
                     height: 400,
@@ -835,67 +279,107 @@
                     fetch(form.action, {
                         method: 'POST',
                         body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok: ' + response.statusText);
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             window.location.reload();
                         } else {
-                            alert('Failed to upload profile picture: ' + (data.message || 'Unknown error'));
+                            alert('Failed to upload: ' + (data.message || 'Unknown error'));
                         }
                     })
                     .catch(error => {
                         console.error('Upload error:', error);
-                        alert('An error occurred while uploading the photo: ' + error.message);
+                        alert('An error occurred while uploading.');
                     })
                     .finally(() => {
-                        cropperModal.style.display = 'none';
-                        if (cropper) cropper.destroy();
-                        input.value = '';
+                        closeCropperModal();
                     });
                 }, 'image/jpeg', 0.95);
             });
+                
         });
-    </script>
-    <script>
+
         function toggleBorders() {
             const modal = document.getElementById('borderModal');
-            if (modal.style.display === 'none' || !modal.style.display) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+            const sidebar = document.querySelector('aside');
+            const bottomNav = document.querySelector('nav.flex.md\\:hidden');
+
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+                if (sidebar) {
+                    sidebar.classList.add('blur-md');
+                    sidebar.style.pointerEvents = 'none';
+                }
+                if (bottomNav) {
+                    bottomNav.classList.add('blur-md');
+                    bottomNav.style.pointerEvents = 'none';
+                }
             } else {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto'; // Restore scrolling
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = 'auto';
+                if (sidebar) {
+                    sidebar.classList.remove('blur-md');
+                    sidebar.style.pointerEvents = '';
+                }
+                if (bottomNav) {
+                    bottomNav.classList.remove('blur-md');
+                    bottomNav.style.pointerEvents = '';
+                }
             }
         }
 
-        // Close modal when clicking outside
         document.getElementById('borderModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 toggleBorders();
             }
         });
-    </script>
 
-    <div id="cropper-modal">
-        <div>
-            <div>
-                <button id="close-cropper">×</button>
-            </div>
-            <div>
-                <img id="cropper-image">
-            </div>
-            <div>
-                <button id="crop-btn">Crop & Upload</button>
-            </div>
-        </div>
-    </div>
-{% endblock %}
+    </script>
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var qrcodeDiv = document.getElementById('user-qrcode');
+        var qr;
+        if (qrcodeDiv) {
+            qr = new QRCode(qrcodeDiv, {
+                text: "{{ current_user.id }}",
+                width: 120,
+                height: 120,
+                colorDark : "#5e35b1",
+                colorLight : "#fff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+    
+        // Fitur unduh QR code dengan padding putih
+        document.getElementById('download-qrcode').addEventListener('click', function() {
+            var canvas = qrcodeDiv.querySelector('canvas');
+            if (canvas) {
+                // Buat canvas baru dengan padding putih
+                var padding = 32; // px
+                var size = canvas.width + padding * 2;
+                var paddedCanvas = document.createElement('canvas');
+                paddedCanvas.width = size;
+                paddedCanvas.height = size;
+                var ctx = paddedCanvas.getContext('2d');
+                // Isi background putih
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, size, size);
+                // Gambar QR code di tengah
+                ctx.drawImage(canvas, padding, padding);
+                // Download
+                var link = document.createElement('a');
+                link.href = paddedCanvas.toDataURL('image/png');
+                link.download = 'qrcode_{{ current_user.id }}.png';
+                link.click();
+            } else {
+                alert('QR Code belum tersedia untuk diunduh.');
+            }
+        });
+    });
+    </script>
+    {% endblock %}

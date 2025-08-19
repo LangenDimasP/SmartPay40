@@ -1,833 +1,291 @@
 {% extends 'base_siswa.html' %}
+
 {% block content %}
-    <style>
-        /* === Enhanced CSS === */
-        :root {
-            --primary-color: #7c4dff;
-            --primary-dark: #5e35b1;
-            --primary-light: #ede7f6;
-            --text-dark: #1a1a1a;
-            --text-light: #666;
-            --background: #f5f7fa;
-            --white: #ffffff;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        body {
-            background: var(--background);
-            color: var(--text-dark);
-            line-height: 1.6;
-            margin:0;
-            padding: 0;
-        }
-
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: var(--white);
-            padding: 20px 30px;
-            border-radius: 0 0 40px 40px;
-            display: flex;
-            margin: 0;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: var(--shadow);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-greeting {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .header-greeting .greeting {
-            font-size: 14px;
-            opacity: 0.85;
-            letter-spacing: 0.5px;
-        }
-
-        .header-greeting .user-name {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-        }
-
-
-        .profile-icon-header:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-        }
-
-
-        .profile-icon-header i {
-            font-size: 22px;
-            color: var(--white);
-        }
-
-        .header-icons {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .header-icons .icon {
-            font-size: 28px;
-            color: var(--white);
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .header-icons .icon:hover {
-            transform: scale(1.1);
-            opacity: 0.9;
-        }
-
-        /* Notification Panel */
-        .notification-icon-wrapper {
-            position: relative;
-            z-index: 1100;
-        }
-
-        .notif-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            z-index: 1050;
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        #notif-bell-btn {
-            color: var(--white);
-            font-size: 1.5em;
-            padding: 8px;
-            transition: color 0.3s ease;
-        }
-
-        #notif-bell-btn:hover {
-            color: var(--primary-light);
-        }
-
-        .notif-badge {
-            position: absolute;
-            top: -2px;
-            right: 0;
-            background: #e53935;
-            color: var(--white);
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 0.75em;
-            font-weight: 600;
-            border: 2px solid var(--white);
-            box-shadow: var(--shadow-light);
-        }
-
-        .notif-panel {
-            display: none;
-            position: absolute;
-            top: calc(100% + 12px);
-            right: -10px;
-            width: 280px;
-            max-height: 70vh;
-            overflow-y: auto;
-            background: var(--white);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            border: 1px solid #e8ecef;
-            z-index: 1200;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
-        }
-
-        .notif-panel.active {
-            display: block;
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .notif-header {
-            padding: 14px 16px;
-            font-weight: 600;
-            color: var(--text-dark);
-            border-bottom: 1px solid #e8ecef;
-            font-size: 1.1em;
-            background: var(--white);
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .notif-list {
-            padding: 0;
-            margin: 0;
-        }
-
-        .notif-item a {
-            display: block;
-            padding: 12px 16px;
-            color: var(--text-dark);
-            text-decoration: none;
-            transition: background 0.2s ease;
-        }
-
-        .notif-item a:hover {
-            background: var(--primary-light);
-        }
-
-        .notif-item.unread {
-            background: #f7f8ff;
-        }
-
-        .notif-message {
-            margin: 0 0 6px 0;
-            font-size: 0.95em;
-            color: var(--text-dark);
-            line-height: 1.5;
-        }
-
-        .notif-time {
-            font-size: 0.8em;
-            color: var(--text-light);
-        }
-
-        .notif-footer {
-            padding: 10px 16px;
-            text-align: center;
-            border-top: 1px solid #e8ecef;
-            background: #fafafa;
-        }
-
-        .notif-footer a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-size: 0.95em;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-
-        .notif-footer a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-
-        .notif-item-empty {
-            padding: 30px;
-            text-align: center;
-            color: var(--text-light);
-            font-size: 0.95em;
-        }
-
-        /* Balance Card */
-        .balance-card {
-            background: var(--white);
-            margin: 30px auto 0;
-            border-radius: 20px;
-            padding: 24px;
-            width: 90%;
-            max-width: 420px;
-            box-shadow: var(--shadow);
-            position: relative;
-            transition: transform 0.3s ease;
-        }
-
-        .balance-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .logo img {
-            height: 45px;
-            width: auto;
-        }
-
-        .balance-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0;
-            gap: 20px;
-        }
-
-        .balance-label {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--text-dark);
-            flex-grow: 1;
-        }
-
-        .balance-actions {
-            display: flex;
-            gap: 25px;
-        }
-
-        .action-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-decoration: none;
-            color: var(--text-dark);
-            transition: transform 0.3s ease;
-        }
-
-        .action-item:hover {
-            transform: scale(1.05);
-        }
-
-        .action-icon {
-            background: var(--primary-light);
-            color: var(--primary-color);
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 22px;
-            transition: background 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .action-item:hover .action-icon {
-            background: var(--primary-color);
-            color: var(--white);
-            box-shadow: 0 0 15px rgba(124, 77, 255, 0.3);
-        }
-
-        .action-label {
-            font-size: 13px;
-            margin-top: 10px;
-            color: var(--text-light);
-            font-weight: 500;
-        }
-
-        .spending-section {
-            background: var(--primary-color);
-            color: var(--white);
-            padding: 16px;
-            border-radius: 12px;
-            margin-top: 20px;
-            text-align: center;
-            font-size: 16px;
-            font-weight: 500;
-            transition: background 0.3s ease;
-        }
-
-        .spending-section:hover {
-            background: var(--primary-dark);
-        }
-
-        .spending-section strong {
-            font-weight: 700;
-        }
-
-        /* Warning Section */
-        .warning-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 20px auto;
-            padding: 12px 16px;
-            font-size: 14px;
-            border-radius: 10px;
-            max-width: 90%;
-            border: 1px solid transparent;
-            box-shadow: var(--shadow-light);
-        }
-
-        .warning-section.low-balance {
-            color: #664d03;
-            background: #fff3cd;
-            border-color: #ffecb5;
-        }
-
-        .warning-section.low-balance .warning-icon {
-            color: #ff9800;
-        }
-
-        .warning-section.zero-balance {
-            color: #842029;
-            background: #f8d7da;
-            border-color: #f5c2c7;
-        }
-
-        .warning-section.zero-balance .warning-icon {
-            color: #dc3545;
-        }
-
-        .warning-icon {
-            font-size: 26px;
-        }
-
-        /* History Preview Card */
-        .history-preview-card {
-            background: var(--white);
-            border-radius: 20px;
-            width: 90%;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 24px;
-            box-shadow: var(--shadow);
-            position: relative;
-            border: 1px solid #e8ecef;
-            transition: transform 0.3s ease;
-        }
-
-        .history-preview-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .history-preview-card h4 {
-            margin: 0 0 15px;
-            font-size: 1.2em;
-            font-weight: 600;
-            color: var(--text-dark);
-            border-bottom: 1px solid #e8ecef;
-            padding-bottom: 12px;
-        }
-
-        .history-preview-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .history-preview-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #e8ecef;
-            transition: background 0.2s ease;
-        }
-
-        .history-preview-list li:hover {
-            background: var(--primary-light);
-        }
-
-        .history-preview-list li:last-child {
-            border-bottom: none;
-        }
-
-        .history-detail {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .history-detail .icon {
-            font-size: 1.5em;
-            width: 32px;
-            text-align: center;
-        }
-
-        .history-detail .icon.payment {
-            color: #e53935;
-        }
-
-        .history-detail .icon.topup {
-            color: #43a047;
-        }
-
-        .history-detail .tx-desc {
-            font-weight: 500;
-            color: var(--text-dark);
-            display: block;
-        }
-
-        .history-detail .tx-time {
-            font-size: 0.85em;
-            color: var(--text-light);
-        }
-
-        .history-amount {
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .history-amount.positive {
-            color: #43a047;
-        }
-
-        .history-amount.negative {
-            color: #e53935;
-        }
-
-        .view-all-history {
-            position: absolute;
-            margin-bottom: 10px;
-            right: 20px;
-            font-size: 0.95em;
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-
-        .view-all-history:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .balance-card, .history-preview-card, .warning-section {
-            animation: slideIn 0.5s ease forwards;
-        }
-                /* Tambahkan di dalam tag <style> dashboard_siswa.html */
-        .profile-icon-header {
-            position: relative;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            overflow: visible;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .profile-img-main {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            object-fit: cover;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .profile-border-overlay {
-            position: absolute;
-            top: -16px;    /* semakin negatif, semakin besar keluar */
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            z-index: 3;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .border-overlay-img {
-            width: 55px;   /* harus lebih besar dari 48px */
-            height: 55px;
-            border-radius: 50%;
-            object-fit: cover;
-            pointer-events: none;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-                    .notif-badge {
-            position: absolute;
-            top: -2px;
-            right: 0;
-            background: #e53935;
-            color: var(--white);
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 0.25em;
-            font-weight: 200;
-            border: 2px solid var(--white);
-            box-shadow: var(--shadow-light);
-        }
-            .balance-card, .history-preview-card {
-                width: 95%;
-                margin-top: 20px;
-            }
-            .header {
-                padding: 15px 20px;
-                    position: relative;
-                    top: 0;
-                    margin:0;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .balance-label {
-                font-size: 24px;
-            }
-            .balance-actions {
-                gap: 15px;
-            }
-            .action-icon {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-            }
-            .spending-section {
-                font-size: 15px;
-            }
-            .header-greeting .user-name {
-                font-size: 16px;
-            }
-            .notif-panel {
-                width: 260px;
-            }
-        }
-
-        @media (max-width: 400px) {
-            .balance-label {
-                font-size: 20px;
-            }
-            .action-icon {
-                width: 46px;
-                height: 46px;
-                font-size: 18px;
-            }
-            .action-label {
-                font-size: 12px;
-            }
-        }
-    </style>
-
-    <div class="dashboard-container" style="padding: 0;">
-        <div class="header">
-            <div class="header-left">
-                <div class="profile-icon-header">
-                    {% if current_user.active_border %}
-                        <div class="profile-border-overlay">
-                            <img src="{{ url_for('static', filename=current_user.active_border.image_path) }}" alt="Border" class="border-overlay-img">
-                        </div>
-                    {% endif %}
-                    {% if current_user.profile_pic_filename %}
-                        <a href="{{ url_for('profile') }}">
-                            <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic_filename) }}?v={{ range(1, 1000) | random }}" alt="P" class="profile-img-main">
-                        </a>
-                    {% else %}
-                        <i class="fas fa-user"></i>
-                    {% endif %}
-                </div>
-                <div class="header-greeting">
-                    <span class="greeting">Halo,</span>
-                    <span class="user-name">{{ current_user.username }}{% if current_user.kelas and current_user.jurusan %} ({{ current_user.kelas }}-{{ current_user.jurusan }}){% endif %}</span>
-                </div>
+<style>
+    /* Animations not supported by Tailwind */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .animate-slideIn {
+        animation: slideIn 0.5s ease forwards;
+    }
+
+    .notif-backdrop {
+        animation: fadeIn 0.3s ease;
+    }
+    .notification-icon-wrapper.active .notif-badge {
+    display: none !important;
+}
+    .notif-badge {
+    font-size: 0.45em !important;   /* Lebih kecil */
+    padding: 2px 6px !important;    /* Padding kecil */
+    min-width: 18px;
+    height: 18px;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -2px;
+    right: 0;
+    }
+    .history-preview-list li:hover {
+    background: linear-gradient(90deg, #ede7f6 0%, #f3e5f5 100%);
+    box-shadow: 0 4px 16px rgba(124,77,255,0.08);
+    transform: scale(1.02);
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(.4,2,.3,1);
+}
+</style>
+
+<div class="p-0">
+    <div class="bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white p-5 md:p-[30px] rounded-b-[40px] flex justify-between items-center sticky top-0 z-[1000] shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+        <div class="flex items-center gap-[15px]">
+            <div class="profile-icon-header relative w-12 h-12 rounded-full flex items-center justify-center overflow-visible hover:scale-105 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                {% if current_user.active_border %}
+                    <div class="profile-border-overlay absolute -top-4 -left-[10px] -right-[10px] -bottom-[10px] z-[3] pointer-events-none flex items-center justify-center">
+                        <img src="{{ url_for('static', filename=current_user.active_border.image_path) }}" alt="Border" class="border-overlay-img w-[55px] h-[55px] rounded-full object-cover pointer-events-none">
+                    </div>
+                {% endif %}
+                {% if current_user.profile_pic_filename %}
+                    <a href="{{ url_for('profile') }}">
+                        <img src="{{ url_for('static', filename='profile_pics/' + current_user.profile_pic_filename) }}?v={{ range(1, 1000) | random }}" alt="P" class="profile-img-main w-12 h-12 rounded-full object-cover z-[2]">
+                    </a>
+                {% else %}
+                    <i class="fas fa-user text-[22px] text-white"></i>
+                {% endif %}
             </div>
-            <div class="header-icons">
-                <div class="notification-icon-wrapper">
-                    <a href="#" id="notif-bell-btn" title="Notifikasi">
-                        <span class="icon-placeholder"><i class="fas fa-bell"></i></span>
-                        {% if unread_count > 0 %}
-                            <span class="notif-badge">{{ unread_count if unread_count <= 9 else '9+' }}</span>
+            <div class="flex flex-col">
+                <span class="greeting text-sm opacity-85 tracking-wider">Halo,</span>
+                <span class="user-name text-lg font-semibold tracking-tight">{{ current_user.username }}{% if current_user.kelas and current_user.jurusan %} ({{ current_user.kelas }}-{{ current_user.jurusan }}){% endif %}</span>
+            </div>
+        </div>
+        <div class="header-icons flex gap-5 items-center">
+    <div class="notification-icon-wrapper relative z-[1100]">
+        <a href="#" id="notif-bell-btn" title="Notifikasi" class="text-white text-2xl p-2 hover:text-[#ede7f6] transition-colors duration-300">
+            <span class="icon-placeholder"><i class="fas fa-bell"></i></span>
+            {% if unread_count > 0 and not notif_panel_active %}
+                        <span class="notif-badge absolute -top-[2px] right-0 bg-red-600 text-white rounded-full px-[6px] py-[2px] text-[0.75em] md:text-[0.25em] font-semibold border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">{{ unread_count if unread_count <= 9 else '9+' }}</span>
+                    {% endif %}
+                </a>
+                <div id="notif-panel" class="notif-panel hidden absolute top-[calc(100%+12px)] -right-2.5 w-[280px] max-h-[70vh] overflow-y-auto bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] z-[1200] opacity-0 invisible -translate-y-2.5 transition-all duration-300">
+                    <div class="notif-header p-4 font-semibold text-[#1a1a1a] border-b border-[#e8ecef] text-lg bg-white sticky top-0 z-[1]">Notifikasi Terbaru</div>
+                    <ul class="notif-list p-0 m-0">
+                        {% if recent_notifications and recent_notifications|length > 0 %}
+                            {% for notif in recent_notifications %}
+                                <li class="notif-item">
+                                    <div class="p-4 text-[#1a1a1a]">
+                                        <span class="font-semibold">{{ notif.type|capitalize }}</span>
+                                        <br>
+                                        <span class="text-sm text-[#666]">{{ notif.message }}</span>
+                                        <br>
+                                        <small class="text-[#666]">{{ notif.timestamp | wib }}</small>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="notif-item-empty p-[30px] text-center text-[#666] text-[0.95em]">Tidak ada notifikasi terbaru.</li>
                         {% endif %}
-                    </a>
-                        <div id="notif-panel" class="notif-panel">
-                            <div class="notif-header">Notifikasi Terbaru</div>
-                            <ul class="notif-list">
-                                {% if recent_notifications %}
-                                    {% set shown_notifications = [] %}
-                                    {% for notif in recent_notifications %}
-                                        {% if ('border' not in notif.message) or (current_user.jurusan in notif.message) %}
-                                            {% if shown_notifications|length < 3 %}
-                                                {% set _ = shown_notifications.append(notif) %}
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
-                            
-                                    {% if shown_notifications %}
-                                        {% for notif in shown_notifications %}
-                                            <li class="notif-item {% if not notif.is_read %}unread{% endif %}">
-                                                <a href="{{ url_for('detail_notif') }}">
-                                                    <p class="notif-message">{{ notif.message }}</p>
-                                                    <small class="notif-time">{{ notif.timestamp | wib }}</small>
-                                                </a>
-                                            </li>
-                                        {% endfor %}
-                                    {% else %}
-                                        <li class="notif-item-empty">Tidak ada notifikasi terbaru.</li>
-                                    {% endif %}
-                                {% else %}
-                                    <li class="notif-item-empty">Tidak ada notifikasi terbaru.</li>
-                                {% endif %}
-                            </ul>
-                            <div class="notif-footer">
-                                <a href="{{ url_for('detail_notif') }}">Lihat Semua Notifikasi <i class="fas fa-arrow-right"></i></a>
-                            </div>
-                        </div>
+                    </ul>
+                    <div class="notif-footer p-[10px_16px] text-center border-t border-[#e8ecef] bg-[#fafafa]">
+                        <a href="{{ url_for('detail_notif') }}" class="text-[#7c4dff] no-underline text-[0.95em] font-medium hover:text-[#5e35b1] hover:underline transition-colors duration-200">Lihat Semua Notifikasi <i class="fas fa-arrow-right"></i></a>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="balance-card">
-            <div class="logo">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo DimasCash">
-            </div>
-            <div class="balance-info">
-                <div class="balance-label">{{ current_user.balance | rupiah }}</div>
-                <div class="balance-actions">
-                    <a href="{{ url_for('request_topup') }}" class="action-item" title="Info Top Up">
-                        <div class="action-icon">
-                            <i class="fas fa-plus"></i>
-                        </div>
-                        <span class="action-label">Top Up</span>
-                    </a>
-                    <a href="{{ url_for('pay_vendor') }}" class="action-item" title="Bayar/Scan QR">
-                        <div class="action-icon">
-                            <i class="fas fa-paper-plane"></i>
-                        </div>
-                        <span class="action-label">Bayar</span>
-                    </a>
-                </div>
-            </div>
-            <div class="spending-section">
-                Pengeluaran Hari Ini: <strong>{{ todays_spending | rupiah }}</strong>
-            </div>
-        </div>
-
-        {% set low_balance_threshold = 10000.0 %}
-        {% if current_user.balance < low_balance_threshold and current_user.balance > 0 %}
-            <div class="warning-section low-balance">
-                <div class="warning-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div>Saldo Anda hampir habis (tersisa {{ current_user.balance|rupiah }}). Segera lakukan Top Up!</div>
-            </div>
-        {% elif current_user.balance <= 0 %}
-            <div class="warning-section zero-balance">
-                <div class="warning-icon">
-                    <i class="fas fa-exclamation-circle"></i>
-                </div>
-                <div>Saldo Anda Habis (Rp 0). Harap lakukan Top Up.</div>
-            </div>
-        {% endif %}
-
-        <div class="history-preview-card">
-            <h4>Riwayat Terakhir</h4>
-            {% if recent_transactions %}
-                <ul class="history-preview-list">
-                    {% for tx in recent_transactions %}
-                    <li>
-                        <div class="history-detail">
-                            {% if tx.type == 'payment' %}
-                                <span class="icon payment"><i class="fas fa-store"></i></span>
-                            {% elif tx.type == 'topup' %}
-                                <span class="icon topup"><i class="fas fa-wallet"></i></span>
-                            {% else %}
-                                <span class="icon"><i class="fas fa-receipt"></i></span>
-                            {% endif %}
-                            <div>
-                                {% if tx.user_id == current_user.id %}
-                                    {% if tx.type == 'payment' %} <span class="tx-desc">Bayar ke {{ tx.related_user.username if tx.related_user else 'N/A' }}</span>
-                                    {% elif tx.type == 'cashout_vendor' %} <span class="tx-desc">Cash Out ke Admin</span>
-                                    {% else %} <span class="tx-desc">{{ tx.type.capitalize() }}</span>
-                                    {% endif %}
-                                {% elif tx.related_user_id == current_user.id %}
-                                    {% if tx.type == 'topup' %} <span class="tx-desc">Top Up dari Admin</span>
-                                    {% else %} <span class="tx-desc">{{ tx.type.capitalize() }} Diterima</span>
-                                    {% endif %}
-                                {% endif %}
-                                <span class="tx-time">{{ tx.timestamp | wib }}</span>
-                            </div>
-                        </div>
-                        <div class="history-amount {% if tx.user_id == current_user.id and tx.type != 'topup' %}negative{% else %}positive{% endif %}">
-                            {% if tx.user_id == current_user.id and tx.type != 'topup' %}-{% else %}+{% endif %}
-                            {{ tx.amount|rupiah }}
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p style="text-align: center; color: var(--text-light); font-size: 0.9em; padding: 20px 0;">Belum ada transaksi terbaru.</p>
-            {% endif %}
-            {% if recent_transactions %}
-            <a href="{{ url_for('riwayat_siswa') }}" class="view-all-history">Lihat Semua <i class="fas fa-arrow-right"></i></a>
-            {% endif %}
         </div>
     </div>
 
-    <script>
-        const notifBellBtn = document.getElementById('notif-bell-btn');
-        const notifPanel = document.getElementById('notif-panel');
-        const notifBadge = document.querySelector('.notif-badge');
 
-        function markNotificationsAsRead() {
-            if (notifBadge && notifBadge.style.display !== 'none') {
-                console.log("Mengirim request POST ke /notifications/mark_read...");
-                fetch("{{ url_for('mark_notifications_read') }}", {
+    <div class="balance-card bg-white mx-auto mt-[30px] rounded-[20px] p-6 w-[90%] max-w-[420px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] relative hover:-translate-y-[5px] transition-transform duration-300 animate-slideIn md:w-[95%] md:mt-5">
+        <div class="logo flex items-center gap-3 mb-5">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo DimasCash" class="h-[45px] w-auto">
+        </div>
+        <div class="balance-info flex justify-between items-center my-5 gap-5">
+    <div class="balance-label text-2xl md:text-3xl font-bold text-[#1a1a1a] flex-grow flex items-center gap-2">
+    <span id="saldo-text"><span id="saldo-rp">Rp</span><span id="saldo-angka">{{ "{:,.0f}".format(current_user.balance) }}</span></span>
+    <button id="toggle-saldo" type="button" class="ml-2 focus:outline-none">
+        <i id="eye-icon" class="fas fa-eye text-[#7c4dff] text-xl"></i>
+    </button>
+</div>
+<div class="balance-actions flex justify-between gap-4">
+    <a href="{{ url_for('request_topup') }}" 
+       class="action-item flex flex-col items-center no-underline text-[#1a1a1a] hover:scale-105 transition-transform duration-300" 
+       title="Info Top Up">
+        <div class="action-icon bg-[#ede7f6] text-[#7c4dff] 
+                    w-12 h-12 sm:w-14 sm:h-14   <!-- mobile kecil, sm ke atas normal -->
+                    rounded-full flex justify-center items-center 
+                    text-[18px] sm:text-[22px]  <!-- font icon juga mengecil di mobile -->
+                    hover:bg-[#7c4dff] hover:text-white hover:shadow-[0_0_15px_rgba(124,77,255,0.3)] 
+                    transition-all duration-300">
+            <i class="fas fa-plus"></i>
+        </div>
+        <span class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Top up</span>
+    </a>
+
+    <a href="{{ url_for('transfer_user') }}" 
+       class="action-item flex flex-col items-center no-underline text-[#1a1a1a] hover:scale-105 transition-transform duration-300" 
+       title="Transfer/Kirim Saldo">
+        <div class="action-icon bg-[#ede7f6] text-[#7c4dff] 
+                    w-12 h-12 sm:w-14 sm:h-14
+                    rounded-full flex justify-center items-center 
+                    text-[18px] sm:text-[22px]
+                    hover:bg-[#7c4dff] hover:text-white hover:shadow-[0_0_15px_rgba(124,77,255,0.3)] 
+                    transition-all duration-300">
+            <i class="fas fa-paper-plane"></i>
+        </div>
+        <span class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Kirim</span>
+    </a>
+
+    <a href="{{ url_for('pay_vendor') }}" 
+       class="action-item flex flex-col items-center no-underline text-[#1a1a1a] hover:scale-105 transition-transform duration-300" 
+       title="Bayar/Scan QR">
+        <div class="action-icon bg-[#ede7f6] text-[#7c4dff] 
+                    w-12 h-12 sm:w-14 sm:h-14
+                    rounded-full flex justify-center items-center 
+                    text-[18px] sm:text-[22px]
+                    hover:bg-[#7c4dff] hover:text-white hover:shadow-[0_0_15px_rgba(124,77,255,0.3)] 
+                    transition-all duration-300">
+            <i class="fas fa-qrcode"></i>
+        </div>
+        <span class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Bayar</span>
+    </a>
+</div>
+
+        </div>
+        <div class="spending-section bg-[#7c4dff] text-white p-4 rounded-xl mt-5 text-center text-base font-medium hover:bg-[#5e35b1] transition-colors duration-300">
+            Pengeluaran Hari Ini: <strong class="font-bold">{{ todays_spending | rupiah }}</strong>
+        </div>
+    </div>
+
+    {% set low_balance_threshold = 10000.0 %}
+    {% if current_user.balance < low_balance_threshold and current_user.balance > 0 %}
+        <div class="warning-section low-balance flex items-center gap-3 mx-auto my-5 p-[12px_16px] text-sm rounded-[10px] max-w-[90%] border border-[#ffecb5] shadow-[0_2px_10px_rgba(0,0,0,0.05)] text-[#664d03] bg-[#fff3cd] animate-slideIn">
+            <div class="warning-icon text-[#ff9800] text-[26px]">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div>Saldo Anda hampir habis (tersisa {{ current_user.balance|rupiah }}). Segera lakukan Top Up!</div>
+        </div>
+    {% elif current_user.balance <= 0 %}
+        <div class="warning-section zero-balance flex items-center gap-3 mx-auto my-5 p-[12px_16px] text-sm rounded-[10px] max-w-[90%] border border-[#f5c2c7] shadow-[0_2px_10px_rgba(0,0,0,0.05)] text-[#842029] bg-[#f8d7da] animate-slideIn">
+            <div class="warning-icon text-[#dc3545] text-[26px]">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div>Saldo Anda Habis (Rp 0). Harap lakukan Top Up.</div>
+        </div>
+    {% endif %}
+
+    <div class="history-preview-card bg-white rounded-[20px] w-[90%] max-w-[800px] mx-auto my-5 p-6 shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] relative hover:-translate-y-[5px] transition-transform duration-300 animate-slideIn md:w-[95%]">
+        <h4 class="m-0 mb-[15px] text-lg font-semibold text-[#1a1a1a] border-b border-[#e8ecef] pb-3">Riwayat Terakhir</h4>
+        {% if recent_transactions %}
+            <ul class="history-preview-list p-0 m-0">
+                {% for tx in recent_transactions[:3] %}
+                <li class="flex justify-between items-center py-[14px] border-b border-[#e8ecef] last:border-b-0">
+                    <div class="history-detail flex items-center gap-3">
+                        {% if tx.type == 'payment' %}
+                            <span class="icon payment text-[#e53935] text-2xl w-8 text-center"><i class="fas fa-store"></i></span>
+                        {% elif tx.type == 'topup' %}
+                            <span class="icon topup text-[#43a047] text-2xl w-8 text-center"><i class="fas fa-wallet"></i></span>
+                        {% else %}
+                            <span class="icon text-2xl w-8 text-center"><i class="fas fa-receipt"></i></span>
+                        {% endif %}
+                        <div>
+                            {% if tx.user_id == current_user.id %}
+                                {% if tx.type == 'payment' %} <span class="tx-desc font-medium text-[#1a1a1a] block">Bayar ke {{ tx.related_user.username if tx.related_user else 'N/A' }}</span>
+                                {% elif tx.type == 'cashout_vendor' %} <span class="tx-desc font-medium text-[#1a1a1a] block">Cash Out ke Admin</span>
+                                {% else %} <span class="tx-desc font-medium text-[#1a1a1a] block">{{ tx.type.capitalize() }}</span>
+                                {% endif %}
+                            {% elif tx.related_user_id == current_user.id %}
+                                {% if tx.type == 'topup' %} <span class="tx-desc font-medium text-[#1a1a1a] block">Top Up dari Admin</span>
+                                {% else %} <span class="tx-desc font-medium text-[#1a1a1a] block">{{ tx.type.capitalize() }} Diterima</span>
+                                {% endif %}
+                            {% endif %}
+                            <span class="tx-time text-[0.85em] text-[#666]">{{ tx.timestamp | wib }}</span>
+                        </div>
+                    </div>
+                    <div class="history-amount font-semibold whitespace-nowrap {% if tx.user_id == current_user.id and tx.type != 'topup' %}text-[#e53935]{% else %}text-[#43a047]{% endif %}">
+                        {% if tx.user_id == current_user.id and tx.type != 'topup' %}-{% else %}+{% endif %}
+                        {{ tx.amount|rupiah }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-center text-[#666] text-[0.9em] py-5">Belum ada transaksi terbaru.</p>
+        {% endif %}
+        {% if recent_transactions %}
+        <a href="{{ url_for('riwayat_siswa') }}" class="view-all-history absolute bottom-[10px] right-5 text-[0.95em] text-[#7c4dff] no-underline font-medium hover:text-[#5e35b1] hover:underline transition-colors duration-200">Lihat Semua <i class="fas fa-arrow-right"></i></a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const notifBellBtn = document.getElementById('notif-bell-btn');
+    const notifPanel = document.getElementById('notif-panel');
+    const notifBadge = document.querySelector('.notif-badge');
+    const notifBackdrop = document.querySelector('.notif-backdrop');
+    const notifWrapper = document.querySelector('.notification-icon-wrapper');
+    const saldoAngka = document.getElementById('saldo-angka');
+    const eyeIcon = document.getElementById('eye-icon');
+    const toggleBtn = document.getElementById('toggle-saldo');
+    let saldoVisible = true;
+    const saldoAsli = saldoAngka.textContent;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (notifBellBtn && notifPanel && notifWrapper) {
+        notifBellBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!notifPanel) return;
+            const isOpening = notifPanel.classList.contains('hidden');
+            if (isOpening) {
+                notifPanel.classList.remove('hidden', 'opacity-0', 'invisible');
+                notifPanel.classList.add('active');
+                if (notifBackdrop) notifBackdrop.classList.remove('hidden');
+                notifWrapper.classList.add('active');
+                fetch('/notifications/mark_read', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
+                        'X-CSRFToken': csrfToken
                     }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        console.log('Backend konfirmasi: Notifikasi ditandai sudah dibaca.');
-                        document.querySelectorAll('#notif-panel .notif-item.unread').forEach(item => {
-                            item.classList.remove('unread');
-                        });
-                    } else {
-                        console.error('Backend: Gagal menandai notifikasi sudah dibaca.', data.message);
-                        if (notifBadge) notifBadge.style.display = 'inline-block';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error saat fetch markNotificationsAsRead:', error);
-                    if (notifBadge) notifBadge.style.display = 'inline-block';
                 });
+                if (notifBadge) notifBadge.style.display = 'none';
             } else {
-                console.log("Tidak ada badge terlihat saat mencoba mark read.");
+                notifPanel.classList.add('hidden', 'opacity-0', 'invisible');
+                notifPanel.classList.remove('active');
+                if (notifBackdrop) notifBackdrop.classList.add('hidden');
+                notifWrapper.classList.remove('active');
             }
+        });
+    }
+
+    if (localStorage.getItem('saldoVisible') === 'false') {
+        saldoVisible = false;
+        saldoAngka.textContent = '***';
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+    }
+
+    toggleBtn.addEventListener('click', function() {
+        saldoVisible = !saldoVisible;
+        localStorage.setItem('saldoVisible', saldoVisible); // Simpan status ke localStorage
+        if (saldoVisible) {
+            saldoAngka.textContent = saldoAsli;
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        } else {
+            saldoAngka.textContent = '***';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
         }
-
-        if (notifBellBtn && notifPanel) {
-            notifBellBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                const isOpening = !notifPanel.classList.contains('active');
-                notifPanel.classList.toggle('active');
-
-                if (isOpening && notifBadge && notifBadge.style.display !== 'none') {
-                    markNotificationsAsRead();
-                    notifBadge.style.display = 'none';
-                }
-            });
-
-            document.addEventListener('click', (event) => {
-                const wrapper = document.querySelector('.notification-icon-wrapper');
-                if (wrapper && !wrapper.contains(event.target)) {
-                    notifPanel.classList.remove('active');
-                }
-            });
-        }
-    </script>
+    });
+});
+</script>
 {% endblock %}

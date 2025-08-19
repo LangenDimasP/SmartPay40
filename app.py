@@ -8,9 +8,16 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_wtf.csrf import CSRFProtect
 from pyngrok import ngrok
+from flask import send_file, request
 import qrcode
 import logging
 import io
+import requests
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import openpyxl
 from flask import make_response, request
 from weasyprint import HTML
 from decouple import config
@@ -19,7 +26,6 @@ import secrets
 from datetime import date, datetime, time, timedelta
 from sqlalchemy import func, or_  # Pastikan func dan or_ diimport
 from sqlalchemy import or_
-from flask import send_file
 import math  # Tambahkan import math jika belum ada di bagian atas
 # Impor untuk Login Manager & UserMixin
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -47,6 +53,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ======================================
 
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+limiter.init_app(app)
 # === Fungsi Helper untuk Cek Ekstensi ===
 
 
@@ -82,7 +93,15 @@ def format_rupiah(value):
 
 
 app.jinja_env.filters['rupiah'] = format_rupiah
+# ...existing code...
+def short_rupiah(value, max_length=15):
+    s = "{:,.0f}".format(value)
+    if len(s) > max_length:
+        return s[:max_length] + "..."
+    return s
 
+app.jinja_env.filters['short_rupiah'] = short_rupiah
+# ...existing code...
 
 try:
     # Untuk Python 3.9+ (built-in)
@@ -172,9 +191,12 @@ class User(db.Model, UserMixin):
     profile_pic_filename = db.Column(db.String(100), nullable=True, default=None)
     kelas = db.Column(db.String(5), nullable=True)
     jurusan = db.Column(db.String(10), nullable=True)
+    plain_password = db.Column(db.String(128)) 
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     active_border_id = db.Column(db.Integer, db.ForeignKey('border.id'), nullable=True)
     active_border = db.relationship('Border', backref=db.backref('users', lazy=True))
+    pin_transfer = db.Column(db.String(6), nullable=True)
+
     # =====================================
 
     # Method set_password, check_password, __repr__ tetap sama
@@ -243,6 +265,7 @@ class TopUpRequest(db.Model):
     student = db.relationship('User', foreign_keys=[
                               student_id], backref=db.backref('topup_requests', lazy='dynamic'))
     admin = db.relationship('User', foreign_keys=[admin_id])
+    bukti_transfer_filename = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
         # Representasi string objek (berguna untuk debugging)
@@ -294,6 +317,26 @@ class UserBorder(db.Model):
         'User', backref=db.backref('user_borders', lazy=True))
     border = db.relationship(
         'Border', backref=db.backref('user_borders', lazy=True))
+    
+class MarginSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nominal_per_margin = db.Column(db.Float, nullable=False, default=5000)  # contoh: 5000
+    potongan_per_margin = db.Column(db.Float, nullable=False, default=500)  # contoh: 500
+
+
+class Laporan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bukti_filename = db.Column(db.String(200), nullable=True)
+    keterangan = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    ditanggapi = db.Column(db.Boolean, default=False)
+
+
+    user = db.relationship('User', backref=db.backref('laporan', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Laporan {self.id} oleh User {self.user_id}>'
 
 
 # --- Routes (Halaman Web) ---
@@ -320,6 +363,7 @@ def bad_request(e):
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")  # Maksimal 5 percobaan login per menit per IP
 def login():
     if current_user.is_authenticated:
         if current_user.role == 'admin':
@@ -329,29 +373,44 @@ def login():
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        username = request.form.get('username')
+        # --- Validasi reCAPTCHA ---
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        if not recaptcha_response:
+            flash('reCAPTCHA wajib diisi!', 'error')
+            return redirect(url_for('login'))
+
+        secret_key = "6Ldsf6krAAAAAN6pwfXSRs2NVNF-YtT1Y9khmElK"
+        payload = {
+            'secret': secret_key,
+            'response': recaptcha_response,
+            'remoteip': request.remote_addr
+        }
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=payload)
+        result = r.json()
+        if not result.get('success'):
+            flash('Verifikasi reCAPTCHA gagal, silakan coba lagi.', 'error')
+            return redirect(url_for('login'))
+
+        # --- Proses login seperti biasa ---
+        user_id = request.form.get('id')
         password = request.form.get('password')
         remember = True if request.form.get('remember') else False
 
-        user = User.query.filter_by(username=username).first()
-
-        # Cek apakah username ada
+        user = User.query.get(user_id)
         if not user:
-            flash('Username tidak ditemukan!', 'error')
+            flash('ID tidak ditemukan!', 'error')
             return redirect(url_for('login'))
 
-        # Jika username ada, cek passwordnya
-        if not check_password_hash(user.password_hash, password):
+        if not user.check_password(password):
             flash('Password salah!', 'error')
             return redirect(url_for('login'))
 
-        # Jika username dan password benar
         login_user(user, remember=remember)
 
         # Redirect berdasarkan role
         if user.role == 'admin':
             return redirect(url_for('admin_dashboard_content'))
-        elif user.role == 'vendor':
+        elif user.role == 'penjual':
             return redirect(url_for('penjual_dashboard'))
         else:
             return redirect(url_for('dashboard'))
@@ -369,14 +428,13 @@ def penjual_dashboard():
     # Zona Waktu WIB
     now_wib = datetime.now(wib_tz)
     today_wib = now_wib.date()
-    today_wib_start_local = datetime.combine(
-        today_wib, time.min).replace(tzinfo=wib_tz)
+    today_wib_start_local = datetime.combine(today_wib, time.min).replace(tzinfo=wib_tz)
     tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
     today_start_utc = today_wib_start_local.astimezone(utc_tz)
     tomorrow_start_utc = tomorrow_wib_start_local.astimezone(utc_tz)
 
     # Statistik Harian
-    todays_earnings = 0.0
+    gross_earnings = 0.0  # Pendapatan kotor
     todays_transaction_count = 0
     total_transaksi = Transaction.query.filter_by(
         related_user_id=current_user.id, type='payment').count()
@@ -388,7 +446,7 @@ def penjual_dashboard():
             Transaction.timestamp < tomorrow_start_utc
         ).scalar()
         if sum_result is not None:
-            todays_earnings = float(sum_result)
+            gross_earnings = float(sum_result)
 
         todays_transaction_count = Transaction.query.filter(
             Transaction.related_user_id == current_user.id,
@@ -399,6 +457,22 @@ def penjual_dashboard():
     except Exception as e:
         print(f"Error calculating vendor stats: {e}")
         flash("Gagal memuat statistik harian.", "warning")
+
+    # Ambil margin setting dari database
+    margin = MarginSetting.query.first()
+    if not margin:
+        margin_nominal = 5000
+        margin_potongan = 500
+    else:
+        margin_nominal = margin.nominal_per_margin
+        margin_potongan = margin.potongan_per_margin
+
+    # Hitung total margin hari ini
+    margin_count = int(gross_earnings // margin_nominal)
+    margin_total = margin_count * margin_potongan
+
+    # Pendapatan bersih
+    total_earnings = gross_earnings - margin_total
 
     # Transaksi Terbaru (3 transaksi)
     recent_transactions = Transaction.query.options(
@@ -414,8 +488,7 @@ def penjual_dashboard():
         unread_count = Notification.query.filter_by(
             user_id=current_user.id, is_read=False).count()
     except Exception as e:
-        print(
-            f"Error fetching notifications for vendor {current_user.id}: {e}")
+        print(f"Error fetching notifications for vendor {current_user.id}: {e}")
 
     # Data untuk Grafik (7 hari terakhir)
     chart_labels = []
@@ -423,10 +496,8 @@ def penjual_dashboard():
     for i in range(6, -1, -1):
         day = today_wib - timedelta(days=i)
         chart_labels.append(day.strftime('%d %b'))
-        start = datetime.combine(day, time.min).replace(
-            tzinfo=wib_tz).astimezone(utc_tz)
-        end = datetime.combine(day, time.max).replace(
-            tzinfo=wib_tz).astimezone(utc_tz)
+        start = datetime.combine(day, time.min).replace(tzinfo=wib_tz).astimezone(utc_tz)
+        end = datetime.combine(day, time.max).replace(tzinfo=wib_tz).astimezone(utc_tz)
         sum_result = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.related_user_id == current_user.id,
             Transaction.type == 'payment',
@@ -439,7 +510,9 @@ def penjual_dashboard():
     data = {
         'qr_code_url': url_for('my_qr_code'),
         'balance': current_user.balance,
-        'todays_earnings': todays_earnings,
+        'todays_earnings': total_earnings,           # bersih
+        'gross_earnings': gross_earnings,            # kotor
+        'margin_total': margin_total,                # margin
         'todays_transaction_count': todays_transaction_count,
         'recent_transactions': recent_transactions,
         'unread_count': unread_count,
@@ -464,6 +537,7 @@ def history_vendor():
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
     sort = request.args.get('sort', 'desc')
+    transaction_id = request.args.get('transaction_id', type=int)  # Tambah ini
 
     # Zona Waktu
     now_wib = datetime.now(wib_tz)
@@ -514,6 +588,10 @@ def history_vendor():
     # Gabungkan kedua query
     all_query = payment_query.union_all(withdrawal_query)
 
+    # Filter berdasarkan ID transaksi jika diisi
+    if transaction_id:
+        all_query = all_query.filter(Transaction.id == transaction_id)
+
     # Sorting
     if sort == 'asc':
         all_query = all_query.order_by(Transaction.timestamp.asc())
@@ -534,7 +612,8 @@ def history_vendor():
         pagination=transactions_pagination,
         filter_start_date=start_dt.strftime('%Y-%m-%d'),
         filter_end_date=end_dt.strftime('%Y-%m-%d'),
-        total_transaksi=total_transaksi
+        total_transaksi=total_transaksi,
+        filter_transaction_id=transaction_id  # Kirim ke template
     )
 
 
@@ -582,7 +661,10 @@ else:
 def dashboard():
     if current_user.role != 'siswa':
         return redirect(url_for('admin_dashboard_content'))
-    
+
+    # Tambahkan ini sebelum query
+    today = datetime.utcnow().date()
+
     # Get recent transactions
     recent_transactions = (Transaction.query
         .filter(or_(
@@ -594,32 +676,31 @@ def dashboard():
         .all())
 
     # Calculate today's spending
-    today = datetime.now().date()
     todays_spending = (Transaction.query
         .filter(
             Transaction.user_id == current_user.id,
-            Transaction.type == 'payment',
+            Transaction.type.in_(['payment', 'transfer']),
             func.date(Transaction.timestamp) == today
         )
         .with_entities(func.sum(Transaction.amount))
         .scalar() or 0)
 
+
     # Get notifications
     recent_notifications = (Notification.query
-        .filter(Notification.user_id == current_user.id)
-        .order_by(Notification.timestamp.desc())
-        .limit(5)
-        .all())
+    .filter(Notification.user_id == current_user.id)
+    .order_by(Notification.timestamp.desc())
+    .all())
 
     # Filter border notifications
     filtered_notifications = []
     for notif in recent_notifications:
-        # Jika bukan notifikasi border, tampilkan
         if 'border' not in notif.message.lower():
             filtered_notifications.append(notif)
-        # Jika notifikasi border, cek jurusan
-        elif current_user.jurusan.lower() in notif.message.lower():
+        elif current_user.jurusan and current_user.jurusan.lower() in notif.message.lower():
             filtered_notifications.append(notif)
+
+        filtered_notifications = filtered_notifications[:3]
 
     # Count unread notifications
     unread_count = (Notification.query
@@ -630,27 +711,24 @@ def dashboard():
         .count())
 
     return render_template('siswa/dashboard_siswa.html',
-                            recent_transactions=recent_transactions,
-                            todays_spending=todays_spending,
-                            unread_count=unread_count,
-                            recent_notifications=filtered_notifications,
-                            active_page='dashboard',)
+                        recent_transactions=recent_transactions,
+                        todays_spending=todays_spending,
+                        unread_count=unread_count,
+                        recent_notifications=filtered_notifications,
+                        active_page='dashboard',)
 
 
 @app.route('/admin/topup', methods=['GET', 'POST'])
-@login_required  # Harus login
+@login_required
 def admin_topup():
-    # 1. Otorisasi: Pastikan yang akses adalah admin
     if current_user.role != 'admin':
         flash("Akses ditolak. Fitur ini hanya untuk admin.", "danger")
-        return redirect(url_for('dashboard'))  # Arahkan ke dashboard biasa
+        return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
         user_id_to_topup = request.form.get('user_id')
         amount_str = request.form.get('amount')
 
-        # 2. Validasi Input Server-side
-        # Cari user berdasarkan ID dari form
         student = User.query.get(user_id_to_topup)
         amount = 0.0
         error_message = None
@@ -662,35 +740,27 @@ def admin_topup():
         else:
             try:
                 amount = float(amount_str)
-                if amount <= 0:  # Atau bisa set minimum topup, misal amount < 100
+                if amount <= 0:
                     error_message = "Jumlah top up harus lebih dari 0."
             except ValueError:
                 error_message = "Jumlah top up harus berupa angka."
 
-        # Jika ada error validasi
         if error_message:
             flash(error_message, "danger")
-            # Kita perlu kirim lagi daftar siswa ke template saat render ulang form
-            students = User.query.filter_by(
-                role='siswa').order_by(User.username).all()
-            return render_template('/admin/admin_topup.html', students=students)
+            return render_template('admin/admin_topup.html', active_page='admin_topup')
 
-        # 3. Proses Top Up (Jika Validasi Lolos)
         try:
             balance_before = student.balance
-            student.balance += amount  # Tambahkan saldo siswa
+            student.balance += amount
             balance_after = student.balance
 
-            # 4. Buat Catatan Transaksi
             new_transaction = Transaction(
-                user_id=current_user.id,         # <<< ID ADMIN yang melakukan Top Up
-                related_user_id=student.id,    # <<< ID SISWA yang menerima Top Up
+                user_id=current_user.id,
+                related_user_id=student.id,
                 type='topup',
                 amount=amount,
-                # user_balance_before/after tetap merujuk ke saldo siswa
-                user_balance_before=balance_before,  # Saldo siswa sebelum
-                user_balance_after=balance_after,   # Saldo siswa sesudah
-                # Deskripsi lebih baik
+                user_balance_before=balance_before,
+                user_balance_after=balance_after,
                 description=f"Top up saldo untuk {student.username} oleh Admin"
             )
             db.session.add(new_transaction)
@@ -700,17 +770,24 @@ def admin_topup():
                 f"Top up untuk {student.username} sebesar {format_rupiah(amount)} berhasil. Saldo baru: {format_rupiah(student.balance)}", "success")
 
         except Exception as e:
-            db.session.rollback()  # Batalkan jika ada error saat commit
+            db.session.rollback()
             flash(f"Terjadi kesalahan saat proses top up: {str(e)}", "danger")
 
-        # Arahkan kembali ke halaman top up setelah proses selesai (baik sukses/gagal)
         return redirect(url_for('admin_topup'))
 
-    # --- Handle Method GET ---
-    # Jika bukan POST, berarti user baru membuka halaman. Tampilkan form.
-    # Ambil semua user dengan role 'siswa' untuk ditampilkan di dropdown
-    students = User.query.filter_by(role='siswa').order_by(User.username).all()
-    return render_template('/admin/admin_topup.html', students=students, active_page='admin_topup')
+    # GET: Tampilkan form tanpa daftar siswa
+    return render_template('admin/admin_topup.html', active_page='admin_topup')
+
+@app.route('/admin/get_student_username')
+@login_required
+def get_student_username():
+    if current_user.role != 'admin':
+        return {'error': 'unauthorized'}, 403
+    user_id = request.args.get('id')
+    user = User.query.get(user_id)
+    if user and user.role == 'siswa':
+        return {'username': user.username}
+    return {'username': None}
 
 # --- Route untuk Admin Dashboard (Opsional tapi bagus) ---
 
@@ -726,27 +803,69 @@ def admin_dashboard_content():
     total_admins = User.query.filter_by(role='admin').count()
     total_vendors = User.query.filter_by(role='penjual').count()
     total_students = User.query.filter_by(role='siswa').count()
-    active_vendors = User.query.filter_by(
-        role='penjual', is_active=True).count()
-    active_students = User.query.filter_by(
-        role='siswa', is_active=True).count()
+    active_vendors = User.query.filter_by(role='penjual', is_active=True).count()
+    active_students = User.query.filter_by(role='siswa', is_active=True).count()
 
     # Statistik saldo
-    total_student_balance = db.session.query(db.func.coalesce(db.func.sum(
-        User.balance), 0)).filter_by(role='siswa', is_active=True).scalar()
-    total_vendor_balance = db.session.query(db.func.coalesce(db.func.sum(
-        User.balance), 0)).filter_by(role='penjual', is_active=True).scalar()
+    total_student_balance = db.session.query(db.func.coalesce(db.func.sum(User.balance), 0)).filter_by(role='siswa', is_active=True).scalar()
+    total_vendor_balance = db.session.query(db.func.coalesce(db.func.sum(User.balance), 0)).filter_by(role='penjual', is_active=True).scalar()
 
     # Statistik aktivitas hari ini
     today = datetime.utcnow().date()
     start_today = datetime.combine(today, datetime.min.time())
     end_today = datetime.combine(today, datetime.max.time())
+
     total_topups_today = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0))\
         .filter(Transaction.type == 'topup', Transaction.timestamp >= start_today, Transaction.timestamp <= end_today).scalar()
     total_payments_today = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0))\
         .filter(Transaction.type == 'payment', Transaction.timestamp >= start_today, Transaction.timestamp <= end_today).scalar()
     total_cashouts_today = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0))\
         .filter(Transaction.type == 'cashout_vendor', Transaction.timestamp >= start_today, Transaction.timestamp <= end_today).scalar()
+
+    # Statistik tambahan
+    total_transactions_today = Transaction.query.filter(
+        Transaction.timestamp >= start_today,
+        Transaction.timestamp <= end_today
+    ).count()
+
+    pending_topup_requests = TopUpRequest.query.filter_by(status='pending').count()
+
+    total_transfer_today = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0)).filter(
+        Transaction.type == 'transfer',
+        Transaction.timestamp >= start_today,
+        Transaction.timestamp <= end_today
+    ).scalar()
+
+    students_no_topup = User.query.filter_by(role='siswa', is_active=True, balance=0).count()
+
+    students_low_balance = User.query.filter(
+        User.role == 'siswa',
+        User.is_active == True,
+        User.balance < 10000
+    ).count()
+
+    vendors_today = db.session.query(User.username, db.func.count(Transaction.id)).join(Transaction, Transaction.related_user_id == User.id).filter(
+        User.role == 'penjual',
+        Transaction.type == 'payment',
+        Transaction.timestamp >= start_today,
+        Transaction.timestamp <= end_today
+    ).group_by(User.username).order_by(db.func.count(Transaction.id).desc()).first()
+
+    students_today = db.session.query(User.username, db.func.count(Transaction.id)).join(Transaction, Transaction.user_id == User.id).filter(
+        User.role == 'siswa',
+        Transaction.timestamp >= start_today,
+        Transaction.timestamp <= end_today
+    ).group_by(User.username).order_by(db.func.count(Transaction.id).desc()).first()
+
+    laporan_pending = Laporan.query.filter_by(ditanggapi=False).count()
+
+    nonactive_students = User.query.filter_by(role='siswa', is_active=False).count()
+    nonactive_vendors = User.query.filter_by(role='penjual', is_active=False).count()
+
+    notifikasi_today = Notification.query.filter(
+        Notification.timestamp >= start_today,
+        Notification.timestamp <= end_today
+    ).count()
 
     stats = {
         'total_admins': total_admins,
@@ -758,7 +877,20 @@ def admin_dashboard_content():
         'total_vendor_balance': total_vendor_balance,
         'total_topups_today': total_topups_today,
         'total_payments_today': total_payments_today,
-        'total_cashouts_today': total_cashouts_today
+        'total_cashouts_today': total_cashouts_today,
+        'total_transactions_today': total_transactions_today,
+        'pending_topup_requests': pending_topup_requests,
+        'total_transfer_today': total_transfer_today,
+        'students_no_topup': students_no_topup,
+        'students_low_balance': students_low_balance,
+        'vendors_today': vendors_today[0] if vendors_today else '-',
+        'vendors_today_count': vendors_today[1] if vendors_today else 0,
+        'students_today': students_today[0] if students_today else '-',
+        'students_today_count': students_today[1] if students_today else 0,
+        'laporan_pending': laporan_pending,
+        'nonactive_students': nonactive_students,
+        'nonactive_vendors': nonactive_vendors,
+        'notifikasi_today': notifikasi_today
     }
 
     # Grafik aktivitas transaksi 7 hari terakhir
@@ -768,16 +900,27 @@ def admin_dashboard_content():
     chart_topup = []
     chart_payment = []
     chart_cashout = []
+    chart_transactions = []
+    chart_transfers = []
+    chart_students_no_topup = []
+    chart_students_low_balance = []
+    chart_active_vendors = []
+    chart_active_students = []
+
     for d in last_7_days:
         start = datetime.combine(d, datetime.min.time())
         end = datetime.combine(d, datetime.max.time())
         chart_labels.append(d.strftime('%d %b'))
-        chart_topup.append(Transaction.query.filter(Transaction.type == 'topup',
-                           Transaction.timestamp >= start, Transaction.timestamp <= end).count())
-        chart_payment.append(Transaction.query.filter(Transaction.type == 'payment',
-                             Transaction.timestamp >= start, Transaction.timestamp <= end).count())
-        chart_cashout.append(Transaction.query.filter(Transaction.type == 'cashout_vendor',
-                             Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_topup.append(Transaction.query.filter(Transaction.type == 'topup', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_payment.append(Transaction.query.filter(Transaction.type == 'payment', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_cashout.append(Transaction.query.filter(Transaction.type == 'cashout_vendor', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_transactions.append(Transaction.query.filter(Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_transfers.append(Transaction.query.filter(Transaction.type == 'transfer', Transaction.timestamp >= start, Transaction.timestamp <= end).count())
+        chart_students_no_topup.append(User.query.filter_by(role='siswa', is_active=True, balance=0).count())
+        chart_students_low_balance.append(User.query.filter(User.role == 'siswa', User.is_active == True, User.balance < 10000).count())
+        # Penjual teraktif dan siswa teraktif bisa diisi dengan angka dummy jika ingin chart, misal 0
+        chart_active_vendors.append(0)
+        chart_active_students.append(0)
 
     return render_template(
         '/admin/dashboard_admin_content.html',
@@ -786,6 +929,12 @@ def admin_dashboard_content():
         chart_topup=chart_topup,
         chart_payment=chart_payment,
         chart_cashout=chart_cashout,
+        chart_transactions=chart_transactions,
+        chart_transfers=chart_transfers,
+        chart_students_no_topup=chart_students_no_topup,
+        chart_students_low_balance=chart_students_low_balance,
+        chart_active_vendors=chart_active_vendors,
+        chart_active_students=chart_active_students,
         now=datetime.utcnow(),
         active_page='admin_dashboard_content'
     )
@@ -885,37 +1034,49 @@ def cash_out():
         flash("Hanya penjual yang dapat melakukan penarikan saldo.", "danger")
         return redirect(url_for('dashboard'))
 
-    if current_user.balance <= 0:
-        flash("Saldo Anda kosong, tidak ada yang bisa ditarik.", "warning")
-        return redirect(url_for('penjual_dashboard'))
-
-    admin_bank_mini = User.query.filter_by(role='admin').first()
-    if not admin_bank_mini:
-        flash("Kesalahan Sistem: Admin Bank Mini tidak ditemukan.", "danger")
-        return redirect(url_for('penjual_dashboard'))
-
-    amount_to_cash_out = current_user.balance
     try:
+        amount_to_cash_out = float(request.form.get('amount_to_cash_out', 0))
+        if amount_to_cash_out < 5000:
+            flash("Minimal penarikan adalah Rp5.000.", "danger")
+            return redirect(url_for('penjual_dashboard'))
+        if amount_to_cash_out > current_user.balance:
+            flash("Saldo tidak mencukupi untuk penarikan.", "danger")
+            return redirect(url_for('penjual_dashboard'))
+
+        # ...ambil margin dari database seperti sebelumnya...
+        margin = MarginSetting.query.first()
+        if not margin:
+            margin_nominal = 5000
+            margin_potongan = 500
+        else:
+            margin_nominal = margin.nominal_per_margin
+            margin_potongan = margin.potongan_per_margin
+
+        margin_count = int(amount_to_cash_out // margin_nominal)
+        total_potongan = margin_count * margin_potongan
+        bersih_diterima = amount_to_cash_out - total_potongan
+
         vendor_balance_before = current_user.balance
+        admin_bank_mini = User.query.filter_by(role='admin').first()
         admin_balance_before = admin_bank_mini.balance
 
-        current_user.balance = 0.0
-        admin_bank_mini.balance += amount_to_cash_out
+        current_user.balance -= amount_to_cash_out
+        admin_bank_mini.balance += bersih_diterima
 
         cashout_transaction = Transaction(
             user_id=current_user.id,
             related_user_id=admin_bank_mini.id,
             type='cashout_vendor',
-            amount=amount_to_cash_out,
+            amount=bersih_diterima,
             user_balance_before=vendor_balance_before,
-            user_balance_after=0.0,
-            description=f"Penarikan tunai oleh {current_user.username}"
+            user_balance_after=current_user.balance,
+            description=f"Penarikan tunai oleh {current_user.username} (potongan {total_potongan})"
         )
         db.session.add(cashout_transaction)
         db.session.commit()
 
         flash(
-            f"Penarikan tunai sebesar {format_rupiah(amount_to_cash_out)} berhasil diproses!", "success")
+            f"Penarikan tunai sebesar {format_rupiah(amount_to_cash_out)} berhasil diproses! Potongan: {format_rupiah(total_potongan)}. Saldo diterima: {format_rupiah(bersih_diterima)}", "success")
     except Exception as e:
         db.session.rollback()
         flash(f"Gagal melakukan penarikan tunai: {str(e)}", "danger")
@@ -926,24 +1087,90 @@ def cash_out():
 @app.route('/my_qr_code.png')
 @login_required
 def my_qr_code():
-    # Hanya penjual yang boleh akses QR-nya sendiri
     if current_user.role != 'penjual':
         return "Akses ditolak", 403
 
-    # Data yang ingin di-encode, misal ID user atau username
+    background_path = os.path.join('static', 'qr_bg', 'background_a5.png')
+    try:
+        canvas = Image.open(background_path).convert("RGBA")
+    except Exception as e:
+        canvas = Image.new("RGBA", (1748, 2480), (255, 255, 255, 255))
+
+    nama_penjual = current_user.username
+    draw = ImageDraw.Draw(canvas)
+    try:
+        font = ImageFont.truetype("arial.ttf", 80)
+    except:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), nama_penjual, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    text_x = (1748 - text_width) // 2
+    text_y = 600
+
+    draw.text((text_x, text_y), nama_penjual, fill=(0, 0, 0, 255), font=font)
+
+        # Tambahkan ID penjual di bawah nama penjual
+    id_penjual = f"ID: {current_user.id}"
+    try:
+        font_id = ImageFont.truetype("arial.ttf", 50)
+    except:
+        font_id = ImageFont.load_default()
+    bbox_id = draw.textbbox((0, 0), id_penjual, font=font_id)
+    id_width = bbox_id[2] - bbox_id[0]
+    id_height = bbox_id[3] - bbox_id[1]
+    id_x = (1748 - id_width) // 2
+    id_y = text_y + text_height + 50  # 10px di bawah nama penjual
+
+    draw.text((id_x, id_y), id_penjual, fill=(0, 0, 0, 255), font=font_id)
+
     data_to_encode = str(current_user.id)
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=8,
-        border=4,
+        box_size=10,
+        border=1,
     )
     qr.add_data(data_to_encode)
     qr.make(fit=True)
+    # QR code dengan background putih
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
 
-    img = qr.make_image(fill_color="black", back_color="white")
+    qr_size = 800
+    qr_img = qr_img.resize((qr_size, qr_size))
+    qr_x = (1748 - qr_size) // 2
+    qr_y = 900  # bebas atur
+
+    # Tempel QR code dengan mask agar putihnya tetap
+    canvas.paste(qr_img, (qr_x, qr_y), qr_img)
+
     img_io = io.BytesIO()
-    img.save(img_io, 'PNG')
+    canvas.save(img_io, 'PNG')
+    img_io.seek(0)
+    return send_file(img_io, mimetype='image/png')
+
+@app.route('/my_qr_code_only.png')
+@login_required
+def my_qr_code_only():
+    if current_user.role != 'penjual':
+        return "Akses ditolak", 403
+
+    data_to_encode = str(current_user.id)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=1,
+    )
+    qr.add_data(data_to_encode)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
+
+    qr_size = 800
+    qr_img = qr_img.resize((qr_size, qr_size))
+
+    img_io = io.BytesIO()
+    qr_img.save(img_io, 'PNG')
     img_io.seek(0)
     return send_file(img_io, mimetype='image/png')
 
@@ -962,12 +1189,11 @@ def admin_users():
 
     # Ambil parameter filter dari URL
     page = request.args.get('page', 1, type=int)
-    per_page = 5  # Jumlah data per halaman
+    per_page = 12
     filter_kelas = request.args.get('kelas')
     filter_jurusan = request.args.get('jurusan')
-    filter_username = request.args.get('username')
+    filter_user_id = request.args.get('user_id', type=int)  # Ganti dari username
 
-    # Query dasar pengguna
     query = User.query
 
     # Filter berdasarkan kelas
@@ -978,11 +1204,10 @@ def admin_users():
     if filter_jurusan:
         query = query.filter(User.jurusan == filter_jurusan)
 
-    # Filter berdasarkan nama pengguna
-    if filter_username:
-        query = query.filter(User.username.ilike(f"%{filter_username}%"))
+    # Filter berdasarkan ID user
+    if filter_user_id:
+        query = query.filter(User.id == filter_user_id)
 
-    # Pagination
     users_pagination = query.order_by(
         User.id.asc()).paginate(page=page, per_page=per_page)
 
@@ -992,7 +1217,8 @@ def admin_users():
         pagination=users_pagination,
         filter_kelas=filter_kelas,
         filter_jurusan=filter_jurusan,
-        filter_username=filter_username, active_page='admin_users')
+        filter_user_id=filter_user_id,  # Ganti dari filter_username
+        active_page='admin_users')
 
 
 @app.route('/admin/transactions')
@@ -1004,31 +1230,32 @@ def admin_transactions():
 
     # Ambil parameter filter dari URL
     page = request.args.get('page', 1, type=int)
-    per_page = 8  # Jumlah data per halaman
+    per_page = 8
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     filter_type = request.args.get('filter_type', 'all')
     username = request.args.get('username')
+    transaction_id = request.args.get('transaction_id', type=int)  # Tambah ini
 
-    # Query dasar transaksi
     query = Transaction.query
 
-    # Filter berdasarkan tanggal
-    if start_date:
-        query = query.filter(Transaction.timestamp >= start_date)
-    if end_date:
-        query = query.filter(Transaction.timestamp <= end_date)
+    # Filter berdasarkan ID transaksi jika diisi
+    if transaction_id:
+        query = query.filter(Transaction.id == transaction_id)
+    else:
+        # Filter berdasarkan tanggal
+        if start_date:
+            query = query.filter(Transaction.timestamp >= start_date)
+        if end_date:
+            query = query.filter(Transaction.timestamp <= end_date)
+        # Filter berdasarkan tipe transaksi
+        if filter_type != 'all':
+            query = query.filter(Transaction.type == filter_type)
+        # Filter berdasarkan username
+        if username:
+            query = query.join(User, Transaction.user_id == User.id).filter(
+                User.username.ilike(f"%{username}%"))
 
-    # Filter berdasarkan tipe transaksi
-    if filter_type != 'all':
-        query = query.filter(Transaction.type == filter_type)
-
-    # Filter berdasarkan username
-    if username:
-        query = query.join(User, Transaction.user_id == User.id).filter(
-            User.username.ilike(f"%{username}%"))
-
-    # Pagination
     transactions_pagination = query.order_by(
         Transaction.timestamp.desc()).paginate(page=page, per_page=per_page)
 
@@ -1039,7 +1266,9 @@ def admin_transactions():
         filter_start_date=start_date,
         filter_end_date=end_date,
         selected_type_filter=filter_type,
-        filter_username=username, active_page='admin_transactions')
+        filter_username=username,
+        filter_transaction_id=transaction_id,  # Kirim ke template
+        active_page='admin_transactions')
 
 
 @app.route('/print/daily_summary')
@@ -1055,8 +1284,7 @@ def print_daily_summary():
         wib = ZoneInfo("Asia/Jakarta")
     except Exception:
         wib = None
-    now_wib = datetime.now(
-        wib) if wib else datetime.utcnow() + timedelta(hours=7)
+    now_wib = datetime.now(wib) if wib else datetime.utcnow() + timedelta(hours=7)
     today_wib = now_wib.date()
 
     # 3. Tentukan Batas Waktu UTC untuk Query Hari Ini (WIB)
@@ -1064,13 +1292,11 @@ def print_daily_summary():
     if wib:
         today_wib_start_local = today_wib_start_local.replace(tzinfo=wib)
     tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
-    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo(
-        "UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
-    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo(
-        "UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
+    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
+    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
 
-    # 4. Hitung Total Pendapatan Hari Ini
-    todays_earnings = 0.0
+    # 4. Hitung Total Pendapatan Kotor Hari Ini
+    gross_earnings = 0.0
     try:
         sum_result = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.related_user_id == current_user.id,
@@ -1079,41 +1305,53 @@ def print_daily_summary():
             Transaction.timestamp < tomorrow_start_utc_for_calc
         ).scalar()
         if sum_result is not None:
-            todays_earnings = float(sum_result)
+            gross_earnings = float(sum_result)
     except Exception as e:
         print(f"Error menghitung pendapatan harian untuk print: {e}")
-        # Tetap lanjutkan meskipun gagal hitung total
 
-    # 5. Ambil Daftar Transaksi Pembayaran Diterima Hari Ini
+    # 5. Hitung Margin Hari Ini
+    margin = MarginSetting.query.first()
+    if not margin:
+        margin_nominal = 5000
+        margin_potongan = 500
+    else:
+        margin_nominal = margin.nominal_per_margin
+        margin_potongan = margin.potongan_per_margin
+
+    margin_count = int(gross_earnings // margin_nominal)
+    margin_total = margin_count * margin_potongan
+
+    # 6. Hitung Pendapatan Bersih
+    total_earnings = gross_earnings - margin_total
+
+    # 7. Ambil Daftar Transaksi Pembayaran Diterima Hari Ini
     daily_transactions = []
     try:
         daily_transactions = Transaction.query.options(
-            db.joinedload(Transaction.user)  # Load data siswa pembayar
+            db.joinedload(Transaction.user)
         ).filter(
-            Transaction.related_user_id == current_user.id,  # Penjual sebagai penerima
-            Transaction.type == 'payment',                  # Hanya pembayaran
+            Transaction.related_user_id == current_user.id,
+            Transaction.type == 'payment',
             Transaction.timestamp >= today_start_utc_for_calc,
             Transaction.timestamp < tomorrow_start_utc_for_calc
-            # Urutkan dari pagi ke sore
         ).order_by(Transaction.timestamp.asc()).all()
     except Exception as e:
         print(f"Error mengambil transaksi harian untuk print: {e}")
         flash("Gagal mengambil rincian transaksi untuk dicetak.", "warning")
 
-    # 6. Siapkan data untuk dikirim ke template cetak
+    # 8. Siapkan data untuk dikirim ke template cetak
     report_data = {
         "vendor_name": current_user.username,
-        # Format tanggal Indonesia yang bagus
         "report_date_str": today_wib.strftime('%A, %d %B %Y'),
-        "total_earnings": todays_earnings,
+        "total_earnings": total_earnings,      # bersih
+        "gross_earnings": gross_earnings,      # kotor
+        "margin_total": margin_total,          # margin
         "transactions": daily_transactions,
-        # Waktu saat laporan ini dibuat (sudah diformat WIB)
         "print_time_wib": format_wib(datetime.utcnow())
     }
 
-    # 7. Render template khusus untuk cetak
-    return render_template('vendor_daily_print.html', **report_data, )
-
+    # 9. Render template khusus untuk cetak
+    return render_template('vendor_daily_print.html', **report_data)
 
 @app.route('/print/daily_summary/pdf')
 @login_required
@@ -1128,8 +1366,7 @@ def print_daily_summary_pdf():
         wib = ZoneInfo("Asia/Jakarta")
     except Exception:
         wib = None
-    now_wib = datetime.now(
-        wib) if wib else datetime.utcnow() + timedelta(hours=7)
+    now_wib = datetime.now(wib) if wib else datetime.utcnow() + timedelta(hours=7)
     today_wib = now_wib.date()
 
     # 3. Tentukan Batas Waktu UTC untuk Query Hari Ini (WIB)
@@ -1137,13 +1374,11 @@ def print_daily_summary_pdf():
     if wib:
         today_wib_start_local = today_wib_start_local.replace(tzinfo=wib)
     tomorrow_wib_start_local = today_wib_start_local + timedelta(days=1)
-    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo(
-        "UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
-    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo(
-        "UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
+    today_start_utc_for_calc = today_wib_start_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else today_wib_start_local - timedelta(hours=7)
+    tomorrow_start_utc_for_calc = tomorrow_wib_start_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else tomorrow_wib_start_local - timedelta(hours=7)
 
-    # 4. Hitung Total Pendapatan Hari Ini
-    todays_earnings = 0.0
+    # 4. Hitung Total Pendapatan Kotor Hari Ini
+    gross_earnings = 0.0
     try:
         sum_result = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.related_user_id == current_user.id,
@@ -1152,39 +1387,53 @@ def print_daily_summary_pdf():
             Transaction.timestamp < tomorrow_start_utc_for_calc
         ).scalar()
         if sum_result is not None:
-            todays_earnings = float(sum_result)
+            gross_earnings = float(sum_result)
     except Exception as e:
         print(f"Error menghitung pendapatan harian untuk print: {e}")
-        # Tetap lanjutkan meskipun gagal hitung total
 
-    # 5. Ambil Daftar Transaksi Pembayaran Diterima Hari Ini
+    # 5. Hitung Margin Hari Ini
+    margin = MarginSetting.query.first()
+    if not margin:
+        margin_nominal = 5000
+        margin_potongan = 500
+    else:
+        margin_nominal = margin.nominal_per_margin
+        margin_potongan = margin.potongan_per_margin
+
+    margin_count = int(gross_earnings // margin_nominal)
+    margin_total = margin_count * margin_potongan
+
+    # 6. Hitung Pendapatan Bersih
+    total_earnings = gross_earnings - margin_total
+
+    # 7. Ambil Daftar Transaksi Pembayaran Diterima Hari Ini
     daily_transactions = []
     try:
         daily_transactions = Transaction.query.options(
-            db.joinedload(Transaction.user)  # Load data siswa pembayar
+            db.joinedload(Transaction.user)
         ).filter(
-            Transaction.related_user_id == current_user.id,  # Penjual sebagai penerima
-            Transaction.type == 'payment',                  # Hanya pembayaran
+            Transaction.related_user_id == current_user.id,
+            Transaction.type == 'payment',
             Transaction.timestamp >= today_start_utc_for_calc,
             Transaction.timestamp < tomorrow_start_utc_for_calc
-            # Urutkan dari pagi ke sore
         ).order_by(Transaction.timestamp.asc()).all()
     except Exception as e:
         print(f"Error mengambil transaksi harian untuk print: {e}")
         flash("Gagal mengambil rincian transaksi untuk dicetak.", "warning")
 
-    # 6. Siapkan data untuk dikirim ke template cetak
+    # 8. Siapkan data untuk dikirim ke template cetak
     report_data = {
         "vendor_name": current_user.username,
         "report_date_str": today_wib.strftime('%A, %d %B %Y'),
-        "total_earnings": todays_earnings,
+        "total_earnings": total_earnings,      # bersih
+        "gross_earnings": gross_earnings,      # kotor
+        "margin_total": margin_total,          # margin
         "transactions": daily_transactions,
         "print_time_wib": format_wib(datetime.utcnow())
     }
 
-    # 7. Render template khusus untuk cetak
+    # 9. Render template khusus untuk cetak
     html = render_template('vendor_daily_print.html', **report_data)
-    # Generate PDF dari HTML
     pdf = HTML(string=html, base_url=request.base_url).write_pdf()
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
@@ -1240,38 +1489,44 @@ def admin_edit_user(user_id):
     # Ambil data user yang mau diedit
     user_to_edit = User.query.get_or_404(user_id)
 
-    # (Opsional) Cegah admin mengedit dirinya sendiri via halaman ini
-    # if user_to_edit.id == current_user.id:
-    #     flash("Gunakan halaman profil untuk mengedit data Anda sendiri.", "warning")
-    #     return redirect(url_for('admin_users'))
-
-    # Jika method POST (artinya form disubmit)
     if request.method == 'POST':
         # Ambil data baru dari form
-        # .strip() hapus spasi awal/akhir
+        new_id = request.form.get('id')
         new_username = request.form.get('username').strip()
-        # Ambil role (akan None jika field disabled)
         new_role = request.form.get('role')
         new_kelas = request.form.get('kelas')
         new_jurusan = request.form.get('jurusan')
+        new_password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
 
-        # === Validasi Data Baru ===
         error = False
-        # Cek field dasar
+
+        # Validasi ID
+        if not new_id or not new_id.isdigit() or len(new_id) != 5:
+            flash("ID harus terdiri dari 5 angka.", "danger")
+            error = True
+        else:
+            # Cek keunikan ID jika diubah
+            if str(user_to_edit.id) != new_id:
+                existing_id = User.query.filter(User.id == int(new_id), User.id != user_id).first()
+                if existing_id:
+                    flash("ID sudah digunakan oleh pengguna lain.", "danger")
+                    error = True
+
+        # Validasi username
         if not new_username:
-            flash("Username tidak boleh kosong.", "danger")
+            flash("Nama lengkap tidak boleh kosong.", "danger")
             error = True
 
-        # Jika mencoba mengubah user yg bukan admin (role bisa diedit)
+        # Validasi role
         if user_to_edit.role != 'admin':
             if not new_role or new_role not in ['siswa', 'penjual']:
                 flash("Peran yang dipilih tidak valid.", "danger")
                 error = True
         else:
-            # Jika targetnya admin, pastikan rolenya tidak berubah
-            new_role = 'admin'  # Tetapkan kembali sebagai admin
+            new_role = 'admin'
 
-        # Validasi Kelas/Jurusan jika rolenya siswa
+        # Validasi kelas/jurusan jika siswa
         kelas_final = None
         jurusan_final = None
         if new_role == 'siswa':
@@ -1285,36 +1540,42 @@ def admin_edit_user(user_id):
                 error = True
             kelas_final = new_kelas
             jurusan_final = new_jurusan
-        # Jika role baru BUKAN siswa, otomatis set kelas/jurusan jadi None (kosong)
 
-        # Cek keunikan username JIKA username diubah
+        # Cek keunikan username jika diubah
         if new_username != user_to_edit.username:
             existing_user = User.query.filter(
                 User.username == new_username, User.id != user_id).first()
             if existing_user:
-                flash(f"Username '{new_username}' sudah digunakan.", "danger")
+                flash(f"Nama '{new_username}' sudah digunakan.", "danger")
                 error = True
 
-        # Jika tidak ada error validasi, simpan perubahan
+        # Validasi password jika ingin diubah
+        if new_password:
+            if len(new_password) < 8:
+                flash("Password minimal 8 karakter.", "danger")
+                error = True
+            if new_password != confirm_password:
+                flash("Password dan konfirmasi password tidak cocok.", "danger")
+                error = True
+
         if not error:
             try:
+                # Update ID jika berubah
+                if str(user_to_edit.id) != new_id:
+                    user_to_edit.id = int(new_id)
                 user_to_edit.username = new_username
                 user_to_edit.role = new_role
-                user_to_edit.kelas = kelas_final  # Akan None jika bukan siswa
-                user_to_edit.jurusan = jurusan_final  # Akan None jika bukan siswa
+                user_to_edit.kelas = kelas_final
+                user_to_edit.jurusan = jurusan_final
+                if new_password:
+                    user_to_edit.set_password(new_password)
                 db.session.commit()
-                flash(
-                    f"Data pengguna '{new_username}' berhasil diperbarui.", "success")
-                # Kembali ke daftar pengguna
+                flash(f"Data pengguna '{new_username}' berhasil diperbarui.", "success")
                 return redirect(url_for('admin_users'))
             except Exception as e:
                 db.session.rollback()
                 flash(f"Gagal memperbarui data: {str(e)}", "danger")
-                # Tetap di halaman edit jika gagal simpan
-        # Jika ada error validasi, template akan dirender ulang (lihat bawah)
 
-    # Method GET (atau jika POST gagal validasi): Tampilkan form edit
-    # Kirim data user yg diedit ke template agar form bisa terisi
     return render_template('admin/admin_edit_users.html', user_to_edit=user_to_edit)
 
 
@@ -1584,90 +1845,94 @@ def change_border(border_id):
     return redirect(url_for('profile'))
 
 
-@app.route('/riwayat_siswa')  # Nama route baru
+@app.route('/riwayat_siswa')
 @login_required
-def riwayat_siswa():  # Nama fungsi baru
-    # Pastikan hanya siswa
+def riwayat_siswa():
     if current_user.role != 'siswa':
         flash("Halaman ini hanya untuk siswa.", "danger")
         return redirect(url_for('dashboard'))
 
-    # --- Ambil & Proses Filter ---
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
-    selected_type_filter = request.args.get(
-        'filter_type', 'all')  # Default 'all'
+    # Ambil filter bulan dan tahun dari request
+    filter_month = request.args.get('filter_month', None, type=int)
+    filter_year = request.args.get('filter_year', None, type=int)
+    selected_type_filter = request.args.get('filter_type', 'all')
 
-    # Zona Waktu & Tanggal Default (misal: 30 hari terakhir)
+    # Zona Waktu WIB
     try:
         wib = ZoneInfo("Asia/Jakarta")
     except Exception:
         wib = None
-    now_wib = datetime.now(wib) if wib and isinstance(
-        wib, ZoneInfo) else datetime.utcnow() + timedelta(hours=7)
+    now_wib = datetime.now(wib) if wib and isinstance(wib, ZoneInfo) else datetime.utcnow() + timedelta(hours=7)
     today_wib = now_wib.date()
-    default_start_dt = today_wib - timedelta(days=29)  # Default 30 hari
-    default_end_dt = today_wib
 
-    # Parsing tanggal input
-    try:
-        start_dt = date.fromisoformat(
-            start_date_str) if start_date_str else default_start_dt
-    except ValueError:
-        start_dt = default_start_dt
-    try:
-        end_dt = date.fromisoformat(
-            end_date_str) if end_date_str else default_end_dt
-    except ValueError:
-        end_dt = default_end_dt
-    if start_dt > end_dt:
-        start_dt, end_dt = default_start_dt, default_end_dt  # Reset jika tidak valid
+    # Default: bulan dan tahun saat ini jika tidak dipilih
+    if not filter_month:
+        filter_month = today_wib.month
+    if not filter_year:
+        filter_year = today_wib.year
 
-    # Konversi ke batas UTC untuk query (Awal hari start -> Akhir hari end)
+    # Hitung tanggal awal dan akhir bulan
+    start_dt = date(filter_year, filter_month, 1)
+    # Hitung hari terakhir bulan
+    if filter_month == 12:
+        end_dt = date(filter_year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_dt = date(filter_year, filter_month + 1, 1) - timedelta(days=1)
+
+    # Konversi ke UTC
     start_wib_day_local = datetime.combine(start_dt, time.min)
     if wib and isinstance(wib, ZoneInfo):
         start_wib_day_local = start_wib_day_local.replace(tzinfo=wib)
     end_wib_day_local = datetime.combine(end_dt, time.max)
     if wib and isinstance(wib, ZoneInfo):
         end_wib_day_local = end_wib_day_local.replace(tzinfo=wib)
-    start_utc_for_query = start_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(
-        wib, ZoneInfo) else start_wib_day_local - timedelta(hours=7)
-    end_utc_for_query = end_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(
-        wib, ZoneInfo) else end_wib_day_local - timedelta(hours=7)
+    start_utc_for_query = start_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else start_wib_day_local - timedelta(hours=7)
+    end_utc_for_query = end_wib_day_local.astimezone(ZoneInfo("UTC")) if wib and isinstance(wib, ZoneInfo) else end_wib_day_local - timedelta(hours=7)
 
-    # --- Query Transaksi Siswa dengan Filter ---
+    # Query transaksi sesuai bulan & tahun
     base_query = Transaction.query.options(
-        db.joinedload(Transaction.user), db.joinedload(
-            Transaction.related_user)
+        db.joinedload(Transaction.user), db.joinedload(Transaction.related_user)
     ).filter(
-        or_(  # Transaksi yg dia lakukan ATAU topup yg dia terima
+        or_(
             Transaction.user_id == current_user.id,
-            and_(Transaction.related_user_id ==
-                 current_user.id, Transaction.type == 'topup')
-        )
-    ).filter(  # Filter tanggal
+            Transaction.related_user_id == current_user.id
+        ),
         Transaction.timestamp >= start_utc_for_query,
         Transaction.timestamp <= end_utc_for_query
     )
 
-    # Filter Tipe (jika bukan 'all')
-    if selected_type_filter == 'payment':
-        base_query = base_query.filter(
-            Transaction.user_id == current_user.id, Transaction.type == 'payment')
-    elif selected_type_filter == 'topup':
-        base_query = base_query.filter(
-            Transaction.related_user_id == current_user.id, Transaction.type == 'topup')
+    # Filter tipe transaksi (tambahkan 'transfer' sebagai pilihan)
+    if selected_type_filter != 'all':
+        if selected_type_filter == 'transfer':
+            base_query = base_query.filter(Transaction.type == 'transfer')
+        else:
+            base_query = base_query.filter(Transaction.type == selected_type_filter)
 
-    # Ambil semua hasil, urutkan terbaru di atas
-    # TODO: Implementasi Pagination jika data sangat banyak
     transactions = base_query.order_by(Transaction.timestamp.desc()).all()
 
-    # Render template baru 'transaksi_siswa.html'
+    bulan_ini = start_dt.strftime('%B')
+
+    # Hitung total bulanan dengan logika benar
+    total_bulan = 0
+    for tx in transactions:
+        if tx.type == 'topup' and tx.related_user_id == current_user.id:
+            total_bulan += tx.amount
+        elif tx.type == 'transfer':
+            if tx.user_id == current_user.id:
+                total_bulan -= tx.amount  # transfer keluar
+            elif tx.related_user_id == current_user.id:
+                total_bulan += tx.amount  # transfer masuk
+        elif tx.type == 'payment' and tx.user_id == current_user.id:
+            total_bulan -= tx.amount  # pembayaran keluar
+
+    # Render template
     return render_template('/siswa/transaksi_siswa.html',
                            transactions=transactions,
-                           filter_start_date=start_dt.strftime('%Y-%m-%d'),
-                           filter_end_date=end_dt.strftime('%Y-%m-%d'),
+                           filter_month=filter_month,
+                           filter_year=filter_year,
                            selected_type_filter=selected_type_filter,
+                           bulan_ini=bulan_ini,
+                           total_bulan=total_bulan,
                            active_page='riwayat_siswa')
 # === Akhir Route Profil ===
 
@@ -1686,9 +1951,7 @@ def request_topup():
 
     # Proses form jika method POST
     if request.method == 'POST':
-        # Logging untuk debug
-        print(
-            f"Received POST request to /request_topup from user {current_user.id}: {request.form}")
+        print(f"Received POST request to /request_topup from user {current_user.id}: {request.form}")
 
         # Jika sudah ada pending, jangan izinkan buat request baru
         if pending_request:
@@ -1700,21 +1963,31 @@ def request_topup():
         amount = 0.0
         error = False
 
+        # Ambil file bukti transfer dari form
+        bukti_file = request.files.get('bukti_transfer')
+        bukti_filename = None
+
         if not amount_str:
-            print("Error: Amount is missing in form data")
             flash('Jumlah request top up wajib diisi.', 'danger')
             error = True
         else:
             try:
                 amount = float(amount_str)
-                # Validasi jumlah minimum request, misal 1000
                 if amount < 1000:
-                    print(f"Error: Amount {amount} is below minimum 1000")
                     flash('Jumlah minimum request top up adalah Rp 1.000.', 'danger')
                     error = True
             except ValueError:
-                print(f"Error: Invalid amount format: {amount_str}")
                 flash('Jumlah harus berupa angka.', 'danger')
+                error = True
+
+        # Validasi file bukti transfer jika di-upload
+        if bukti_file and bukti_file.filename != '':
+            if allowed_file(bukti_file.filename):
+                bukti_filename = secure_filename(f"bukti_{current_user.id}_{int(datetime.now().timestamp())}.jpg")
+                bukti_path = os.path.join(app.config['UPLOAD_FOLDER'], bukti_filename)
+                bukti_file.save(bukti_path)
+            else:
+                flash('Tipe file bukti transfer tidak diizinkan. Hanya jpg/png/gif.', 'danger')
                 error = True
 
         # Jika validasi lolos
@@ -1725,29 +1998,24 @@ def request_topup():
                     student_id=current_user.id,
                     amount=amount,
                     status='pending',
-                    request_timestamp=datetime.now(pytz.timezone("UTC"))
+                    request_timestamp=datetime.now(pytz.timezone("UTC")),
+                    bukti_transfer_filename=bukti_filename
                 )
                 db.session.add(new_request)
                 db.session.commit()
-                print(
-                    f"Top-up request created: {amount} for user {current_user.id}")
                 flash(
                     f'Request top up sebesar {format_rupiah(amount)} berhasil dibuat. Silakan lakukan pembayaran tunai sejumlah tersebut di Bank Mini.', 'success')
                 return redirect(url_for('request_topup'))
             except Exception as e:
                 db.session.rollback()
-                print(
-                    f"Error creating top-up request for user {current_user.id}: {e}")
                 flash('Gagal membuat request top up, silakan coba lagi.', 'danger')
                 return redirect(url_for('request_topup'))
 
         # Jika validasi gagal, redirect kembali ke GET request
-        print("Validation failed, redirecting to GET /request_topup")
         return redirect(url_for('request_topup'))
 
     # Method GET: Tampilkan form dan riwayat request
     else:
-        # Ambil juga beberapa request terakhir (misal 5) untuk ditampilkan
         recent_requests = TopUpRequest.query.filter_by(student_id=current_user.id)\
             .order_by(TopUpRequest.request_timestamp.desc())\
             .limit(5).all()
@@ -1921,7 +2189,41 @@ def admin_register_user():
         flash("Hanya admin yang dapat mendaftarkan akun baru.", "danger")
         return redirect(url_for('dashboard'))
 
-    if request.method == 'POST':
+    # --- Handle Import Excel ---
+    if request.method == 'POST' and 'file' in request.files:
+        role = request.form.get('role')
+        file = request.files.get('file')
+        if not file or not role:
+            flash("File dan jenis user wajib diisi.", "danger")
+            return redirect(url_for('admin_register_user'))
+
+        import openpyxl
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+        imported = 0
+        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+            if role == 'siswa':
+                id, username, kelas, jurusan = row
+                password = secrets.token_urlsafe(8)[:8]
+                if User.query.get(id):
+                    continue
+                user = User(id=id, username=username, role='siswa', kelas=kelas, jurusan=jurusan)
+            else:
+                id, username = row
+                password = secrets.token_urlsafe(8)[:8]
+                if User.query.get(id):
+                    continue
+                user = User(id=id, username=username, role='penjual')
+            user.set_password(password)
+            user.plain_password = password  # Simpan password asli untuk notifikasi
+            db.session.add(user)
+            imported += 1
+        db.session.commit()
+        flash(f"Berhasil import {imported} {role}. Password otomatis digenerate.", "success")
+        return redirect(url_for('admin_register_user'))
+
+    # --- Handle Registrasi Manual ---
+    if request.method == 'POST' and 'file' not in request.files:
         username = request.form.get('username')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
@@ -1975,6 +2277,7 @@ def admin_register_user():
 
         new_user = User(**user_data)
         new_user.set_password(password)
+        new_user.plain_password = password
 
         try:
             db.session.add(new_user)
@@ -2028,12 +2331,15 @@ def top_board():
         # Format data untuk template
         leaderboard = []
         for rank, spender in enumerate(top_spenders, 1):
+            user_obj = User.query.get(spender.id)
             leaderboard.append({
                 'rank': rank,
                 'username': spender.username,
                 'kelas': spender.kelas or '-',
                 'jurusan': spender.jurusan or '-',
-                'total_spent': format_rupiah(spender.total_spent)
+                'total_spent': format_rupiah(spender.total_spent),
+                'profile_pic_filename': user_obj.profile_pic_filename if user_obj and user_obj.profile_pic_filename else 'default.png',
+                'active_border': user_obj.active_border if user_obj else None
             })
 
     except Exception as e:
@@ -2079,6 +2385,17 @@ def update_password():
 
     return redirect(url_for('profile'))
 
+@app.route('/transaksi/<int:transaksi_id>')
+@login_required
+def detail_transaksi(transaksi_id):
+    transaksi = Transaction.query.get_or_404(transaksi_id)
+    # Jika transaksi topup, tampilkan related_user_id (siswa)
+    if transaksi.type == 'topup' and transaksi.related_user_id:
+        user_id_masked = str(transaksi.related_user_id)[:2] + '***'
+    else:
+        user_id_masked = str(transaksi.user_id)[:2] + '***'
+    return render_template('siswa/detail_transaksi.html', transaksi=transaksi, user_id_masked=user_id_masked)
+
 
 @app.route('/admin/profile')
 @login_required
@@ -2120,7 +2437,271 @@ def admin_update_password():
 
     return redirect(url_for('admin_profile'))
 
-# Tambahkan setelah definisi model
+@app.route('/admin/laporan')
+@login_required
+def admin_laporan():
+    if current_user.role != 'admin':
+        flash("Akses ditolak. Halaman ini hanya untuk admin.", "danger")
+        return redirect(url_for('dashboard'))
+
+    filter_status = request.args.get('filter', 'all')
+    if filter_status == 'sudah':
+        daftar_laporan = Laporan.query.filter(
+            (Laporan.ditanggapi == True) | (Laporan.ditanggapi == 1)
+        ).order_by(Laporan.timestamp.desc()).all()
+    elif filter_status == 'belum':
+        daftar_laporan = Laporan.query.filter(
+            (Laporan.ditanggapi == False) | (Laporan.ditanggapi == 0)
+        ).order_by(Laporan.timestamp.desc()).all()
+    else:
+        daftar_laporan = Laporan.query.order_by(Laporan.timestamp.desc()).all()
+
+    return render_template(
+        'admin/admin_laporan.html',
+        daftar_laporan=daftar_laporan,
+        active_page='admin_laporan'
+    )
+
+@app.route('/transfer', methods=['GET', 'POST'])
+@login_required
+def transfer_user():
+    if request.method == 'POST':
+        target_id = request.form.get('target_id')
+        amount = float(request.form.get('amount', 0))
+        # Validasi
+        if not target_id or amount <= 0:
+            flash('ID tujuan dan jumlah harus diisi!', 'danger')
+            return redirect(url_for('transfer_user'))
+        if amount > current_user.balance:
+            flash('Saldo tidak cukup!', 'danger')
+            return redirect(url_for('transfer_user'))
+        target_user = User.query.filter_by(id=target_id).first()
+        if not target_user or target_user.id == current_user.id:
+            flash('User tujuan tidak valid!', 'danger')
+            return redirect(url_for('transfer_user'))
+        # Proses transfer
+        user_balance_before = current_user.balance
+        current_user.balance -= amount
+        target_user.balance += amount
+        user_balance_after = current_user.balance
+        # Simpan transaksi
+        tx = Transaction(
+            user_id=current_user.id,
+            related_user_id=target_user.id,
+            type='transfer',
+            amount=amount,
+            user_balance_before=user_balance_before,
+            user_balance_after=user_balance_after,
+            description=f"Transfer ke {target_user.username}"
+        )
+        db.session.add(tx)
+        # Buat notifikasi untuk pengirim
+        notif_sender = Notification(
+            user_id=current_user.id,
+            message=f"Transfer ke {target_user.username} sebesar {amount:,.0f} berhasil.",
+            timestamp=datetime.utcnow(),
+            is_read=False
+        )
+        db.session.add(notif_sender)
+        # Buat notifikasi untuk penerima
+        notif_receiver = Notification(
+            user_id=target_user.id,
+            message=f"Kamu menerima transfer dari {current_user.username} sebesar {amount:,.0f}.",
+            timestamp=datetime.utcnow(),
+            is_read=False
+        )
+        db.session.add(notif_receiver)
+        db.session.commit()
+        flash('Transfer berhasil!', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('siswa/transfer_user.html')
+
+@app.route('/api/username/<user_id>')
+@login_required
+def api_username(user_id):
+    user = User.query.filter_by(id=user_id).first()
+    if user:
+        photo_url = None
+        border_url = None
+        # Foto profil
+        if user.profile_pic_filename:
+            photo_url = url_for('static', filename=f'profile_pics/{user.profile_pic_filename}')
+        # Border aktif
+        if user.active_border and user.active_border.image_path:
+            border_url = url_for('static', filename=user.active_border.image_path)
+        return {
+            'username': user.username,
+            'photo_url': photo_url,
+            'border_url': border_url
+        }
+    return {'username': None}
+
+@app.route('/admin/laporan/tanggapi/<int:laporan_id>', methods=['POST'])
+@login_required
+def tanggapi_laporan(laporan_id):
+    if current_user.role != 'admin':
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for('admin_laporan'))
+    laporan = Laporan.query.get_or_404(laporan_id)
+    laporan.ditanggapi = True
+    db.session.commit()
+    flash("Laporan telah ditandai sebagai sudah ditanggapi.", "success")
+    return redirect(url_for('admin_laporan'))
+
+@app.route('/buat_laporan', methods=['GET', 'POST'])
+@login_required
+def buat_laporan():
+    if request.method == 'POST':
+        keterangan = request.form.get('keterangan')
+        file = request.files.get('bukti_laporan')
+        filename = None
+
+        if file and file.filename != '':
+            ext = file.filename.rsplit('.', 1)[-1].lower()
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi']:
+                filename = secure_filename(f"laporan_{current_user.id}_{int(datetime.now().timestamp())}.{ext}")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            else:
+                flash('Tipe file tidak didukung. Hanya gambar/video.', 'danger')
+                return redirect(url_for('buat_laporan'))
+
+        # Simpan laporan ke database
+        laporan = Laporan(
+            user_id=current_user.id,
+            bukti_filename=filename,
+            keterangan=keterangan,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(laporan)
+        db.session.commit()
+
+        flash('Laporan berhasil dikirim!', 'success')
+        return redirect(url_for('buat_laporan'))  # Redirect ke halaman yang sama agar pesan muncul
+
+    return render_template('siswa/buat_laporan.html', pengirim=current_user.username)
+
+@app.route('/atur_pin', methods=['GET', 'POST'])
+@login_required
+def atur_pin():
+    if request.method == 'POST':
+        pin = request.form.get('pin')
+        old_pin = request.form.get('old_pin')
+        # Validasi: harus 6 digit angka
+        if not pin or not pin.isdigit() or len(pin) != 6:
+            flash('PIN harus 6 digit angka!', 'danger')
+            return redirect(url_for('atur_pin'))
+        # Jika sudah punya PIN, cek PIN lama dulu
+        if current_user.pin_transfer:
+            if not old_pin or old_pin != current_user.pin_transfer:
+                flash('PIN lama salah!', 'danger')
+                return redirect(url_for('atur_pin'))
+        current_user.pin_transfer = pin
+        db.session.commit()
+        flash('PIN transfer berhasil disimpan!', 'success')
+        return redirect(url_for('profile'))
+    return render_template('siswa/atur_pin.html')
+
+@app.route('/api/cek_pin', methods=['POST'])
+@login_required
+def api_cek_pin():
+    data = request.get_json()
+    pin = data.get('pin')
+    valid = current_user.pin_transfer == pin
+    return jsonify({'valid': valid})
+
+
+
+@app.route('/admin/download_template/<role>')
+@login_required
+def download_template(role):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    if role == 'siswa':
+        ws.append(['id', 'username', 'kelas', 'jurusan'])  # Header
+        ws.append(['12345', 'Budi Santoso', 'X', 'RPL'])   # Contoh data siswa 1
+        ws.append(['12346', 'Siti Aminah', 'XI', 'DKV1'])  # Contoh data siswa 2
+        ws.append(['12347', 'Andi Wijaya', 'XII', 'AK'])   # Contoh data siswa 3
+    else:
+        ws.append(['id', 'username'])                      # Header
+        ws.append(['20001', 'Warung Pak Dedi'])            # Contoh penjual 1
+        ws.append(['20002', 'Kantin Bu Sari'])             # Contoh penjual 2
+
+    stream = BytesIO()
+    wb.save(stream)
+    stream.seek(0)
+    filename = f"template_{role}.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@app.route('/admin/export_users')
+@login_required
+def admin_export_users():
+    if current_user.role != 'admin':
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for('admin_users'))
+
+    role = request.args.get('role')
+    kelas = request.args.get('kelas')
+    jurusan = request.args.get('jurusan')
+
+    query = User.query
+    if role:
+        query = query.filter_by(role=role)
+    if kelas:
+        query = query.filter_by(kelas=kelas)
+    if jurusan:
+        query = query.filter_by(jurusan=jurusan)
+
+    users = query.all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Pengguna"
+    ws.append(['ID', 'Username', 'Password', 'Role', 'Kelas', 'Jurusan'])
+
+    for user in users:
+        # Ambil password asli jika disimpan, atau tampilkan info jika tidak bisa
+        password = getattr(user, 'plain_password', None)
+        if not password:
+            password = '(tidak tersedia)'
+        ws.append([
+            user.id,
+            user.username,
+            password,
+            user.role,
+            user.kelas if user.kelas else '',
+            user.jurusan if user.jurusan else ''
+        ])
+
+    stream = BytesIO()
+    wb.save(stream)
+    stream.seek(0)
+    filename = "export_pengguna.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/admin/margin', methods=['GET', 'POST'])
+@login_required
+def admin_margin():
+    if current_user.role != 'admin':
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for('dashboard'))
+
+    margin = MarginSetting.query.first()
+    if not margin:
+        margin = MarginSetting(nominal_per_margin=5000, potongan_per_margin=500)
+        db.session.add(margin)
+        db.session.commit()
+
+    if request.method == 'POST':
+        nominal = float(request.form.get('nominal_per_margin', 5000))
+        potongan = float(request.form.get('potongan_per_margin', 500))
+        margin.nominal_per_margin = nominal
+        margin.potongan_per_margin = potongan
+        db.session.commit()
+        flash("Margin berhasil diupdate!", "success")
+        return redirect(url_for('admin_margin'))
+
+    return render_template('admin/admin_margin.html', margin=margin)
 
 
 def initialize_borders():

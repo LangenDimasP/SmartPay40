@@ -1,451 +1,219 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    /* Gaya Umum dan Font */
-    body {
-      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #333;
-      background-color: #f7f7ff !important;
-      padding: 20px;
-    }
-    
-    h2 {
-      color: #7c4dff;
-      margin-bottom: 30px;
-      font-weight: 600;
-      font-size: 28px;
-      position: relative;
-      padding-bottom: 12px;
-      display: inline-block;
-      letter-spacing: 0.5px;
-    }
-    
-    
-    /* Gaya Kontainer Utama */
-    .btn-reset {
-    background: linear-gradient(135deg, #f44336, #e57373);
-    color: white;
-    border: none;
-    border-radius: 50px;
-    padding: 8px 16px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s;
-}
+{% extends 'admin_base.html' %} 
+{% block title %}Admin - Daftar Pengguna{% endblock %} 
 
-.btn-reset:hover {
-    background: linear-gradient(135deg, #d32f2f, #f44336);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 10px rgba(244, 67, 54, 0.3);
-}
+{% block admin_content %}
+<div class="p-5 font-['Poppins']">
+    <!-- Header -->
+    <h2 class="text-[#7c4dff] mb-8 font-semibold text-3xl relative pb-3 inline-block tracking-wide">
+        Daftar Semua Pengguna Terdaftar
+    </h2>
 
-    /* Gaya Tabel */
-    .data-table-container {
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(124, 77, 255, 0.15);
-        overflow-x: auto; /* Pastikan hanya horizontal scrollbar yang muncul jika diperlukan */
-        margin: 30px 0;
-    }
-
-        /* Gaya untuk Form Filter */
-    .filter-form select,
-    .filter-form input[type="text"] {
-        border: 1px solid #ddd;
-        border-radius: 50px;
-        padding: 8px 16px;
-        font-size: 0.9rem;
-        color: #333;
-        background-color: #fff;
-        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s;
-        outline: none;
-    }
-    
-    .filter-form select:focus,
-    .filter-form input[type="text"]:focus {
-        border-color: #7c4dff;
-        box-shadow: 0 3px 8px rgba(124, 77, 255, 0.3);
-    }
-    
-    .filter-form label {
-        font-weight: 500;
-        font-size: 0.85rem;
-        color: #555;
-        margin-bottom: 5px;
-        display: block;
-    }
-    
-    .filter-form .btn-filter-submit {
-        background: linear-gradient(135deg, #7c4dff, #9969ff);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 8px 16px;
-        font-size: 0.85rem;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s;
-        box-shadow: 0 3px 6px rgba(124, 77, 255, 0.3);
-    }
-    
-    .filter-form .btn-filter-submit:hover {
-        background: linear-gradient(135deg, #6a3de8, #7c4dff);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 10px rgba(124, 77, 255, 0.4);
-    }
-    
-    .filter-form .btn-reset {
-        background: linear-gradient(135deg, #f44336, #e57373);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 8px 16px;
-        font-size: 0.85rem;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s;
-        box-shadow: 0 3px 6px rgba(244, 67, 54, 0.3);
-    }
-    
-    .filter-form .btn-reset:hover {
-        background: linear-gradient(135deg, #d32f2f, #f44336);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 10px rgba(244, 67, 54, 0.4);
-    }
-    
-    .data-table {
-        width: 100%;
-        border-collapse: collapse; /* Hilangkan jarak antar sel */
-        background-color: #fff;
-    }
-    
-    .data-table thead tr {
-      background: linear-gradient(135deg, #7c4dff 0%, #9969ff 100%);
-      color: white;
-      text-transform: uppercase;
-      font-size: 0.85em;
-      letter-spacing: 1px;
-    }
-    
-    .data-table th {
-        padding: 16px; /* Konsisten dengan <td> */
-        font-weight: 600;
-        text-align: left; /* Atur teks ke kiri */
-        vertical-align: middle; /* Teks di tengah secara vertikal */
-        color: white;
-    }
-    
-    
-    .data-table td {
-      padding: 16px 15px;
-      border-bottom: 1px solid #f0f0ff;
-      font-size: 0.95em;
-    }
-    
-    .data-table tbody tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .data-table tbody tr:hover {
-      background-color: #f9f7ff;
-      transition: all 0.2s ease;
-    }
-    
-    /* Status Styling */
-    .status-active {
-      color: #00c853;
-      font-weight: 600;
-      background-color: rgba(0, 200, 83, 0.1);
-      padding: 6px 12px;
-      border-radius: 50px;
-      display: inline-block;
-    }
-    
-    .status-inactive {
-      color: #f44336;
-      font-weight: 600;
-      background-color: rgba(244, 67, 54, 0.1);
-      padding: 6px 12px;
-      border-radius: 50px;
-      display: inline-block;
-    }
-    
-    /* Button Styling */
-    .btn {
-      border-radius: 50px;
-      padding: 8px 16px;
-      margin: 2px;
-      font-size: 0.85rem;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-block;
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-      font-weight: 500;
-    }
-    
-    .btn-warning {
-      background: linear-gradient(135deg, #ff9800, #ffb74d);
-      color: white;
-    }
-    
-    .btn-warning:hover {
-      background: linear-gradient(135deg, #f57c00, #ff9800);
-      transform: translateY(-2px);
-      box-shadow: 0 5px 10px rgba(255, 152, 0, 0.3);
-    }
-    
-    .btn-success {
-      background: linear-gradient(135deg, #00c853, #69f0ae);
-      color: white;
-    }
-    
-    .btn-success:hover {
-      background: linear-gradient(135deg, #00a844, #00c853);
-      transform: translateY(-2px);
-      box-shadow: 0 5px 10px rgba(0, 200, 83, 0.3);
-    }
-    
-    .btn-info {
-      background: linear-gradient(135deg, #7c4dff, #b388ff);
-      color: white;
-    }
-    
-    .btn-info:hover {
-      background: linear-gradient(135deg, #6a3de8, #7c4dff);
-      transform: translateY(-2px);
-      box-shadow: 0 5px 10px rgba(124, 77, 255, 0.3);
-    }
-    
-    /* Pagination */
-    .pagination-container {
-      display: flex;
-      justify-content: center;
-      margin-top: 30px;
-    }
-    
-    .pagination {
-      display: flex;
-      justify-content: center;
-      list-style: none;
-      padding: 0;
-      background-color: white;
-      border-radius: 50px;
-      box-shadow: 0 5px 15px rgba(124, 77, 255, 0.1);
-      padding: 5px;
-    }
-    
-    .pagination li {
-      margin: 0;
-    }
-    
-    .pagination .page-link {
-      color: #7c4dff;
-      padding: 10px 16px;
-      text-decoration: none;
-      border-radius: 50px;
-      display: block;
-      font-weight: 500;
-      min-width: 40px;
-      text-align: center;
-      transition: all 0.2s;
-    }
-    
-    .pagination .page-item.active .page-link {
-      background: linear-gradient(135deg, #7c4dff, #9969ff);
-      color: white;
-      box-shadow: 0 5px 15px rgba(124, 77, 255, 0.3);
-    }
-    
-    .pagination .page-item.disabled .page-link {
-      color: #c4c4c4;
-      pointer-events: none;
-    }
-    
-    .pagination .page-link:hover:not(.active) {
-      background-color: #f7f7ff;
-    }
-    
-    /* Flash Messages */
-    .flash-messages {
-      margin-bottom: 25px;
-    }
-    
-    .flash-success {
-      background-color: #e8f5e9;
-      border-left: 5px solid #00c853;
-      padding: 15px 20px;
-      border-radius: 8px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .flash-danger {
-      background-color: #ffebee;
-      border-left: 5px solid #f44336;
-      padding: 15px 20px;
-      border-radius: 8px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* Table Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: #9e9e9e;
-      font-style: italic;
-    }
-    
-  </style>
-</head>
-<body>
-  {% extends 'admin_base.html' %} 
-  {% block title %}Admin - Daftar Pengguna{% endblock %} 
-  {% block admin_content %}
-  <div class="admin-container">
-    <h2>Daftar Semua Pengguna Terdaftar</h2>
-
-    {# Area Flash Message #} 
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %} 
     {% if messages %}
-    <div class="flash-messages">
-      {% for category, message in messages %}
-      <p class="flash-{{ category }}">{{ message }}</p>
-      {% endfor %}
+    <div class="mb-6">
+        {% for category, message in messages %}
+            {% if category == 'success' %}
+            <p class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg shadow-sm mb-3 text-green-800">
+                {{ message }}
+            </p>
+            {% elif category == 'danger' %}
+            <p class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm mb-3 text-red-800">
+                {{ message }}
+            </p>
+            {% endif %}
+        {% endfor %}
     </div>
     {% endif %} 
     {% endwith %}
 
+        <!-- Data Table Container -->
+    <div class="rounded-xl overflow-x-auto my-8">
+        <form method="GET" action="{{ url_for('admin_export_users') }}" class="mb-8 flex flex-wrap gap-4 items-end">
+    <div>
+        <label for="export_role" class="block font-medium text-sm text-gray-600 mb-1">Jenis User:</label>
+        <select id="export_role" name="role" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md">
+            <option value="">Semua</option>
+            <option value="siswa">Siswa</option>
+            <option value="penjual">Penjual</option>
+        </select>
+    </div>
+    <div>
+        <label for="export_kelas" class="block font-medium text-sm text-gray-600 mb-1">Kelas:</label>
+        <select id="export_kelas" name="kelas" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md">
+            <option value="">Semua</option>
+            <option value="X">X</option>
+            <option value="XI">XI</option>
+            <option value="XII">XII</option>
+        </select>
+    </div>
+    <div>
+        <label for="export_jurusan" class="block font-medium text-sm text-gray-600 mb-1">Jurusan:</label>
+        <select id="export_jurusan" name="jurusan" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md">
+            <option value="">Semua</option>
+            <option value="RPL">RPL</option>
+            <option value="DKV1">DKV1</option>
+            <option value="DKV2">DKV2</option>
+            <option value="AK">AK</option>
+            <option value="MP">MP</option>
+            <option value="BR">BR</option>
+        </select>
+    </div>
+    <button type="submit" class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white border-0 rounded-full px-4 py-2 text-sm cursor-pointer transition-all duration-200 shadow-md shadow-[#7c4dff]/30 hover:from-[#6a3de8] hover:to-[#7c4dff] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#7c4dff]/40">
+        Export Excel
+    </button>
+</form>
 
-            <!-- Form Filter -->
-      <!-- Form Filter -->
-      <form method="GET" action="{{ url_for('admin_users') }}" class="filter-form" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
-          <div>
-              <label for="kelas">Kelas:</label>
-              <select id="kelas" name="kelas">
-                  <option value="" {% if not filter_kelas %}selected{% endif %}>Semua Kelas</option>
-                  <option value="X" {% if filter_kelas == 'X' %}selected{% endif %}>X</option>
-                  <option value="XI" {% if filter_kelas == 'XI' %}selected{% endif %}>XI</option>
-                  <option value="XII" {% if filter_kelas == 'XII' %}selected{% endif %}>XII</option>
-              </select>
-          </div>
-          <div>
-              <label for="jurusan">Jurusan:</label>
-              <select id="jurusan" name="jurusan">
-                  <option value="" {% if not filter_jurusan %}selected{% endif %}>Semua Jurusan</option>
-                  <option value="RPL" {% if filter_jurusan == 'RPL' %}selected{% endif %}>RPL</option>
-                  <option value="DKV1" {% if filter_jurusan == 'DKV1' %}selected{% endif %}>DKV1</option>
-                  <option value="DKV2" {% if filter_jurusan == 'DKV2' %}selected{% endif %}>DKV2</option>
-                  <option value="AK" {% if filter_jurusan == 'AK' %}selected{% endif %}>AK</option>
-                  <option value="MP" {% if filter_jurusan == 'MP' %}selected{% endif %}>MP</option>
-                  <option value="BR" {% if filter_jurusan == 'BR' %}selected{% endif %}>BR</option>
-              </select>
-          </div>
-          <div>
-              <label for="username">Nama:</label>
-              <input type="text" id="username" name="username" value="{{ filter_username or '' }}" placeholder="Cari Nama...">
-          </div>
-          <div>
-              <button type="submit" class="btn btn-filter-submit">Filter</button>
-              <a href="{{ url_for('admin_users') }}" class="btn btn-reset">Reset</a>
-          </div>
-      </form>
-      <div class="data-table-container">
-      <table class="data-table">
-          <thead>
-              <tr>
-                  <th>ID</th>
-                  <th>Username</th>
-                  <th style="text-align: center">Peran</th>
-                  <th style="text-align: center">Kelas</th>
-                  <th style="text-align: center">Jurusan</th>
-                  <th style="text-align: center">Saldo</th>
-                  <th style="text-align: center">Status</th>
-                  <th style="text-align: center">Aksi</th>
-              </tr>
-          </thead>
-          <tbody>
-              {% for user in users %}
-              <tr>
-                  <td>{{ user.id }}</td>
-                  <td>{{ user.username }}</td>
-                  <td style="text-align: center">{{ user.role.capitalize() }}</td>
-                  <td style="text-align: center">{{ user.kelas if user.kelas else '-' }}</td>
-                  <td style="text-align: center">{{ user.jurusan if user.jurusan else '-' }}</td>
-                  <td style="text-align: center">{{ user.balance|rupiah }}</td>
-                  <td style="text-align: center">
-                      {% if user.is_active %}
-                      <span class="status-active">Aktif</span>
-                      {% else %}
-                      <span class="status-inactive">Nonaktif</span>
-                      {% endif %}
-                  </td>
-                  <td style="text-align: center; white-space: nowrap;">
-                      <form method="POST" action="{{ url_for('toggle_user_active', user_id=user.id) }}" style="display: inline-block;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          {% if user.is_active %}
-                          <button type="submit" class="btn btn-warning">Nonaktifkan</button>
-                          {% else %}
-                          <button type="submit" class="btn btn-success">Aktifkan</button>
-                          {% endif %}
-                      </form>
-                      <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="btn btn-info">Edit</a>
-                  </td>
-              </tr>
-              {% else %}
-              <tr>
-                  <td colspan="8" class="empty-state">Belum ada pengguna terdaftar.</td>
-              </tr>
-              {% endfor %}
-          </tbody>
-      </table>
+    <!-- Filter Form -->
+    <form method="GET" action="{{ url_for('admin_users') }}" class="mb-5 flex flex-wrap gap-4 items-end">
+        <div>
+            <label for="kelas" class="block font-medium text-sm text-gray-600 mb-1">Kelas:</label>
+            <select id="kelas" name="kelas" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md transition-all duration-200 outline-none focus:border-[#7c4dff] focus:shadow-lg focus:shadow-[#7c4dff]/30">
+                <option value="" {% if not filter_kelas %}selected{% endif %}>Semua Kelas</option>
+                <option value="X" {% if filter_kelas == 'X' %}selected{% endif %}>X</option>
+                <option value="XI" {% if filter_kelas == 'XI' %}selected{% endif %}>XI</option>
+                <option value="XII" {% if filter_kelas == 'XII' %}selected{% endif %}>XII</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="jurusan" class="block font-medium text-sm text-gray-600 mb-1">Jurusan:</label>
+            <select id="jurusan" name="jurusan" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md transition-all duration-200 outline-none focus:border-[#7c4dff] focus:shadow-lg focus:shadow-[#7c4dff]/30">
+                <option value="" {% if not filter_jurusan %}selected{% endif %}>Semua Jurusan</option>
+                <option value="RPL" {% if filter_jurusan == 'RPL' %}selected{% endif %}>RPL</option>
+                <option value="DKV1" {% if filter_jurusan == 'DKV1' %}selected{% endif %}>DKV1</option>
+                <option value="DKV2" {% if filter_jurusan == 'DKV2' %}selected{% endif %}>DKV2</option>
+                <option value="AK" {% if filter_jurusan == 'AK' %}selected{% endif %}>AK</option>
+                <option value="MP" {% if filter_jurusan == 'MP' %}selected{% endif %}>MP</option>
+                <option value="BR" {% if filter_jurusan == 'BR' %}selected{% endif %}>BR</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="user_id" class="block font-medium text-sm text-gray-600 mb-1">ID Pengguna:</label>
+            <input type="number" id="user_id" name="user_id" value="{{ filter_user_id or '' }}"
+                   placeholder="Cari ID..."
+                   class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md transition-all duration-200 outline-none focus:border-[#7c4dff] focus:shadow-lg focus:shadow-[#7c4dff]/30">
+        </div>
+        
+        <div class="flex gap-2">
+            <button type="submit" class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white border-0 rounded-full px-4 py-2 text-sm cursor-pointer transition-all duration-200 shadow-md shadow-[#7c4dff]/30 hover:from-[#6a3de8] hover:to-[#7c4dff] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#7c4dff]/40">
+                Filter
+            </button>
+            <a href="{{ url_for('admin_users') }}" class="bg-gradient-to-r from-red-500 to-red-400 text-white border-0 rounded-full px-4 py-2 text-sm no-underline transition-all duration-200 shadow-md shadow-red-500/30 hover:from-red-600 hover:to-red-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/40">
+                Reset
+            </a>
+        </div>
+    </form>
+        <table class="w-full border-collapse bg-white">
+            <!-- Table Header -->
+            <thead>
+                <tr class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white uppercase text-sm tracking-wide">
+                    <th class="p-4 font-semibold text-left align-middle text-white">ID</th>
+                    <th class="p-4 font-semibold text-left align-middle text-white">Username</th>
+                    <th class="p-4 font-semibold text-center align-middle text-white">Peran</th>
+                    <th class="p-4 font-semibold text-center align-middle text-white">Kelas</th>
+                    <th class="p-4 font-semibold text-center align-middle text-white">Jurusan</th>
+                    <th class="p-4 font-semibold text-center align-middle text-white">Saldo</th>
+                    <th class="p-4 font-semibold text-center align-middle text-white">Status</th>
+                    <th class="p-4 font-semibold text-center align-middle text-white">Aksi</th>
+                </tr>
+            </thead>
+            
+            <!-- Table Body -->
+            <tbody>
+                {% for user in users %}
+                <tr class="hover:bg-indigo-50 transition-all duration-200">
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm">{{ user.id }}</td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm">{{ user.username }}</td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.role.capitalize() }}</td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.kelas if user.kelas else '-' }}</td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.jurusan if user.jurusan else '-' }}</td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.balance|rupiah }}</td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">
+                        {% if user.is_active %}
+                        <span class="text-green-600 font-semibold bg-green-100 px-3 py-1.5 rounded-full inline-block">Aktif</span>
+                        {% else %}
+                        <span class="text-red-500 font-semibold bg-red-100 px-3 py-1.5 rounded-full inline-block">Nonaktif</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center whitespace-nowrap">
+                        <form method="POST" action="{{ url_for('toggle_user_active', user_id=user.id) }}" class="inline-block">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if user.is_active %}
+                            <button type="submit" class="bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-full px-4 py-2 mx-0.5 text-sm border-0 cursor-pointer transition-all duration-200 shadow-md font-medium hover:from-orange-600 hover:to-orange-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/30">
+                                Nonaktifkan
+                            </button>
+                            {% else %}
+                            <button type="submit" class="bg-gradient-to-r from-green-600 to-green-400 text-white rounded-full px-4 py-2 mx-0.5 text-sm border-0 cursor-pointer transition-all duration-200 shadow-md font-medium hover:from-green-700 hover:to-green-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-600/30">
+                                Aktifkan
+                            </button>
+                            {% endif %}
+                        </form>
+                        <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="bg-gradient-to-r from-[#7c4dff] to-[#b388ff] text-white rounded-full px-4 py-2 mx-0.5 text-sm no-underline inline-block transition-all duration-200 shadow-md font-medium hover:from-[#6a3de8] hover:to-[#7c4dff] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#7c4dff]/30">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-10 px-5 text-gray-400 italic">Belum ada pengguna terdaftar.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    <!-- Navigasi Pagination -->
-    <div class="pagination-container">
-      <nav aria-label="Page navigation">
-        <ul class="pagination">
-          {% if pagination.has_prev %}
-          <li class="page-item">
-            <a class="page-link" href="{{ url_for('admin_users', page=pagination.prev_num) }}" aria-label="Previous">
-              <span aria-hidden="true">&laquo;</span>
-            </a>
-          </li>
-          {% else %}
-          <li class="page-item disabled">
-            <span class="page-link">&laquo;</span>
-          </li>
-          {% endif %}
+    <!-- Pagination -->
+    <div class="flex justify-center mt-8">
+        <nav aria-label="Page navigation">
+            <ul class="flex justify-center list-none p-0 bg-white rounded-full shadow-lg shadow-[#7c4dff]/10 px-1.5 py-1.5">
+                {% if pagination.has_prev %}
+                <li>
+                    <a class="text-[#7c4dff] px-4 py-2.5 no-underline rounded-full block font-medium min-w-10 text-center transition-all duration-200 hover:bg-indigo-50" 
+                       href="{{ url_for('admin_users', page=pagination.prev_num) }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li>
+                    <span class="text-gray-300 px-4 py-2.5 rounded-full block font-medium min-w-10 text-center pointer-events-none">&laquo;</span>
+                </li>
+                {% endif %}
 
-          {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-          {% if page_num %}
-          {% if page_num == pagination.page %}
-          <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
-          {% else %}
-          <li class="page-item"><a class="page-link" href="{{ url_for('admin_users', page=page_num) }}">{{ page_num }}</a></li>
-          {% endif %}
-          {% else %}
-          <li class="page-item disabled"><span class="page-link">…</span></li>
-          {% endif %}
-          {% endfor %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                    <li>
+                        <span class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white px-4 py-2.5 rounded-full block font-medium min-w-10 text-center shadow-md shadow-[#7c4dff]/30">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li>
+                        <a class="text-[#7c4dff] px-4 py-2.5 no-underline rounded-full block font-medium min-w-10 text-center transition-all duration-200 hover:bg-indigo-50" 
+                           href="{{ url_for('admin_users', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li>
+                    <span class="text-gray-300 px-4 py-2.5 rounded-full block font-medium min-w-10 text-center pointer-events-none">…</span>
+                </li>
+                {% endif %}
+                {% endfor %}
 
-          {% if pagination.has_next %}
-          <li class="page-item">
-            <a class="page-link" href="{{ url_for('admin_users', page=pagination.next_num) }}" aria-label="Next">
-              <span aria-hidden="true">&raquo;</span>
-            </a>
-          </li>
-          {% else %}
-          <li class="page-item disabled">
-            <span class="page-link">&raquo;</span>
-          </li>
-          {% endif %}
-        </ul>
-      </nav>
+                {% if pagination.has_next %}
+                <li>
+                    <a class="text-[#7c4dff] px-4 py-2.5 no-underline rounded-full block font-medium min-w-10 text-center transition-all duration-200 hover:bg-indigo-50" 
+                       href="{{ url_for('admin_users', page=pagination.next_num) }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li>
+                    <span class="text-gray-300 px-4 py-2.5 rounded-full block font-medium min-w-10 text-center pointer-events-none">&raquo;</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
     </div>
-  </div>
-  {% endblock admin_content %}
-</body>
-</html>
+</div>
+{% endblock admin_content %}

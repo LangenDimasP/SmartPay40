@@ -3,263 +3,20 @@
 {% block title %}Registrasi{% endblock %}
 
 {% block admin_content %}
-<style>
-    :root {
-        --primary-color: #7c4dff;
-        --primary-dark: #5e35b1;
-        --primary-light: #b39ddb;
-        --text-light: #ffffff;
-        --text-dark: #333333;
-        --error-color: #f44336;
-        --success-color: #4caf50;
-    }
-    body{
-        background-color: #f7f7ff !important;
-    }
-
-.register-container {
-    display: flex;
-    background-color: #f7f7ff;
-    width: 100%;
-    min-height: calc(100vh - 60px); /* Adjust for padding in admin-content */
-    justify-content: center;   /* Tengah horizontal */
-    align-items: center;       /* Tengah vertikal */
-}
-
-    .register-section {
-        padding: 40px;
-        width: 60%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .welcome-section {
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-        color: var(--text-light);
-        padding: 40px;
-        width: 40%;
-        min-height: calc(100vh - 60px);
-        position: relative;
-        display: flex;
-        border-radius: 0 12px 12px 0;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .welcome-title {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 10px;
-        position: relative;
-        z-index: 2;
-    }
-
-    .welcome-subtitle {
-        margin-bottom: 20px;
-        font-size: 1.2rem;
-        position: relative;
-        z-index: 2;
-    }
-
-    .welcome-text {
-        font-size: 0.9rem;
-        margin-bottom: 30px;
-        opacity: 0.9;
-        position: relative;
-        z-index: 2;
-    }
-
-    .decorative-circle {
-        position: absolute;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-    }
-
-    .circle-1 {
-        width: 150px;
-        height: 150px;
-        bottom: 20%;
-        left: -30px;
-    }
-
-    .circle-2 {
-        width: 100px;
-        height: 100px;
-        bottom: 10%;
-        right: 20px;
-    }
-
-    .register-header {
-        margin-bottom: 25px;
-    }
-
-    .register-title {
-        font-size: 1.8rem;
-        color: var(--text-dark);
-        margin-bottom: 10px;
-    }
-
-    .register-subtitle {
-        color: #777;
-        font-size: 0.9rem;
-    }
-
-    .flash-messages {
-        margin-bottom: 20px;
-    }
-
-    .flash-error {
-        color: var(--error-color);
-        padding: 10px;
-        border-radius: 4px;
-        background-color: rgba(244, 67, 54, 0.1);
-        margin-bottom: 10px;
-    }
-
-    .flash-success {
-        color: var(--success-color);
-        padding: 10px;
-        border-radius: 4px;
-        background-color: rgba(76, 175, 80, 0.1);
-        margin-bottom: 10px;
-    }
-
-    .input-group {
-        margin-bottom: 18px;
-        position: relative;
-    }
-
-    .input-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 0.9rem;
-        color: #555;
-    }
-
-    .input-group input, .input-group select {
-        width: 100%;
-        padding: 12px 12px 12px 40px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 1rem;
-        transition: border 0.3s;
-    }
-
-    .input-group input:focus, .input-group select:focus {
-        border-color: var(--primary-color);
-        outline: none;
-    }
-
-    .input-icon {
-        position: absolute;
-        left: 12px;
-        bottom: 12px;
-        color: #777;
-    }
-
-    .section-title {
-        font-size: 1rem;
-        color: var(--primary-dark);
-        margin-top: 10px;
-        margin-bottom: 15px;
-    }
-
-    .student-fields {
-        padding: 15px;
-        border-radius: 8px;
-        background-color: #f9f5ff;
-        margin-bottom: 18px;
-        border-left: 3px solid var(--primary-color);
-    }
-
-    .student-fields .input-group:last-child {
-        margin-bottom: 0;
-    }
-
-    .btn {
-        display: block;
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 6px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        margin-top: 10px;
-    }
-
-    .btn-primary {
-        background-color: var(--primary-color);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background-color: var(--primary-dark);
-    }
-
-    .login-prompt {
-        text-align: center;
-        margin-top: 25px;
-        font-size: 0.9rem;
-        color: #555;
-    }
-
-    .login-link {
-        color: var(--primary-color);
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .register-container {
-            flex-direction: column-reverse;
-            max-width: 550px;
-            min-height: unset;
-            height: auto;
-        }
-
-        .welcome-section {
-            width: 100%;
-            padding: 30px;
-            border-radius: 12px 12px 0 0;
-            min-height: unset;
-            height: auto;
-        }
-
-        .register-section {
-            width: 100%;
-            padding: 30px;
-        }
-
-        .circle-1 {
-            width: 100px;
-            height: 100px;
-        }
-
-        .circle-2 {
-            width: 80px;
-            height: 80px;
-        }
-    }
-</style>
-
-<div class="register-container">
+<div class="flex w-full min-h-[calc(100vh-60px)] justify-center items-center">
     <!-- Registration Form Section -->
-    <div class="register-section">
-        <div class="register-header">
-            <h2 class="register-title">Registrasi</h2>
-            <p class="register-subtitle">Daftarkan untuk mendapatkan akses ke Kantin Digital</p>
+    <div class="w-3/5 p-10 flex flex-col justify-center">
+        <div class="mb-6">
+            <h2 class="text-2xl text-[#333333] font-semibold mb-2">Registrasi</h2>
+            <p class="text-gray-500 text-sm">Daftarkan untuk mendapatkan akses ke Kantin Digital</p>
         </div>
         
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flash-messages">
+                <div class="mb-5">
                     {% for category, message in messages %}
-                        <p class="flash-{{ category }}">{{ message }}</p>
+                        <p class="{% if category == 'success' %}bg-green-100 text-green-600 p-2 rounded text-sm mb-2{% else %}bg-red-100 text-red-600 p-2 rounded text-sm mb-2{% endif %}">{{ message }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -268,65 +25,74 @@
         <!-- Registration Form -->
         <form method="POST" action="{{ url_for('admin_register_user') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            
-            <div class="input-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Masukkan username" required>
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+            <div class="mb-4 relative">
+                <label for="id" class="block mb-2 text-sm text-gray-600">ID Siswa/Penjual</label>
+                <div class="flex gap-2">
+                    <input type="text" id="id" name="id" placeholder="Masukkan ID atau klik generate" maxlength="5" pattern="\d{5}" required class="flex-1 p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
+                    <button type="button" class="bg-[#7c4dff] text-white px-4 py-2 rounded-md font-semibold hover:bg-[#5e35b1] transition-colors" onclick="generateId()">Generate</button>
+                </div>
+                <small class="text-gray-500 text-xs">ID terdiri dari 5 angka, digunakan untuk login.</small>
+            </div>
+
+            <div class="mb-4 relative">
+                <label for="nama" class="block mb-2 text-sm text-gray-600">Nama Lengkap</label>
+                <input type="text" id="nama" name="username" placeholder="Masukkan nama lengkap" required class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
+                <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                 </svg>
             </div>
-            
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Masukkan password" required>
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+
+            <div class="mb-4 relative">
+                <label for="password" class="block mb-2 text-sm text-gray-600">Password</label>
+                <div class="flex gap-2">
+                    <input type="text" id="password" name="password" placeholder="Masukkan password atau klik generate" maxlength="8" required class="flex-1 p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
+                    <button type="button" class="bg-[#7c4dff] text-white px-4 py-2 rounded-md font-semibold hover:bg-[#5e35b1] transition-colors" onclick="generatePassword()">Generate</button>
+                </div>
+                <small class="text-gray-500 text-xs">Password terdiri dari 8 huruf acak, digunakan untuk login.</small>
+            </div>
+
+            <div class="mb-4 relative">
+                <label for="confirm_password" class="block mb-2 text-sm text-gray-600">Konfirmasi Password</label>
+                <input type="text" id="confirm_password" name="confirm_password" placeholder="Konfirmasi password" required class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
+                <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
                 </svg>
             </div>
-            
-            <div class="input-group">
-                <label for="confirm_password">Konfirmasi Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" placeholder="Konfirmasi password" required>
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-            </div>
-            
-            <div class="input-group">
-                <label for="role">Daftar sebagai</label>
-                <select id="role" name="role" required onchange="toggleStudentFields()">
+
+            <div class="mb-4 relative">
+                <label for="role" class="block mb-2 text-sm text-gray-600">Daftar sebagai</label>
+                <select id="role" name="role" required onchange="toggleStudentFields()" class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
                     <option value="" disabled selected>-- Pilih Peran --</option>
                     <option value="siswa">Siswa</option>
                     <option value="penjual">Penjual Kantin</option>
                 </select>
-                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                     <circle cx="8.5" cy="7" r="4"></circle>
                     <polyline points="17 11 19 13 23 9"></polyline>
                 </svg>
             </div>
 
-            <div id="kelas-jurusan-fields" class="student-fields" style="display: none;">
-                <h3 class="section-title">Informasi Tambahan Siswa</h3>
-                <div class="input-group">
-                    <label for="kelas">Kelas</label>
-                    <select id="kelas" name="kelas">
+            <div id="kelas-jurusan-fields" class="p-4 rounded-lg bg-[#f9f5ff] mb-4 border-l-4 border-[#7c4dff]" style="display: none;">
+                <h3 class="text-base text-[#5e35b1] mt-2 mb-3 font-semibold">Informasi Tambahan Siswa</h3>
+                <div class="mb-4 relative">
+                    <label for="kelas" class="block mb-2 text-sm text-gray-600">Kelas</label>
+                    <select id="kelas" name="kelas" class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
                         <option value="" disabled selected>-- Pilih Kelas --</option>
                         <option value="X">X</option>
                         <option value="XI">XI</option>
                         <option value="XII">XII</option>
                     </select>
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
                 </div>
-                <div class="input-group">
-                    <label for="jurusan">Jurusan</label>
-                    <select id="jurusan" name="jurusan">
+                <div class="relative">
+                    <label for="jurusan" class="block mb-2 text-sm text-gray-600">Jurusan</label>
+                    <select id="jurusan" name="jurusan" class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
                         <option value="" disabled selected>-- Pilih Jurusan --</option>
                         <option value="RPL">RPL</option>
                         <option value="DKV1">DKV1</option>
@@ -335,15 +101,38 @@
                         <option value="MP">MP</option>
                         <option value="BR">BR</option>
                     </select>
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg>
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-primary">Buat Akun Sekarang</button>
+            <button type="submit" class="w-full p-3 bg-[#7c4dff] text-white rounded-md font-semibold text-base hover:bg-[#5e35b1] transition-colors mt-2">Buat Akun Sekarang</button>
         </form>
+
+                <!-- Import Excel Section -->
+        <div class="mt-12 mb-6 border-t pt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-[#7c4dff]">Import Data Siswa/Penjual dari Excel</h2>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_register_user') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <label class="block mb-2 font-medium">Pilih Jenis User:</label>
+                <select name="role" required class="mb-4 p-2 border rounded w-full">
+                    <option value="siswa">Siswa</option>
+                    <option value="penjual">Penjual</option>
+                </select>
+                <label class="block mb-2 font-medium">Upload File Excel (.xlsx):</label>
+                <input type="file" name="file" accept=".xlsx" required class="mb-4 p-2 border rounded w-full">
+                <button type="submit" class="w-full p-3 bg-[#7c4dff] text-white rounded font-semibold hover:bg-[#5e35b1]">Import Data</button>
+            </form>
+            <div class="mt-6 text-sm">
+                <p>Download template:</p>
+                <ul class="list-disc ml-6">
+                    <li><a href="{{ url_for('download_template', role='siswa') }}" class="text-[#7c4dff] underline">Template Siswa</a></li>
+                    <li><a href="{{ url_for('download_template', role='penjual') }}" class="text-[#7c4dff] underline">Template Penjual</a></li>
+                </ul>
+            </div>
+        </div>
     
     </div>
 </div>
@@ -370,5 +159,26 @@
             jurusanSelect.value = "";
         }
     }
+    function generateId() {
+        let id = Math.floor(10000 + Math.random() * 90000);
+        document.getElementById('id').value = id;
+    }
+    function generatePassword() {
+        let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        let pass = '';
+        for (let i = 0; i < 8; i++) {
+            pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('password').value = pass;
+        document.getElementById('confirm_password').value = pass;
+    }
+
+        document.addEventListener('DOMContentLoaded', function() {
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirm_password');
+        passwordInput.addEventListener('input', function() {
+            confirmInput.value = passwordInput.value;
+        });
+    });
 </script>
 {% endblock %}

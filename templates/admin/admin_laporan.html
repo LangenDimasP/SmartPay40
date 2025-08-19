@@ -1,0 +1,167 @@
+{% extends 'admin_base.html' %}
+{% block admin_content %}
+<div class="min-h-screen py-8 px-4">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header Section -->
+        <div class="mb-8 text-center">
+            <h2 class="text-4xl font-bold bg-gradient-to-r from-[#7c4dff] to-[#5e35b1] bg-clip-text text-transparent mb-2">
+                Daftar Laporan Siswa
+            </h2>
+            <p class="text-gray-600">Kelola dan pantau laporan dari siswa dengan mudah</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg border border-purple-100 p-6 hover:shadow-xl transition-shadow duration-300">
+                <div class="flex items-center">
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-2xl font-bold text-gray-900">
+                            {{ daftar_laporan|selectattr('ditanggapi')|selectattr('ditanggapi', 'equalto', True)|list|length }}
+                        </p>
+                        <p class="text-gray-600">Laporan Sudah Ditanggapi</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg border border-purple-100 p-6 hover:shadow-xl transition-shadow duration-300">
+                <div class="flex items-center">
+                    <div class="p-3 bg-red-100 rounded-full">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-2xl font-bold text-gray-900">
+                            {{ daftar_laporan|selectattr('ditanggapi', 'equalto', 0)|list|length }}
+                        </p>
+                        <p class="text-gray-600">Laporan Belum Ditanggapi</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                        <!-- Filter -->
+        <form method="get" class="mb-6 flex justify-center gap-4">
+            <select name="filter" class="p-2 rounded-lg border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                <option value="all" {% if request.args.get('filter', 'all') == 'all' %}selected{% endif %}>Semua</option>
+                <option value="belum" {% if request.args.get('filter') == 'belum' %}selected{% endif %}>Belum Ditanggapi</option>
+                <option value="sudah" {% if request.args.get('filter') == 'sudah' %}selected{% endif %}>Sudah Ditanggapi</option>
+            </select>
+            <button type="submit" class="bg-[#7c4dff] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#5e35b1] transition">Filter</button>
+        </form>
+
+        <!-- Main Table Card -->
+        <div class="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
+            <!-- Table Header -->
+            <div class="bg-[#7c4dff] px-6 py-4">
+                <h3 class="text-xl font-semibold text-white">Detail Laporan</h3>
+            </div>
+
+            <!-- Table Content -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-[#ede7f6] border-b border-purple-100">
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Waktu</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Pengirim</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Keterangan</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Bukti</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Tanggapi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-purple-50">
+                        {% for laporan in daftar_laporan %}
+                        <tr class="hover:bg-purple-25 transition-colors duration-200 group">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                                    {{ laporan.timestamp|wib }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="ml-3">
+                                        <p class="text-sm font-semibold text-gray-900">{{ laporan.user.username }}</p>
+                                        <p class="text-xs text-gray-500">Siswa</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="max-w-xs">
+                                    <p class="text-sm text-gray-900 leading-relaxed">{{ laporan.keterangan }}</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if laporan.bukti_filename %}
+                                    {% set ext = laporan.bukti_filename.split('.')[-1]|lower %}
+                                    {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+                                        <img src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}"
+                                             alt="Bukti"
+                                             class="w-20 h-20 object-cover rounded-lg shadow-md border border-gray-200 cursor-pointer"
+                                             onclick="showModal('{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}')">
+                                    {% elif ext in ['mp4', 'mov', 'avi'] %}
+                                        <video controls class="w-32 h-20 rounded-lg shadow-md border border-gray-200 object-cover">
+                                            <source src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}" type="video/{{ ext }}">
+                                            Video tidak didukung.
+                                        </video>
+                                    {% else %}
+                                        <span class="text-sm text-gray-600">File tidak didukung</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-sm italic text-gray-400">Tidak ada bukti</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Modal untuk gambar full screen -->
+                            <div id="imgModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+                                <span class="absolute top-6 right-8 text-white text-3xl cursor-pointer" onclick="closeModal()">&times;</span>
+                                <img id="modalImg" src="" class="max-w-full max-h-[90vh] rounded-lg shadow-2xl border-4 border-white" alt="Bukti Laporan">
+                            </div>
+                            
+                            <td class="px-6 py-4 text-center">
+                                <form method="POST" action="{{ url_for('tanggapi_laporan', laporan_id=laporan.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="focus:outline-none">
+                                        {% if laporan.ditanggapi %}
+                                            <span class="inline-block w-8 h-8 bg-green-100 rounded-full flex items-center justify-center border border-green-300">
+                                                <i class="fas fa-check text-green-600 text-xl"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-block w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-300 hover:bg-green-200 hover:border-green-400 transition">
+                                                <i class="fas fa-check text-gray-400 group-hover:text-green-600 text-xl"></i>
+                                            </span>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if daftar_laporan|length == 0 %}
+                        <tr>
+                            <td colspan="5" class="text-center py-6 text-gray-400">Belum ada laporan masuk.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t border-purple-100">
+                <p class="text-sm text-gray-600 text-center">
+                    Total {{ daftar_laporan|length }} laporan ditemukan
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function showModal(imgSrc) {
+    document.getElementById('modalImg').src = imgSrc;
+    document.getElementById('imgModal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('imgModal').style.display = 'none';
+}
+</script>
+{% endblock %}

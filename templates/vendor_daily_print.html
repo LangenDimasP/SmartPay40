@@ -81,7 +81,13 @@
 
     <div class="summary">
         <h2>Total Pendapatan Hari Ini</h2>
-        <p><strong>{{ total_earnings|rupiah }}</strong></p>
+        <p>
+            <strong>{{ total_earnings|rupiah }}</strong>
+            <br>
+            <span style="font-size: 0.95em; color: #555;">
+                ({{ gross_earnings|rupiah }} - {{ margin_total|rupiah }} <span style="font-style:italic;">(margin)</span>)
+            </span>
+        </p>
     </div>
 
     <h2>Rincian Transaksi Pembayaran Diterima</h2>

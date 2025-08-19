@@ -1,563 +1,213 @@
 {% extends 'base_siswa.html' %}
+
+{% block title %}Riwayat Transaksi - {{ current_user.username }}{% endblock %}
+
 {% block content %}
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Riwayat Transaksi - {{ current_user.username }}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* === Enhanced CSS === */
-        :root {
-            --primary-color: #7c4dff;
-            --primary-dark: #5e35b1;
-            --primary-light: #ede7f6;
-            --text-dark: #1a1a1a;
-            --text-light: #666;
-            --background: #f5f7fa;
-            --white: #ffffff;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
+<style>
+    /* Animations and custom styles not supported by Tailwind */
+    @keyframes slideIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
+    .animate-slideIn {
+        animation: slideIn 0.5s ease forwards;
+    }
 
-        body {
-            background: var(--background);
-            color: var(--text-dark);
-            line-height: 1.6;
-            padding-bottom: 20px; /* Minimal padding since bottom nav is in base_siswa.html */
-        }
+    .filter-form select {
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%235E35B1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+        background-repeat: no-repeat;
+        background-position: right 0.8rem center;
+        background-size: 0.7em auto;
+        padding-right: 2.5rem;
+        cursor: pointer;
+    }
 
-        /* Header */
-        .history-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: var(--white);
-            padding: 30px 25px;
-            display: flex;
-            align-items: center;
-            box-shadow: var(--shadow);
-            border-radius: 0 0 40px 40px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .history-header a.back-link {
-            color: var(--white);
-            text-decoration: none;
-            font-size: 1.5em;
-            margin-right: 15px;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .history-header a.back-link:hover {
-            transform: scale(1.1);
-            opacity: 0.9;
-        }
-
-        .history-header h1 {
-            font-size: 1.25em;
+    @media (max-width: 768px) {
+        .history-table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 15px;
+            width: 35%;
+            padding-right: 10px;
             font-weight: 600;
-            margin: 0;
-            letter-spacing: 0.3px;
-        }
-
-        /* Main Container */
-        .history-container {
-            max-width: 1000px;
-            margin: 30px auto;
-            padding: 0 20px;
-            animation: slideIn 0.5s ease forwards;
-        }
-
-        /* Flash Messages */
-        .flash-messages {
-            margin-bottom: 20px;
-        }
-
-        .flash-messages p {
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            font-size: 0.95em;
-            border: 1px solid transparent;
-        }
-
-        .flash-success {
-            background: #d4edda;
-            color: #155724;
-            border-color: #c3e6cb;
-        }
-
-        .flash-danger {
-            background: #f8d7da;
-            color: #721c24;
-            border-color: #f5c6cb;
-        }
-
-        .flash-warning {
-            background: #fff3cd;
-            color: #664d03;
-            border-color: #ffecb5;
-        }
-
-        .flash-info {
-            background: #cff4fc;
-            color: #055160;
-            border-color: #b6effb;
-        }
-
-        /* Filter Card */
-        .filter-card {
-            background: var(--white);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            border: 1px solid #e8ecef;
-            margin-bottom: 30px;
-            transition: transform 0.3s ease;
-        }
-
-        .filter-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .filter-form {
-            display: flex;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .filter-form div {
-            flex-grow: 1;
-            min-width: 160px;
-        }
-
-        .filter-form label {
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 0.85em;
-            color: var(--text-light);
-            text-transform: uppercase;
-        }
-
-        .filter-form input[type="date"],
-        .filter-form select {
-            padding: 12px 14px;
-            border: 1px solid #e8ecef;
-            border-radius: 8px;
-            font-size: 0.95em;
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            width: 100%;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .filter-form select {
-            appearance: none;
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%235E35B1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat;
-            background-position: right 0.8rem center;
-            background-size: 0.7em auto;
-            padding-right: 2.5rem;
-            cursor: pointer;
-        }
-
-        .filter-form input[type="date"]:focus,
-        .filter-form select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.2);
-        }
-
-        .filter-form .filter-actions {
-            flex-grow: 0;
-            display: flex;
-            
-        }
-
-        .filter-form button,
-        .filter-form a.btn {
-            padding: 10px 20px;
-            font-size: 0.9em;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.3s ease, transform 0.3s ease;
-        }
-
-        .btn-filter-submit {
-            background: var(--primary-color);
-            color: var(--white);
-            border: none;
-            margin-right: 10px;
-        }
-
-        .btn-filter-submit:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        .btn-filter-reset {
-            background: #e8ecef;
-            color: var(--text-dark);
-            border: 1px solid #d1d5db;
-        }
-
-        .btn-filter-reset:hover {
-            background: #d1d5db;
-            transform: translateY(-2px);
-        }
-
-        /* History Card */
-        .history-card {
-            background: var(--white);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            border: 1px solid #e8ecef;
-            overflow: hidden;
-        }
-
-        .history-table-wrapper {
-            overflow-x: auto;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .history-table th,
-        .history-table td {
-            padding: 16px 20px;
-            border-bottom: 1px solid #f0f0f0;
             text-align: left;
-        }
-
-        .history-table th:nth-child(3),
-        .history-table th:nth-child(4) {
-            text-align: left;
-        }
-
-        .history-table thead th {
-            background: #f9fafb;
-            font-weight: 600;
-            color: var(--text-dark);
-            font-size: 0.9em;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .history-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .history-table tbody tr:hover {
-            background: #f8faff;
-        }
-
-        .history-table td {
-            font-size: 0.95em;
-            vertical-align: middle;
-        }
-
-        .tx-time {
-            font-size: 0.9em;
-            color: var(--text-light);
-            white-space: nowrap;
-        }
-
-        .tx-description {
-            font-weight: 500;
-            color: var(--text-dark);
-        }
-
-        .tx-description small {
-            font-weight: normal;
-            color: var(--text-light);
+            color: #1a1a1a;
             font-size: 0.85em;
-            display: block;
-            margin-top: 4px;
+            top: 50%;
+            transform: translateY(-50%);
         }
+    }
+</style>
 
-        .tx-amount {
-            text-align: right;
-            font-weight: 600;
-            white-space: nowrap;
-            font-size: 1em;
-        }
-
-        .tx-amount.positive {
-            color: #2e7d32;
-        }
-
-        .tx-amount.negative {
-            color: #c62828;
-        }
-
-        .tx-balance {
-            text-align: right;
-            color: var(--text-dark);
-            font-size: 0.95em;
-            white-space: nowrap;
-        }
-
-        .no-history {
-            text-align: center;
-            padding: 60px;
-            color: var(--text-light);
-            font-style: italic;
-            font-size: 1em;
-        }
-
-        .back-link-bottom {
-            margin-top: 30px;
-            text-align: center;
-        }
-
-        .back-link-bottom a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .back-link-bottom a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-
-        /* Animations */
-        @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .history-table thead {
-                display: none;
-            }
-
-            .history-table tbody,
-            .history-table tr,
-            .history-table td {
-                display: block;
-                width: 100%;
-            }
-
-            .history-table tr {
-                border: none;
-                border-bottom: 1px solid #e8ecef;
-                margin-bottom: 0;
-                border-radius: 0;
-                background: var(--white);
-                padding: 10px 0;
-            }
-
-            .history-table tr:last-child {
-                border-bottom: none;
-            }
-
-            .history-card {
-                border-radius: 0;
-                box-shadow: none;
-                border: none;
-                background: none;
-            }
-
-            .history-table-wrapper {
-                border-radius: 12px;
-                box-shadow: var(--shadow);
-                border: 1px solid #e8ecef;
-            }
-
-            .history-table td {
-                text-align: right;
-                padding-left: 40% !important;
-                position: relative;
-                border: none;
-                padding-top: 12px;
-                padding-bottom: 12px;
-                min-height: 45px;
-                border-bottom: 1px solid #f0f0f0;
-            }
-
-            .history-table tr:last-child td:last-child {
-                border-bottom: none;
-            }
-
-            .history-table td::before {
-                content: attr(data-label);
-                position: absolute;
-                left: 15px;
-                width: 35%;
-                padding-right: 10px;
-                font-weight: 600;
-                text-align: left;
-                color: var(--text-dark);
-                font-size: 0.85em;
-                top: 50%;
-                transform: translateY(-50%);
-            }
-
-            .history-table td[data-label="Waktu"],
-            .history-table td[data-label="Keterangan"] {
-                text-align: left;
-            }
-
-            .history-table td[data-label="Jumlah"],
-            .history-table td[data-label="Saldo Setelah"] {
-                text-align: right;
-            }
-
-            .filter-form {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .filter-form div {
-                min-width: 100%;
-            }
-
-            .filter-form .filter-actions {
-                flex-direction: row;
-                margin-top: 15px;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .history-container {
-                padding: 0 15px;
-            }
-
-            .filter-card {
-                padding: 20px;
-            }
-
-            .history-header {
-                padding: 20px 15px;
-            }
-
-            .history-header h1 {
-                font-size: 1.1em;
-            }
-        }
-    </style>
-</head>
-<body>
-    {# Header Halaman #}
-    <div class="history-header">
-        <a href="{{ url_for('dashboard') }}" class="back-link" title="Kembali ke Dashboard"><i class="fas fa-arrow-left"></i></a>
-        <h1>Riwayat Transaksi</h1>
+<div class="bg-[#f5f7fa] text-[#1a1a1a] pb-5">
+    <div class="history-header bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white p-[30px_25px] flex items-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] rounded-b-[40px] sticky top-0 z-[1000] md:p-[20px_15px]">
+        <a href="{{ url_for('dashboard') }}" class="back-link text-white text-2xl mr-[15px] no-underline hover:scale-110 hover:opacity-90 transition-all duration-300" title="Kembali ke Dashboard">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h1 class="text-xl md:text-lg font-semibold m-0 tracking-tight">Riwayat Transaksi</h1>
     </div>
 
-    <div class="history-container">
-        {# Flash messages #}
+    <div class="history-container max-w-[1000px] mx-auto mt-[30px] px-5 animate-slideIn md:px-[15px]">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flash-messages">
+                <div class="flash-messages mb-5">
                     {% for category, message in messages %}
-                        <p class="flash-{{ category }}">{{ message }}</p>
+                        <p class="flash-{{ category }} p-[12px_15px] mb-[10px] rounded-lg text-[0.95em] border {% if category == 'success' %}bg-[#d4edda] text-[#155724] border-[#c3e6cb]{% elif category == 'danger' %}bg-[#f8d7da] text-[#721c24] border-[#f5c6cb]{% elif category == 'warning' %}bg-[#fff3cd] text-[#664d03] border-[#ffecb5]{% else %}bg-[#cff4fc] text-[#055160] border-[#b6effb]{% endif %}">
+                            {{ message }}
+                        </p>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
 
-        {# Kartu Filter #}
-        <div class="filter-card">
-            <form method="GET" action="{{ url_for('riwayat_siswa') }}" class="filter-form">
-                <div>
-                    <label for="start_date">Dari Tanggal:</label>
-                    <input type="date" id="start_date" name="start_date" value="{{ filter_start_date }}">
-                </div>
-                <div>
-                    <label for="end_date">Sampai Tanggal:</label>
-                    <input type="date" id="end_date" name="end_date" value="{{ filter_end_date }}">
-                </div>
-                <div>
-                    <label for="filter_type">Tipe Transaksi:</label>
-                    <select id="filter_type" name="filter_type">
-                        <option value="all" {% if selected_type_filter == 'all' %}selected{% endif %}>Semua</option>
-                        <option value="payment" {% if selected_type_filter == 'payment' %}selected{% endif %}>Pembayaran (-)</option>
-                        <option value="topup" {% if selected_type_filter == 'topup' %}selected{% endif %}>Top Up (+)</option>
+        <div class="filter-card bg-white rounded-[16px] p-[25px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] mb-[30px] hover:-translate-y-[5px] transition-transform duration-300 md:p-5">
+            <form method="GET" action="{{ url_for('riwayat_siswa') }}" class="filter-form flex flex-wrap items-end gap-5 md:flex-col md:items-stretch">
+                <div class="flex-1 min-w-[160px] md:min-w-full">
+                    <label for="filter_month" class="block mb-2 text-[0.85em] font-medium text-[#666] uppercase">Bulan:</label>
+                    <select id="filter_month" name="filter_month" class="w-full p-[12px_14px] border border-[#e8ecef] rounded-lg text-[0.95em] bg-[#ede7f6] text-[#5e35b1] focus:outline-none focus:border-[#7c4dff] transition-all duration-300 appearance-none">
+                        {% for num in range(1,13) %}
+                            <option value="{{ num }}" {% if filter_month == num %}selected{% endif %}>{{ "{:02d}".format(num) }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="filter-actions">
-                    <label> </label>
-                    <button type="submit" class="btn btn-filter-submit"><i class="fas fa-filter"></i> Filter</button>
-                    <a href="{{ url_for('riwayat_siswa') }}" class="btn btn-filter-reset">Reset</a>
+                <div class="flex-1 min-w-[160px] md:min-w-full">
+                    <label for="filter_year" class="block mb-2 text-[0.85em] font-medium text-[#666] uppercase">Tahun:</label>
+                    <select id="filter_year" name="filter_year" class="w-full p-[12px_14px] border border-[#e8ecef] rounded-lg text-[0.95em] bg-[#ede7f6] text-[#5e35b1] focus:outline-none focus:border-[#7c4dff] transition-all duration-300 appearance-none">
+                        {% for year in range(2023, now.year+1) %}
+                            <option value="{{ year }}" {% if filter_year == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-actions flex flex-0 md:flex-row md:mt-[15px]">
+                    <label class="block mb-2 text-[0.85em] font-medium text-[#666] uppercase invisible"> </label>
+                    <button type="submit" class="btn-filter-submit bg-[#7c4dff] text-white border-none py-[10px] px-5 rounded-lg text-[0.9em] font-medium mr-[10px] hover:bg-[#5e35b1] hover:-translate-y-[2px] transition-all duration-300">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <a href="{{ url_for('riwayat_siswa') }}" class="btn-filter-reset bg-[#e8ecef] text-[#1a1a1a] border border-[#d1d5db] py-[10px] px-5 rounded-lg text-[0.9em] font-medium no-underline hover:bg-[#d1d5db] hover:-translate-y-[2px] transition-all duration-300">Reset</a>
                 </div>
             </form>
+        
         </div>
+                    <!-- Tombol filter tipe transaksi -->
+            <div class="flex gap-2 mt-4 mb-6">
+                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
+                    {% if selected_type_filter == 'all' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
+                    data-type="all">Semua</button>
+                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
+                    {% if selected_type_filter == 'payment' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
+                    data-type="payment">Pembayaran (-)</button>
+                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
+                    {% if selected_type_filter == 'topup' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
+                    data-type="topup">Top Up (+)</button>
+                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
+                    {% if selected_type_filter == 'transfer' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
+                    data-type="transfer">Transfer</button>
+            </div>
 
-        {# Kartu Tabel Riwayat Transaksi #}
-        <div class="history-card">
-            <div class="history-table-wrapper">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Waktu (WIB)</th>
-                            <th>Keterangan</th>
-                            <th>Jumlah</th>
-                            <th>Saldo Setelah</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if transactions %}
-                            {% for tx in transactions %}
-                            <tr>
-                                <td data-label="Waktu"><span class="tx-time">{{ tx.timestamp | wib }}</span></td>
-                                <td data-label="Keterangan">
-                                    <span class="tx-description">
-                                    {% if tx.user_id == current_user.id %} {# Outgoing #}
-                                        {% if tx.type == 'payment' %} Bayar ke {{ tx.related_user.username if tx.related_user else 'N/A' }}
-                                        {% else %} {{ tx.type.capitalize() }}
-                                        {% endif %}
-                                    {% elif tx.related_user_id == current_user.id %} {# Incoming #}
-                                        {% if tx.type == 'topup' %} Top Up dari {{ tx.user.username if tx.user else 'Admin' }}
-                                        {% else %} {{ tx.type.capitalize() }} Diterima
-                                        {% endif %}
-                                    {% endif %}
-                                    </span>
-                                    {% if tx.description %}<small><em>{{ tx.description }}</em></small>{% endif %}
-                                </td>
-                                <td data-label="Jumlah" class="tx-amount {% if tx.user_id == current_user.id and tx.type == 'payment' %}negative{% else %}positive{% endif %}">
-                                    {% if tx.user_id == current_user.id and tx.type == 'payment' %}- {% else %}+ {% endif %}
-                                    {{ tx.amount|rupiah }}
-                                </td>
-                                <td data-label="Saldo Setelah" class="tx-balance">
-                                    {{ tx.user_balance_after|rupiah }}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="4" class="no-history">
-                                    Tidak ada transaksi ditemukan untuk periode atau filter yang dipilih.
-                                </td>
-                            </tr>
+        <div class="history-card bg-white rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] overflow-hidden md:shadow-none md:border-none md:bg-transparent">
+            <div class="history-table-wrapper overflow-x-auto rounded-[12px] md:shadow-[0_4px_20px_rgba(0,0,0,0.08)] md:border md:border-[#e8ecef]">
+<div class="space-y-3 overflow-x-auto max-w-full w-full px-2">
+    {% if transactions %}
+    <div class="rekapan-bulanan text-[#5e35b1] rounded-xl px-5 py-4 font-semibold text-lg flex text-left w-full max-w-full">
+        {{ bulan_ini }} : 
+        <span class="{% if total_bulan >= 0 %}text-green-600{% else %}text-red-600{% endif %} ml-2">
+            {% if total_bulan >= 0 %}+{% endif %}{{ total_bulan|rupiah }}
+        </span>
+    </div>
+    {% for tx in transactions %}
+    <a href="{{ url_for('detail_transaksi', transaksi_id=tx.id) }}" class="block">
+    <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 w-full max-w-full">
+        <div class="flex items-center justify-between w-full max-w-full">
+            <!-- Left side: Icon and details -->
+            <div class="flex items-center space-x-3 flex-1 min-w-0 pr-3">
+                <!-- Icon -->
+                <div class="w-10 h-10 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    {% if tx.type == 'payment' %}
+                        <span class="icon payment text-[#e53935] text-lg w-6 text-center"><i class="fas fa-store"></i></span>
+                    {% elif tx.type == 'topup' %}
+                        <span class="icon topup text-[#43a047] text-lg w-6 text-center"><i class="fas fa-wallet"></i></span>
+                    {% elif tx.type == 'transfer' %}
+                        <span class="icon transfer text-[#7c4dff] text-lg w-6 text-center"><i class="fas fa-receipt"></i></span>
+                    {% endif %}
+                </div>
+                <!-- Transaction details: hanya nama merchant/terima uang dan waktu -->
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold text-gray-800 text-sm uppercase tracking-wide truncate">
+                        {% if tx.type == 'payment' %}
+                            {{ tx.related_user.username if tx.related_user else 'MERCHANT' }}
+                        {% elif tx.type == 'topup' %}
+                            TOP UP
+                        {% elif tx.type == 'transfer' %}
+                            {% if tx.user_id == current_user.id %}
+                                KIRIM KE {{ tx.related_user.username if tx.related_user else 'USER' }}
+                            {% elif tx.related_user_id == current_user.id %}
+                                TERIMA UANG DARI {{ tx.user.username if tx.user else 'USER' }}
+                            {% endif %}
                         {% endif %}
-                    </tbody>
-                </table>
+                    </h3>
+                    <p class="text-gray-500 text-xs">
+                        {{ tx.timestamp | wib }}
+                    </p>
+                </div>
+            </div>
+            <!-- Right side: hanya nominal saldo (+/-) -->
+            <div class="flex items-center space-x-2 flex-shrink-0">
+                <div class="text-right">
+                    <p class="font-semibold text-sm
+                        {% if tx.type == 'payment' or (tx.type == 'transfer' and tx.user_id == current_user.id) %}
+                            text-red-600
+                        {% else %}
+                            text-green-600
+                        {% endif %}">
+                        {% if tx.type == 'payment' or (tx.type == 'transfer' and tx.user_id == current_user.id) %}
+                            -
+                        {% else %}
+                            +
+                        {% endif %}
+                        {{ tx.amount|rupiah }}
+                    </p>
+                </div>
+                <!-- Chat/Message icon -->
+                <img src="{{ url_for('static', filename='images/hanya_logo.png') }}"
+                     alt="Logo"
+                     class="w-8 h-8 select-none pointer-events-none"
+                     draggable="false"
+                     oncontextmenu="return false;">
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center w-full max-w-full">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+        </div>
+        <p class="text-gray-500 italic text-base">
+            Tidak ada transaksi ditemukan untuk periode atau filter yang dipilih.
+        </p>
+    </div>
+    {% endif %}
+</div>
+</a>
             </div>
         </div>
 
-        {# Back Link #}
-        <div class="back-link-bottom">
-            <a href="{{ url_for('dashboard') }}">Kembali ke Dashboard</a>
+        <div class="back-link-bottom mt-[30px] text-center">
+            <a href="{{ url_for('dashboard') }}" class="text-[#7c4dff] no-underline font-medium hover:text-[#5e35b1] hover:underline transition-colors duration-300">Kembali ke Dashboard</a>
         </div>
     </div>
-</body>
-</html>
+</div>
+<script>
+document.querySelectorAll('.filter-type-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const type = btn.getAttribute('data-type');
+        const params = new URLSearchParams(window.location.search);
+        params.set('filter_type', type);
+        window.location.search = params.toString();
+    });
+});
+</script>
 {% endblock %}

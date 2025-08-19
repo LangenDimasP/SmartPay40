@@ -1,460 +1,209 @@
 {% extends 'base_siswa.html' %}
+
+{% block title %}Lakukan Pembayaran - DimasCash{% endblock %}
+
 {% block content %}
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lakukan Pembayaran - DimasCash</title>
-    {# Link Font Awesome & QR Scanner Library #}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <style>
-        /* === Enhanced CSS === */
-        :root {
-            --primary-color: #7c4dff;
-            --primary-dark: #5e35b1;
-            --primary-light: #ede7f6;
-            --text-dark: #1a1a1a;
-            --text-light: #666;
-            --background: #f5f7fa;
-            --white: #ffffff;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
+<style>
+    /* Animations and custom styles not supported by Tailwind */
+    @keyframes slideIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
+    .animate-slideIn {
+        animation: slideIn 0.5s ease forwards;
+    }
 
-        body {
-            background: var(--background);
-            color: var(--text-dark);
-            line-height: 1.6;
-            padding-bottom: 20px; /* Reduced padding since bottom nav is in base_siswa.html */
-        }
+    .payment-form select {
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%235E35B1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 0.8em auto;
+        padding-right: 2.5rem;
+        cursor: pointer;
+    }
 
-        /* Header */
-        .pay-header-v2 {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: var(--white);
-            padding: 30px 25px;
-            display: flex;
-            align-items: center;
-            box-shadow: var(--shadow);
-            border-radius: 0 0 40px 40px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
+    #qr-reader {
+        background: #f9f9f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 24 24' fill='none' stroke='%23dddddd' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' class='feather feather-smartphone'%3E%3Crect x='5' y='2' width='14' height='20' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='18' x2='12.01' y2='18'%3E%3C/line%3E%3C/svg%3E") center no-repeat;
+        background-size: 50px;
+    }
+    @media (max-width: 640px) {
+    .pay-header-v2 {
+        padding: 16px 10px !important;
+        font-size: 1em !important;
+        border-radius: 0 0 24px 24px !important;
+    }
+    .pay-container {
+        padding: 0 4px !important;
+        margin-top: 16px !important;
+    }
+    .payment-card-v2 {
+        flex-direction: column !important;
+        gap: 1rem !important;
+        padding: 1rem !important;
+    }
+    .payment-column {
+        min-width: 100% !important;
+    }
+    #qr-reader {
+        width: 160px !important;
+        height: 160px !important;
+    }
+    .saldo-info {
+        font-size: 1em !important;
+    }
+    h3 {
+        font-size: 1em !important;
+    }
+    .flash-messages p {
+        font-size: 0.95em !important;
+        padding: 0.5em !important;
+    }
+}
+</style>
 
-        .pay-header-v2 a.back-link {
-            color: var(--white);
-            text-decoration: none;
-            font-size: 1.5em;
-            margin-right: 15px;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .pay-header-v2 a.back-link:hover {
-            transform: scale(1.1);
-            opacity: 0.9;
-        }
-
-        .pay-header-v2 h1 {
-            font-size: 1.25em;
-            font-weight: 600;
-            margin: 0;
-            letter-spacing: 0.3px;
-        }
-
-        /* Main Container */
-        .pay-container {
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 0 20px;
-            animation: slideIn 0.5s ease forwards;
-        }
-
-        /* Payment Card */
-        .payment-card-v2 {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: var(--shadow);
-            border: 1px solid #e8ecef;
-            display: flex;
-            gap: 40px;
-            flex-wrap: wrap;
-            transition: transform 0.3s ease;
-        }
-
-        .payment-card-v2:hover {
-            transform: translateY(-5px);
-        }
-
-        /* Columns */
-        .payment-column {
-            flex: 1;
-            min-width: 280px;
-        }
-
-        .payment-column h3 {
-            font-size: 1.3em;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--primary-light);
-            padding-bottom: 8px;
-        }
-
-        .payment-column .sub-heading,
-        .payment-column label {
-            font-size: 0.95em;
-            font-weight: 500;
-            color: var(--text-light);
-            margin: 15px 0 8px;
-            display: block;
-        }
-
-        /* Balance Info */
-        .saldo-info {
-            font-size: 1.1em;
-            color: var(--text-dark);
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-
-        .saldo-info strong {
-            font-weight:  stony;
-            font-size: 1.2em;
-            color: var(--primary-color);
-        }
-
-        /* Scan Button */
-        #start-scan-btn {
-            background: var(--primary-color);
-            color: var(--white);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 1em;
-            width: 100%;
-            margin-top: 15px;
-            transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        #start-scan-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 0 15px rgba(124, 77, 255, 0.3);
-        }
-
-        /* QR Reader */
-        #qr-reader {
-            max-width: 100%;
-            width: 250px;
-            height: 250px;
-            margin: 20px auto 0;
-            border: 2px dashed var(--primary-light);
-            border-radius: 12px;
-            overflow: hidden;
-            display: none;
-            background: #f9f9f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 24 24' fill='none' stroke='%23dddddd' stroke-width='1' stroke-linecap='round' stroke-linejoin='round' class='feather feather-smartphone'%3E%3Crect x='5' y='2' width='14' height='20' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='18' x2='12.01' y2='18'%3E%3C/line%3E%3C/svg%3E") center no-repeat;
-            background-size: 50px;
-        }
-
-        #qr-reader video {
-            max-width: 100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-            object-fit: cover;
-        }
-
-        #qr-scan-result {
-            margin-top: 15px;
-            font-weight: 500;
-            text-align: center;
-            font-size: 0.95em;
-            min-height: 1.5em;
-            color: var(--text-light);
-        }
-
-        /* Payment Form */
-        .payment-form select,
-        .payment-form input[type="number"] {
-            width: 100%;
-            padding: 14px 16px;
-            border: 1px solid #e8ecef;
-            border-radius: 12px;
-            font-size: 1em;
-            margin-bottom: 20px;
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            font-weight: 500;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            appearance: none;
-        }
-
-        .payment-form select {
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%235E35B1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat;
-            background-position: right 1rem center;
-            background-size: 0.8em auto;
-            padding-right: 2.5rem;
-            cursor: pointer;
-        }
-
-        .payment-form input[type="number"] {
-            background-image: none;
-            cursor: text;
-        }
-
-        .payment-form select:focus,
-        .payment-form input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.2);
-        }
-
-        .payment-form button[type="submit"] {
-            background: var(--primary-color);
-            color: var(--white);
-            border: none;
-            padding: 16px 30px;
-            border-radius: 12px;
-            font-size: 1.1em;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-            transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .payment-form button[type="submit"]:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 0 15px rgba(124, 77, 255, 0.3);
-        }
-
-        /* Flash Messages */
-        .flash-messages {
-            margin-bottom: 20px;
-        }
-
-        .flash-success {
-            background: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #c3e6cb;
-        }
-
-        .flash-error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #f5c6cb;
-        }
-
-        /* Animations */
-        @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .payment-card-v2 {
-                flex-direction: column;
-                gap: 30px;
-            }
-
-            .payment-column {
-                min-width: 100%;
-            }
-
-            .pay-header-v2 {
-                padding: 20px 15px;
-            }
-
-            .pay-header-v2 h1 {
-                font-size: 1.1em;
-            }
-        }
-
-        @media (max-width: 600px) {
-            #qr-reader {
-                width: 200px;
-                height: 200px;
-            }
-
-            .payment-form select,
-            .payment-form input[type="number"] {
-                font-size: 0.95em;
-            }
-
-            .payment-form button[type="submit"] {
-                padding: 14px 20px;
-                font-size: 1em;
-            }
-        }
-    </style>
-</head>
-<body>
-    {# Header Halaman #}
-    <div class="pay-header-v2">
-        <a href="{{ url_for('dashboard') }}" class="back-link" title="Kembali ke Dashboard"><i class="fas fa-arrow-left"></i></a>
-        <h1>Lakukan Pembayaran</h1>
+<div class="bg-[#f5f7fa] text-[#1a1a1a] pb-5">
+    <div class="pay-header-v2 bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white p-[30px_25px] flex items-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] rounded-b-[40px] sticky top-0 z-[1000] md:p-[20px_15px]">
+        <a href="{{ url_for('dashboard') }}" class="back-link text-white text-2xl mr-[15px] no-underline hover:scale-110 hover:opacity-90 transition-all duration-300" title="Kembali ke Dashboard">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h1 class="text-xl md:text-lg font-semibold m-0 tracking-tight">Lakukan Pembayaran</h1>
     </div>
 
-    <div class="pay-container">
-        {# Flash messages #}
+    <div class="pay-container max-w-[900px] mx-auto mt-[30px] px-5 animate-slideIn">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flash-messages">
+                <div class="flash-messages mb-5">
                     {% for category, message in messages %}
-                        <p class="flash-{{ category }}">{{ message }}</p>
+                        <p class="flash-{{ category }} {% if category == 'success' %}bg-[#d4edda] text-[#155724] border-[#c3e6cb]{% else %}bg-[#f8d7da] text-[#721c24] border-[#f5c6cb]{% endif %} p-3 rounded-lg border text-sm">
+                            {{ message }}
+                        </p>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
 
-        {# Kartu Pembayaran Utama #}
-        <div class="payment-card-v2">
-            {# Kolom Kiri: Scan QR #}
-            <div class="payment-column qr-section">
-                <div class="saldo-info">
-                    Saldo Anda: <strong>{{ current_user.balance|rupiah }}</strong>
+        <div class="payment-card-v2 bg-white rounded-[20px] p-[30px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] flex flex-wrap gap-10 hover:-translate-y-[5px] transition-transform duration-300 md:flex-col md:gap-[30px]">
+            <div class="payment-column flex-1 min-w-[280px] md:min-w-full">
+                <div class="saldo-info text-[1.1em] text-[#1a1a1a] mb-5 font-medium">
+                    Saldo Anda: <strong class="font-bold text-[#7c4dff] text-[1.2em]">{{ current_user.balance|rupiah }}</strong>
                 </div>
-                <h3>Scan Kode QR Penjual</h3>
-                <button id="start-scan-btn" type="button">Mulai Scan</button>
-                <div id="qr-reader"></div>
-                <div id="qr-scan-result"></div>
+                <h3 class="text-[1.3em] font-semibold text-[#1a1a1a] mb-[15px] border-b-2 border-[#ede7f6] pb-2">Scan Kode QR Penjual</h3>
+                <button id="start-scan-btn" type="button" class="bg-[#7c4dff] text-white border-none py-3 px-6 rounded-xl font-semibold text-base w-full mt-[15px] hover:bg-[#5e35b1] hover:-translate-y-[2px] hover:shadow-[0_0_15px_rgba(124,77,255,0.3)] transition-all duration-300">Mulai Scan</button>
+                <div id="qr-reader" class="max-w-full w-[250px] h-[250px] mx-auto mt-5 border-2 border-dashed border-[#ede7f6] rounded-xl overflow-hidden hidden md:w-[200px] md:h-[200px]"></div>
+                <div id="qr-scan-result" class="mt-[15px] font-medium text-center text-[0.95em] min-h-[1.5em] text-[#666]"></div>
             </div>
 
-            {# Kolom Kanan: Form Manual #}
-            <div class="payment-column payment-form">
-                <h3>Atau Pilih Penjual Manual</h3>
+            <div class="payment-column payment-form flex-1 min-w-[280px] md:min-w-full">
+                <h3 class="text-[1.3em] font-semibold text-[#1a1a1a] mb-[15px] border-b-2 border-[#ede7f6] pb-2">Atau Pilih Penjual Manual</h3>
                 <form method="POST" action="{{ url_for('pay_vendor') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div>
-                        <label for="vendor_id">Bayar Ke:</label>
-                        <select name="vendor_id" id="vendor_id" required>
+                    <div class="mb-5">
+                        <label for="vendor_id" class="sub-heading block text-[0.95em] font-medium text-[#666] mb-2">Bayar Ke:</label>
+                        <select name="vendor_id" id="vendor_id" required class="w-full p-[14px_16px] border border-[#e8ecef] rounded-xl text-base bg-[#ede7f6] text-[#5e35b1] font-medium focus:outline-none focus:border-[#7c4dff] focus:shadow-[0_0_0_3px_rgba(124,77,255,0.2)] transition-all duration-300 appearance-none">
                             <option value="" disabled selected>-- Pilih Penjual --</option>
                             {% for vendor in vendors %}
                                 <option value="{{ vendor.id }}">{{ vendor.username }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div>
-                        <label for="amount">Jumlah Pembayaran:</label>
-                        <input type="number" name="amount" id="amount" min="100" step="any" required placeholder="Masukkan Jumlah (Rp)">
+                    <div class="mb-5">
+                        <label for="amount" class="sub-heading block text-[0.95em] font-medium text-[#666] mb-2">Jumlah Pembayaran:</label>
+                        <input type="number" name="amount" id="amount" min="100" step="any" required placeholder="Masukkan Jumlah (Rp)" class="w-full p-[14px_16px] border border-[#e8ecef] rounded-xl text-base bg-[#ede7f6] text-[#5e35b1] font-medium focus:outline-none focus:border-[#7c4dff] focus:shadow-[0_0_0_3px_rgba(124,77,255,0.2)] transition-all duration-300">
                     </div>
-                    <button type="submit">Bayar Sekarang</button>
+                    <button type="submit" class="bg-[#7c4dff] text-white border-none py-4 px-[30px] rounded-xl text-[1.1em] font-semibold w-full mt-2 hover:bg-[#5e35b1] hover:-translate-y-[2px] hover:shadow-[0_0_15px_rgba(124,77,255,0.3)] transition-all duration-300">Bayar Sekarang</button>
                 </form>
             </div>
         </div>
     </div>
+</div>
 
-    {# === SCRIPT JAVASCRIPT UNTUK QR SCANNER === #}
-    <script>
-        const vendorSelect = document.getElementById('vendor_id');
-        const qrReaderDiv = document.getElementById('qr-reader');
-        const scanBtn = document.getElementById('start-scan-btn');
-        const resultDiv = document.getElementById('qr-scan-result');
-        let html5QrCode = null; // Ganti dari html5QrcodeScanner ke html5QrCode
-    
-        function isScanning() { return scanBtn.textContent === 'Hentikan Scan'; }
-    
-        function onScanSuccess(decodedText, decodedResult) {
-            console.log(`Hasil Scan: ${decodedText}`);
-            resultDiv.innerHTML = `Memproses ID: ${decodedText}...`;
-            let vendorFound = false;
-            for (let i = 0; i < vendorSelect.options.length; i++) {
-                if (vendorSelect.options[i].value === decodedText) {
-                    vendorSelect.selectedIndex = i; vendorFound = true; break;
-                }
-            }
-            if (vendorFound) {
-                resultDiv.innerHTML = `<span style="color: #43a047;">✔ Penjual '${vendorSelect.options[vendorSelect.selectedIndex].text}' terpilih! Masukkan jumlah.</span>`;
-                document.getElementById('amount').focus(); 
-                stopScanning();
-            } else {
-                resultDiv.innerHTML = `<span style="color: #e53935;">✖ QR tidak cocok. Pilih manual atau scan ulang.</span>`;
-            }
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+const vendorSelect = document.getElementById('vendor_id');
+const qrReaderDiv = document.getElementById('qr-reader');
+const scanBtn = document.getElementById('start-scan-btn');
+const resultDiv = document.getElementById('qr-scan-result');
+let html5QrCode = null;
+
+function isScanning() { return scanBtn.textContent === 'Hentikan Scan'; }
+
+function onScanSuccess(decodedText, decodedResult) {
+    console.log(`Hasil Scan: ${decodedText}`);
+    resultDiv.innerHTML = `Memproses ID: ${decodedText}...`;
+    let vendorFound = false;
+    for (let i = 0; i < vendorSelect.options.length; i++) {
+        if (vendorSelect.options[i].value === decodedText) {
+            vendorSelect.selectedIndex = i; vendorFound = true; break;
         }
-    
-        function onScanFailure(error) { /* Abaikan error scan */ }
-    
-        async function startScanning() {
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("qr-reader"); // Gunakan Html5Qrcode langsung
-            }
-    
-            qrReaderDiv.style.display = 'block';
-            resultDiv.innerHTML = 'Arahkan kamera ke Kode QR Penjual...';
-            scanBtn.textContent = 'Hentikan Scan';
-    
-            try {
-                // Dapatkan daftar kamera
-                const devices = await Html5Qrcode.getCameras();
-                if (devices && devices.length) {
-                    const config = {
-                        fps: 10,
-                        qrbox: { width: 200, height: 200 },
-                        aspectRatio: 1.0
-                    };
-    
-                    // Coba gunakan kamera belakang
-                    await html5QrCode.start(
-                        { facingMode: "environment" }, // Paksa menggunakan kamera belakang
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    );
-                } else {
-                    throw new Error('Tidak ada kamera yang tersedia');
-                }
-            } catch (err) {
-                console.error("Error starting scanner:", err);
-                resultDiv.innerHTML = `<span style="color: #e53935;">Error kamera: ${err}. Izinkan akses kamera.</span>`;
-                qrReaderDiv.style.display = 'none';
-                scanBtn.textContent = 'Mulai Scan';
-            }
+    }
+    if (vendorFound) {
+        resultDiv.innerHTML = `<span style="color: #43a047;">✔ Penjual '${vendorSelect.options[vendorSelect.selectedIndex].text}' terpilih! Masukkan jumlah.</span>`;
+        document.getElementById('amount').focus();
+        stopScanning();
+    } else {
+        resultDiv.innerHTML = `<span style="color: #e53935;">✖ QR tidak cocok. Pilih manual atau scan ulang.</span>`;
+    }
+}
+
+function onScanFailure(error) { /* Abaikan error scan */ }
+
+async function startScanning() {
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("qr-reader");
+    }
+
+    qrReaderDiv.style.display = 'block';
+    resultDiv.innerHTML = 'Arahkan kamera ke Kode QR Penjual...';
+    scanBtn.textContent = 'Hentikan Scan';
+
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length) {
+            const config = {
+                fps: 10,
+                qrbox: { width: 200, height: 200 },
+                aspectRatio: 1.0
+            };
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            );
+        } else {
+            throw new Error('Tidak ada kamera yang tersedia');
         }
-    
-        async function stopScanning() {
-            if (html5QrCode) {
-                try {
-                    await html5QrCode.stop();
-                    qrReaderDiv.style.display = 'none';
-                    scanBtn.textContent = 'Mulai Scan';
-                } catch (err) {
-                    console.warn("Error stopping scanner:", err);
-                }
-            }
+    } catch (err) {
+        console.error("Error starting scanner:", err);
+        resultDiv.innerHTML = `<span style="color: #e53935;">Error kamera: ${err}. Izinkan akses kamera.</span>`;
+        qrReaderDiv.style.display = 'none';
+        scanBtn.textContent = 'Mulai Scan';
+    }
+}
+
+async function stopScanning() {
+    if (html5QrCode) {
+        try {
+            await html5QrCode.stop();
             qrReaderDiv.style.display = 'none';
             scanBtn.textContent = 'Mulai Scan';
+        } catch (err) {
+            console.warn("Error stopping scanner:", err);
         }
-    
-        if (scanBtn) {
-            scanBtn.addEventListener('click', () => {
-                if (isScanning()) {
-                    stopScanning();
-                } else {
-                    startScanning();
-                }
-            });
+    }
+    qrReaderDiv.style.display = 'none';
+    scanBtn.textContent = 'Mulai Scan';
+}
+
+if (scanBtn) {
+    scanBtn.addEventListener('click', () => {
+        if (isScanning()) {
+            stopScanning();
+        } else {
+            startScanning();
         }
-    </script>
-</body>
-</html>
+    });
+}
+</script>
 {% endblock %}

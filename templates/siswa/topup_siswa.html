@@ -68,14 +68,26 @@
         {# Form untuk membuat request baru #}
         <div class="form-box">
             <h3>Buat Request Top Up Baru</h3>
-            <form method="POST" action="{{ url_for('request_topup') }}">
-                {# Tambahkan CSRF token #}
+            <form method="POST" action="{{ url_for('request_topup') }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div>
                     <label for="amount">Jumlah Request Top Up (Rp):</label>
                     <input type="number" name="amount" id="amount" min="1000" step="1000" required placeholder="Min: 1000" {% if pending_request %}disabled title="Selesaikan request sebelumnya dahulu"{% endif %}>
                 </div>
-                {# Tombol dinonaktifkan jika ada request pending #}
+                <div class="upload-box" style="margin-bottom:18px;">
+                    <label for="bukti_transfer" style="font-weight:600; color:#4a148c; margin-bottom:8px; display:block;">
+                        <i class="fas fa-upload"></i> Upload Bukti Transfer <span style="font-size:0.9em; color:#888;">(jpg/png)</span>
+                    </label>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <input type="file" name="bukti_transfer" id="bukti_transfer" accept="image/*"
+                            style="padding:10px; border:1.5px solid #a60bf4; border-radius:8px; background:#f9f8ff; color:#4527a0; flex:1;"
+                            {% if pending_request %}disabled{% endif %}>
+                        <label for="bukti_transfer" style="background:#a60bf4; color:#fff; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight:500; transition:background 0.2s;">
+                            <i class="fas fa-image"></i> Pilih File
+                        </label>
+                    </div>
+                    <small style="color:#888; margin-top:6px; display:block;">Maksimal 2MB. Format gambar saja.</small>
+                </div>
                 <button type="submit" {% if pending_request %}disabled title="Selesaikan request sebelumnya dahulu"{% endif %}>Buat Request</button>
             </form>
         </div>

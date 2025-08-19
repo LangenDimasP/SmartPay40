@@ -3,162 +3,388 @@
 {% block title %}Dashboard Admin{% endblock %}
 
 {% block admin_content %}
-<style>
-    body {
-        font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: #333;
-        background-color: #f7f7ff;
-        padding: 20px;
-    }
-    
-    h2, h3 {
-        color: #7c4dff;
-        margin-bottom: 30px;
-        font-weight: 600;
-        font-size: 28px;
-        position: relative;
-        padding-bottom: 12px;
-        display: inline-block;
-        letter-spacing: 0.5px;
-    }
-    
-    h3 {
-        font-size: 24px;
-    }
-    
-    .admin-container {
-        max-width: 100%;
-        margin: 0 auto;
-    }
-    
-    .flash-messages {
-        margin-bottom: 25px;
-    }
-    
-    .flash-success {
-        background-color: #e8f5e9;
-        border-left: 5px solid #00c853;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .flash-danger {
-        background-color: #ffebee;
-        border-left: 5px solid #f44336;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-    
-    .stats-box {
-        background-color: #fff;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(124, 77, 255, 0.15);
-        padding: 20px;
-        transition: all 0.2s ease;
-    }
-    
-    .stats-box:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 30px rgba(124, 77, 255, 0.2);
-    }
-    
-    .stats-box h4 {
-        margin: 0 0 15px;
-        color: #7c4dff;
-        font-size: 1.2em;
-        font-weight: 600;
-        border-bottom: 1px solid #f0f0ff;
-        padding-bottom: 8px;
-    }
-    
-    .stats-box h4 i {
-        margin-right: 8px;
-        color: #7c4dff;
-    }
-    
-    .stats-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .stats-list li {
-        margin-bottom: 10px;
-        font-size: 0.95em;
-        color: #333;
-    }
-    
-    .stats-list li strong {
-        color: #000;
-        font-size: 1.05em;
-    }
-    
-    .chart-container {
-        background-color: #fff;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        padding: 20px;
-        margin-top: 30px;
-        min-height: 400px;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-    
-    .chart-container canvas {
-        min-height: 300px;
-        width: 100%;
-    }
-</style>
+<div class="max-w-full mx-auto text-gray-800 p-5 font-['Poppins']">
+  <!-- Header -->
+  <h2 class="text-[#7c4dff] mb-8 font-semibold text-3xl relative pb-3 inline-block tracking-wide">
+    Dashboard Admin
+  </h2>
+  <p class="mb-6 text-gray-700">
+    Selamat datang di Panel Admin DimasCash! Berikut ringkasan aktivitas sistem.
+  </p>
 
-<div class="admin-container">
-    <h2>Dashboard Admin</h2>
-    <p>Selamat datang di Panel Admin DimasCash! Berikut ringkasan aktivitas sistem.</p>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="flash-messages">
-            {% for category, message in messages %}
-            <p class="flash-{{ category }}">{{ message }}</p>
-            {% endfor %}
-        </div>
-        {% endif %}
-    {% endwith %}
-    
-    <h3>Statistik Sistem</h3>
-    <div class="stats-container">
-        <div class="stats-box">
-            <h4><i class="fas fa-users"></i> Pengguna</h4>
-            <ul class="stats-list">
-                <li>Total Admin: <strong>{{ stats.get('total_admins', '?') }}</strong></li>
-                <li>Total Penjual: <strong>{{ stats.get('total_vendors', '?') }}</strong> (Aktif: {{ stats.get('active_vendors', '?') }})</li>
-                <li>Total Siswa: <strong>{{ stats.get('total_students', '?') }}</strong> (Aktif: {{ stats.get('active_students', '?') }})</li>
-            </ul>
-        </div>
-        <div class="stats-box">
-            <h4><i class="fas fa-wallet"></i> Akumulasi Saldo (Aktif)</h4>
-            <ul class="stats-list">
-                <li>Total Saldo Siswa: <strong>{{ stats.get('total_student_balance', 0)|rupiah }}</strong></li>
-                <li>Total Saldo Penjual: <strong>{{ stats.get('total_vendor_balance', 0)|rupiah }}</strong></li>
-            </ul>
-        </div>
-        <div class="stats-box">
-            <h4><i class="fas fa-chart-line"></i> Aktivitas Hari Ini ({{ now.strftime('%d %b %Y') if now else 'Hari Ini' }})</h4>
-            <ul class="stats-list">
-                <li>Total Top Up: <strong style="color: #00c853;">{{ stats.get('total_topups_today', 0)|rupiah }}</strong></li>
-                <li>Total Pembayaran: <strong style="color: #7c4dff;">{{ stats.get('total_payments_today', 0)|rupiah }}</strong></li>
-                <li>Total Penarikan Tunai: <strong style="color: #ff9800;">{{ stats.get('total_cashouts_today', 0)|rupiah }}</strong></li>
-            </ul>
-        </div>
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="mb-6">
+    {% for category, message in messages %}
+    {% if category == 'success' %}
+    <p class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg shadow-sm mb-3 text-green-800">
+      {{ message }}
+    </p>
+    {% elif category == 'danger' %}
+    <p class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm mb-3 text-red-800">
+      {{ message }}
+    </p>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- Statistics Section -->
+  <h3 class="text-[#7c4dff] mb-8 font-semibold text-2xl relative pb-3 inline-block tracking-wide">
+    Statistik Sistem
+  </h3>
+
+  <!-- Stats Container -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-8">
+    <!-- Users Stats -->
+    <div class="bg-white rounded-xl shadow-lg p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl border border-purple-100">
+      <h4 class="m-0 mb-4 text-[#7c4dff] text-lg font-semibold border-b border-indigo-100 pb-2">
+        <i class="fas fa-users mr-2 text-[#7c4dff]"></i>Pengguna
+      </h4>
+      <ul class="list-none p-0 m-0 space-y-2">
+        <li class="text-sm text-gray-800">
+          Total Admin: <strong class="text-black text-base">{{ stats.get('total_admins', '?') }}</strong>
+        </li>
+        <li class="text-sm text-gray-800">
+          Total Penjual: <strong class="text-black text-base">{{ stats.get('total_vendors', '?') }}</strong>
+          (Aktif: {{ stats.get('active_vendors', '?') }})
+        </li>
+        <li class="text-sm text-gray-800">
+          Total Siswa: <strong class="text-black text-base">{{ stats.get('total_students', '?') }}</strong>
+          (Aktif: {{ stats.get('active_students', '?') }})
+        </li>
+      </ul>
     </div>
-    
-</div>
-{% endblock admin_content %}
 
+    <!-- Balance Stats -->
+    <div class="bg-white rounded-xl shadow-lg p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl border border-purple-100">
+      <h4 class="m-0 mb-4 text-[#7c4dff] text-lg font-semibold border-b border-indigo-100 pb-2">
+        <i class="fas fa-wallet mr-2 text-[#7c4dff]"></i>Akumulasi Saldo (Aktif)
+      </h4>
+      <ul class="list-none p-0 m-0 space-y-2">
+        <li class="text-sm text-gray-800">
+          Total Saldo Siswa: <strong class="text-black text-base">{{ stats.get('total_student_balance', 0)|rupiah }}</strong>
+        </li>
+        <li class="text-sm text-gray-800">
+          Total Saldo Penjual: <strong class="text-black text-base">{{ stats.get('total_vendor_balance', 0)|rupiah }}</strong>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Today's Activity Stats -->
+    <div class="bg-white rounded-xl shadow-lg p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl border border-purple-100">
+      <h4 class="m-0 mb-4 text-[#7c4dff] text-lg font-semibold border-b border-indigo-100 pb-2">
+        <i class="fas fa-chart-line mr-2 text-[#7c4dff]"></i>Aktivitas Hari Ini ({{ now.strftime('%d %b %Y') if now else 'Hari Ini' }})
+      </h4>
+      <ul class="list-none p-0 m-0 space-y-2">
+        <li class="text-sm text-gray-800">
+          Total Top Up: <strong class="text-green-600 text-base">{{ stats.get('total_topups_today', 0)|rupiah }}</strong>
+        </li>
+        <li class="text-sm text-gray-800">
+          Total Pembayaran: <strong class="text-[#7c4dff] text-base">{{ stats.get('total_payments_today', 0)|rupiah }}</strong>
+        </li>
+        <li class="text-sm text-gray-800">
+          Total Penarikan Tunai: <strong class="text-orange-500 text-base">{{ stats.get('total_cashouts_today', 0)|rupiah }}</strong>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Additional Statistics -->
+    <div class="bg-white rounded-xl shadow-lg p-5 border border-purple-100">
+      <h4 class="text-[#7c4dff] text-lg font-semibold mb-4 border-b pb-2">Statistik Tambahan</h4>
+      <ul class="list-none p-0 m-0 space-y-2 text-sm">
+        <li>Total Transaksi Hari Ini: <strong>{{ stats.total_transactions_today }}</strong></li>
+        <li>Request Top Up Pending: <strong>{{ stats.pending_topup_requests }}</strong></li>
+        <li>Total Transfer Hari Ini: <strong>{{ stats.total_transfer_today|rupiah }}</strong></li>
+        <li>Siswa Belum Pernah Top Up: <strong>{{ stats.students_no_topup }}</strong></li>
+        <li>Siswa Saldo < Rp 10.000: <strong>{{ stats.students_low_balance }}</strong></li>
+        <li>Penjual Teraktif Hari Ini: <strong>{{ stats.vendors_today }}</strong> ({{ stats.vendors_today_count }} transaksi)</li>
+        <li>Siswa Teraktif Hari Ini: <strong>{{ stats.students_today }}</strong> ({{ stats.students_today_count }} transaksi)</li>
+        <li>Laporan Belum Ditanggapi: <strong>{{ stats.laporan_pending }}</strong></li>
+        <li>Siswa Nonaktif: <strong>{{ stats.nonactive_students }}</strong></li>
+        <li>Penjual Nonaktif: <strong>{{ stats.nonactive_vendors }}</strong></li>
+        <li>Notifikasi Terkirim Hari Ini: <strong>{{ stats.notifikasi_today }}</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Charts Container -->
+  <div class="mt-8">
+    <h3 class="text-[#7c4dff] mb-6 font-semibold text-2xl relative pb-3 inline-block tracking-wide">
+      Grafik Aktivitas 7 Hari Terakhir
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <!-- Top Up Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Top Up</h4>
+        <div id="topupNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="topupChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Payment Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Pembayaran</h4>
+        <div id="paymentNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="paymentChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Cashout Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Penarikan Tunai</h4>
+        <div id="cashoutNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="cashoutChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Transaction Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Total Transaksi Hari Ini</h4>
+        <div id="transactionNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="transactionChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Transfer Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Total Transfer Hari Ini</h4>
+        <div id="transferNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="transferChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Students No Top Up Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Siswa Belum Pernah Top Up</h4>
+        <div id="studentsNoTopupNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="studentsNoTopupChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Students Low Balance Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Siswa Saldo < Rp 10.000</h4>
+        <div id="studentsLowBalanceNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="studentsLowBalanceChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Active Vendors Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Penjual Teraktif Hari Ini</h4>
+        <div id="activeVendorsNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="activeVendorsChart" class="min-h-72 w-full"></canvas>
+      </div>
+      <!-- Active Students Chart -->
+      <div class="bg-white rounded-2xl shadow-lg p-5 border border-gray-100 relative">
+        <h4 class="text-[#7c4dff] font-medium mb-2">Siswa Teraktif Hari Ini</h4>
+        <div id="activeStudentsNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-lg">Tidak ada data</div>
+        <canvas id="activeStudentsChart" class="min-h-72 w-full"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Data dari backend
+  const chartLabels = {{ chart_labels|tojson }};
+  const chartTopup = {{ chart_topup|tojson }};
+  const chartPayment = {{ chart_payment|tojson }};
+  const chartCashout = {{ chart_cashout|tojson }};
+  const chartTransactions = {{ chart_transactions|tojson }};
+  const chartTransfers = {{ chart_transfers|tojson }};
+  const chartStudentsNoTopup = {{ chart_students_no_topup|tojson }};
+  const chartStudentsLowBalance = {{ chart_students_low_balance|tojson }};
+  const chartActiveVendors = {{ chart_active_vendors|tojson }};
+  const chartActiveStudents = {{ chart_active_students|tojson }};
+
+  // Function to check and display "No Data" message
+  function showNoDataMessage(canvasId, noDataId, data) {
+    const noDataElement = document.getElementById(noDataId);
+    const canvas = document.getElementById(canvasId);
+    if (!data || data.length === 0 || data.every(val => val === 0)) {
+      noDataElement.classList.remove('hidden');
+      canvas.style.display = 'none';
+      return true;
+    }
+    return false;
+  }
+
+  // Chart Top Up
+  if (!showNoDataMessage('topupChart', 'topupNoData', chartTopup)) {
+    new Chart(document.getElementById('topupChart'), {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Top Up',
+          data: chartTopup,
+          backgroundColor: '#00c853'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Chart Pembayaran
+  if (!showNoDataMessage('paymentChart', 'paymentNoData', chartPayment)) {
+    new Chart(document.getElementById('paymentChart'), {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Pembayaran',
+          data: chartPayment,
+          borderColor: '#7c4dff',
+          backgroundColor: 'rgba(124,77,255,0.15)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Chart Penarikan Tunai
+  if (!showNoDataMessage('cashoutChart', 'cashoutNoData', chartCashout)) {
+    new Chart(document.getElementById('cashoutChart'), {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Penarikan Tunai',
+          data: chartCashout,
+          backgroundColor: '#ff9800'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Chart Total Transaksi Hari Ini (Bar)
+  if (!showNoDataMessage('transactionChart', 'transactionNoData', chartTransactions)) {
+    new Chart(document.getElementById('transactionChart'), {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Total Transaksi',
+          data: chartTransactions,
+          backgroundColor: '#2196f3'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Chart Total Transfer Hari Ini (Line)
+  if (!showNoDataMessage('transferChart', 'transferNoData', chartTransfers)) {
+    new Chart(document.getElementById('transferChart'), {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Total Transfer',
+          data: chartTransfers,
+          borderColor: '#e91e63',
+          backgroundColor: 'rgba(233,30,99,0.15)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Chart Siswa Belum Pernah Top Up (Pie)
+  if (!showNoDataMessage('studentsNoTopupChart', 'studentsNoTopupNoData', chartStudentsNoTopup)) {
+    new Chart(document.getElementById('studentsNoTopupChart'), {
+      type: 'pie',
+      data: {
+        labels: ['Belum Top Up', 'Sudah Top Up'],
+        datasets: [{
+          label: 'Siswa Belum Top Up',
+          data: chartStudentsNoTopup,
+          backgroundColor: ['#ff5722', '#4caf50']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+
+  // Chart Siswa Saldo < Rp 10.000 (Doughnut)
+  if (!showNoDataMessage('studentsLowBalanceChart', 'studentsLowBalanceNoData', chartStudentsLowBalance)) {
+    new Chart(document.getElementById('studentsLowBalanceChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Saldo < Rp 10.000', 'Saldo ≥ Rp 10.000'],
+        datasets: [{
+          label: 'Siswa Saldo Rendah',
+          data: chartStudentsLowBalance,
+          backgroundColor: ['#f44336', '#3f51b5']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+
+  // Chart Penjual Teraktif Hari Ini (Horizontal Bar)
+  if (!showNoDataMessage('activeVendorsChart', 'activeVendorsNoData', chartActiveVendors)) {
+    new Chart(document.getElementById('activeVendorsChart'), {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Transaksi Penjual Teraktif',
+          data: chartActiveVendors,
+          backgroundColor: '#9c27b0'
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Chart Siswa Teraktif Hari Ini (Horizontal Bar)
+  if (!showNoDataMessage('activeStudentsChart', 'activeStudentsNoData', chartActiveStudents)) {
+    new Chart(document.getElementById('activeStudentsChart'), {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Transaksi Siswa Teraktif',
+          data: chartActiveStudents,
+          backgroundColor: '#ffeb3b'
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+</script>
+{% endblock %}

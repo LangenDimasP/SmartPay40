@@ -1,0 +1,33 @@
+{% extends 'base_siswa.html' %}
+{% block content %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-4">
+      {% for category, message in messages %}
+        <div class="p-3 rounded text-white {% if category == 'success' %}bg-green-500{% else %}bg-red-500{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+<div class="max-w-lg mx-auto mt-10 bg-white rounded-xl shadow-lg p-8">
+    <h2 class="text-xl font-bold text-purple-700 mb-6">Buat Laporan</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-1">Pengirim</label>
+            <input type="text" name="pengirim" value="{{ pengirim }}" readonly class="w-full p-2 border border-gray-300 rounded-md bg-gray-100">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-1">Bukti Laporan (gambar/video)</label>
+            <input type="file" name="bukti_laporan" accept="image/*,video/*" class="w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-1">Keterangan</label>
+            <textarea name="keterangan" rows="3" required class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+        </div>
+        <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition">Kirim Laporan</button>
+    </form>
+</div>
+{% endblock %}

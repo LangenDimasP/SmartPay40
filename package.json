@@ -1,0 +1,26 @@
+{
+  "name": "kantin40_digital",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "watch:tailwind": "npx tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LangenDimasP/SmartPay40.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LangenDimasP/SmartPay40/issues"
+  },
+  "homepage": "https://github.com/LangenDimasP/SmartPay40#readme",
+  "description": "",
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1"
+  }
+}
