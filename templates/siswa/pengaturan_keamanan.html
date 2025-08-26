@@ -1,0 +1,104 @@
+{% extends 'base_siswa.html' %}
+{% block content %}
+
+<div class="container mx-auto p-4 md:p-6 max-w-xl">
+    <h1 class="text-2xl font-bold text-purple-700 mb-6">Pengaturan Keamanan</h1>
+    <div class="space-y-8">
+        <!-- Atur PIN -->
+        <div class="border rounded-lg p-6 bg-gray-50 shadow">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">PIN Keamanan</h2>
+            <a href="{{ url_for('atur_pin') }}"
+               class="bg-amber-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 hover:bg-amber-700 transition">
+                <i class="fas fa-key"></i> Atur PIN
+            </a>
+        </div>
+        <!-- Verifikasi Email -->
+        <div class="border rounded-lg p-6 bg-gray-50 shadow">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Verifikasi Email</h2>
+            {% if current_user.email_verified %}
+                <div class="text-green-700 font-semibold flex items-center gap-2">
+                    <i class="fas fa-check-circle"></i>
+                    Email terverifikasi: {{ current_user.email }}
+                </div>
+            {% else %}
+            <form id="email-form" class="space-y-3">
+                <input type="email" id="email-input" name="email" required placeholder="Masukkan email Anda" class="w-full p-2 border rounded">
+                <button type="button" id="send-otp" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
+                    Kirim Kode Verifikasi
+                </button>
+                <div id="email-status" class="text-sm text-gray-600"></div>
+                <input type="text" id="otp-input" name="otp" maxlength="6" placeholder="Masukkan kode OTP" class="w-full p-2 border rounded mt-2">
+                <button type="button" id="verify-otp" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition mt-2">
+                    Verifikasi OTP
+                </button>
+                <div id="otp-status" class="text-sm text-gray-600"></div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not current_user.email_verified %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = "{{ csrf_token() }}";
+    const sendOtpBtn = document.getElementById('send-otp');
+    const verifyOtpBtn = document.getElementById('verify-otp');
+    const emailInput = document.getElementById('email-input');
+    const emailStatus = document.getElementById('email-status');
+    const otpInput = document.getElementById('otp-input');
+    const otpStatus = document.getElementById('otp-status');
+
+    sendOtpBtn.onclick = async function() {
+        emailStatus.textContent = '';
+        otpStatus.textContent = '';
+        if (!emailInput.value) {
+            emailStatus.textContent = 'Email harus diisi.';
+            return;
+        }
+        sendOtpBtn.disabled = true;
+        emailStatus.textContent = 'Mengirim kode verifikasi...';
+        const resp = await fetch('/send_email_otp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ email: emailInput.value })
+        });
+        sendOtpBtn.disabled = false;
+        if (resp.ok) {
+            emailStatus.textContent = 'Kode verifikasi telah dikirim ke email Anda.';
+        } else {
+            emailStatus.textContent = 'Gagal mengirim kode verifikasi.';
+        }
+    };
+
+    verifyOtpBtn.onclick = async function() {
+        otpStatus.textContent = '';
+        if (!otpInput.value) {
+            otpStatus.textContent = 'Kode OTP harus diisi.';
+            return;
+        }
+        verifyOtpBtn.disabled = true;
+        otpStatus.textContent = 'Memverifikasi kode...';
+        const resp = await fetch('/verify_email_otp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ email: emailInput.value, otp: otpInput.value })
+        });
+        verifyOtpBtn.disabled = false;
+        const result = await resp.json();
+        if (result.success) {
+            otpStatus.textContent = 'Email berhasil diverifikasi! Silakan reload halaman.';
+        } else {
+            otpStatus.textContent = 'Kode OTP salah atau sudah kadaluarsa.';
+        }
+    };
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -43,8 +43,8 @@
                         <a href="{{ url_for('buat_laporan') }}" class="bg-blue-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-blue-700 transition">
                             <i class="fas fa-file-alt"></i> Buat Laporan
                         </a>
-                        <a href="{{ url_for('atur_pin') }}" class="bg-amber-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-amber-700 transition">
-                            <i class="fas fa-key"></i> Atur PIN
+                        <a href="{{ url_for('pengaturan_keamanan') }}" class="bg-amber-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-amber-700 transition">
+                            <i class="fas fa-key"></i> Pengaturan Keamanan
                         </a>
                     </div>
                 </div>
@@ -58,9 +58,8 @@
                         {{ current_user.jurusan if current_user.jurusan else '' }}
                     </p>
                     <div class="mt-4 flex flex-col items-center">
-    <div id="user-qrcode" class="bg-white p-2 rounded-lg shadow border border-gray-200"></div>
-    <button id="download-qrcode" class="mt-2 bg-purple-600 text-white py-1 px-3 rounded font-medium text-sm hover:bg-purple-700 transition flex items-center gap-2">
-        <i class="fas fa-download"></i> Unduh QR Code
+    <button id="open-qrcode" class="bg-purple-600 text-white py-2 px-4 rounded-lg font-medium flex items-center gap-2 w-fit hover:bg-purple-700 transition">
+        <i class="fas fa-qrcode"></i> QR Saya
     </button>
     <div class="text-xs text-gray-500 mt-2">QR Code ID: {{ current_user.id }}</div>
 </div>
@@ -85,64 +84,12 @@
             {% endwith %}
             </div>
 
-            <!-- Stats Section -->
-            <div class="px-6 md:px-8 pb-6">
-                <div>
-                    <div class="text-sm text-gray-400 uppercase tracking-wider">SALDO</div>
-                    <div class="text-3xl font-bold text-purple-600">{{ current_user.balance|rupiah }}</div>
-                </div>
-            </div>
-
-            <!-- Profile Details -->
-            <div class="border-t border-gray-200 px-6 md:px-8 py-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    <div class="grid grid-cols-[100px_1fr]">
-                        <div class="font-medium text-gray-500">ID</div>
-                        <div class="text-gray-800">{{ current_user.id }}</div>
-                    </div>
-                    <div class="grid grid-cols-[100px_1fr]">
-                        <div class="font-medium text-gray-500">Username</div>
-                        <div class="text-gray-800">{{ current_user.username }}</div>
-                    </div>
-                    <div class="grid grid-cols-[100px_1fr]">
-                        <div class="font-medium text-gray-500">Peran</div>
-                        <div class="text-gray-800">{{ current_user.role.capitalize() }}</div>
-                    </div>
-                    <div class="grid grid-cols-[100px_1fr]">
-                        <div class="font-medium text-gray-500">Status Akun</div>
-                        <div class="text-gray-800">
-                            {% if current_user.is_active %}
-                                <span class="font-bold text-green-600">Aktif</span>
-                            {% else %}
-                                <span class="font-bold text-red-600">Nonaktif</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Update Password Form -->
-            <div class="border-t border-gray-200 px-6 md:px-8 py-6">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Update Password</h2>
-                <form method="POST" action="{{ url_for('update_password') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="space-y-4 max-w-sm">
-                        <div>
-                            <label for="current_password" class="block text-sm font-medium text-gray-600 mb-1">Password Saat Ini</label>
-                            <input type="password" id="current_password" name="current_password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 transition">
-                        </div>
-                        <div>
-                            <label for="new_password" class="block text-sm font-medium text-gray-600 mb-1">Password Baru</label>
-                            <input type="password" id="new_password" name="new_password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 transition">
-                        </div>
-                        <div>
-                            <label for="confirm_password" class="block text-sm font-medium text-gray-600 mb-1">Konfirmasi Password Baru</label>
-                            <input type="password" id="confirm_password" name="confirm_password" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 transition">
-                        </div>
-                        <button type="submit" class="bg-purple-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-300">Update Password</button>
-                    </div>
-                </form>
-            </div>
+        <div class="border-t border-gray-200 px-6 md:px-8 py-6 flex justify-center">
+    <a href="{{ url_for('pengaturan_profile') }}"
+       class="bg-purple-600 text-white py-2 px-6 rounded-lg font-semibold flex items-center gap-2 hover:bg-purple-700 transition">
+        <i class="fas fa-cog"></i> Pengaturan Profile
+    </a>
+</div>
 
             <!-- Footer -->
             <div class="border-t border-gray-200 px-6 md:px-8 py-4 bg-gray-50 text-right">
@@ -214,8 +161,31 @@
         </div>
     </div>
 
+    <div id="qrcode-modal" class="hidden fixed inset-0 z-[9999] items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative bg-white rounded-lg p-6 z-10 w-full max-w-sm text-center">
+        <button id="close-qrcode" class="absolute top-2 right-3 text-gray-600 hover:text-gray-900 text-2xl">×</button>
+        <div id="modal-qrcode" class="bg-white p-2 rounded-lg shadow border border-gray-200 inline-block"></div>
+        <div class="mt-4 flex items-center justify-center gap-3">
+            <button id="download-qrcode-modal" class="bg-purple-600 text-white py-1 px-3 rounded font-medium text-sm hover:bg-purple-700 transition flex items-center gap-2">
+                <i class="fas fa-download"></i> Unduh
+            </button>
+        </div>
+    </div>
+</div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+/* Tambahkan di dalam <head> atau sebelum </body> */
+#modal-qrcode canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+</style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -340,46 +310,196 @@
         });
 
     </script>
-        <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var qrcodeDiv = document.getElementById('user-qrcode');
-        var qr;
-        if (qrcodeDiv) {
-            qr = new QRCode(qrcodeDiv, {
-                text: "{{ current_user.id }}",
-                width: 120,
-                height: 120,
-                colorDark : "#5e35b1",
-                colorLight : "#fff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const openBtn = document.getElementById('open-qrcode');
+    const modal = document.getElementById('qrcode-modal');
+    const closeBtn = document.getElementById('close-qrcode');
+    const modalQrcode = document.getElementById('modal-qrcode');
+    const downloadBtn = document.getElementById('download-qrcode-modal');
+    const sidebar = document.querySelector('aside');
+    const bottomNav = document.getElementById('bottom-nav') || document.querySelector('nav.flex.md\\:hidden');
+    let qrInstance = null;
+
+    // Pastikan modal overlay di atas semua elemen lain
+    if (modal) {
+        modal.style.zIndex = '99999';
+    }
+
+    function blurUI(enable) {
+        if (enable) {
+            document.body.style.overflow = 'hidden';
+            if (sidebar) { sidebar.classList.add('blur-md'); sidebar.style.pointerEvents = 'none'; }
+            if (bottomNav) { bottomNav.classList.add('blur-md'); bottomNav.style.pointerEvents = 'none'; }
+        } else {
+            document.body.style.overflow = '';
+            if (sidebar) { sidebar.classList.remove('blur-md'); sidebar.style.pointerEvents = ''; }
+            if (bottomNav) { bottomNav.classList.remove('blur-md'); bottomNav.style.pointerEvents = ''; }
         }
-    
-        // Fitur unduh QR code dengan padding putih
-        document.getElementById('download-qrcode').addEventListener('click', function() {
-            var canvas = qrcodeDiv.querySelector('canvas');
-            if (canvas) {
-                // Buat canvas baru dengan padding putih
-                var padding = 32; // px
-                var size = canvas.width + padding * 2;
-                var paddedCanvas = document.createElement('canvas');
-                paddedCanvas.width = size;
-                paddedCanvas.height = size;
-                var ctx = paddedCanvas.getContext('2d');
-                // Isi background putih
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, size, size);
-                // Gambar QR code di tengah
-                ctx.drawImage(canvas, padding, padding);
-                // Download
-                var link = document.createElement('a');
-                link.href = paddedCanvas.toDataURL('image/png');
-                link.download = 'qrcode_{{ current_user.id }}.png';
-                link.click();
-            } else {
-                alert('QR Code belum tersedia untuk diunduh.');
-            }
+    }
+
+    // Gunakan fallback jika user belum punya foto profil
+    const profileSrc = "{{ url_for('static', filename='profile_pics/' + (profile_pic_filename if profile_pic_filename else 'default.png')) }}";
+
+    // Buat QR + overlay foto profil di tengah canvas
+    function generateQrWithProfile() {
+        modalQrcode.innerHTML = '';
+
+        qrInstance = new QRCode(modalQrcode, {
+            text: "{{ current_user.id }}",
+            width: 420,
+            height: 420,
+            colorDark : "#5e35b1",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
         });
+
+        let tries = 0;
+        function waitForCanvas() {
+            tries++;
+            let baseCanvas = modalQrcode.querySelector('canvas');
+            const qrImg = modalQrcode.querySelector('img');
+
+            if (!baseCanvas && qrImg) {
+                baseCanvas = document.createElement('canvas');
+                const w = qrImg.naturalWidth || 420;
+                const h = qrImg.naturalHeight || 420;
+                baseCanvas.width = w;
+                baseCanvas.height = h;
+                const bctx = baseCanvas.getContext('2d');
+                bctx.fillStyle = '#fff';
+                bctx.fillRect(0,0,w,h);
+                bctx.drawImage(qrImg, 0, 0, w, h);
+
+                modalQrcode.innerHTML = '';
+                baseCanvas.style.display = 'block';
+                modalQrcode.appendChild(baseCanvas);
+            }
+
+            if (!baseCanvas) {
+                if (tries < 30) return setTimeout(waitForCanvas, 80);
+                return;
+            }
+
+            // gambar foto profil di tengah (tanpa border, radius lebih kecil)
+            const ctx = baseCanvas.getContext('2d');
+            const profileImg = new Image();
+            profileImg.crossOrigin = 'anonymous';
+            profileImg.src = profileSrc;
+
+            profileImg.onload = function() {
+                const cw = baseCanvas.width;
+                const ch = baseCanvas.height;
+                const cx = cw / 2;
+                const cy = ch / 2;
+                const radius = Math.floor(cw * 0.13); // lebih kecil dari sebelumnya
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(profileImg, cx - radius, cy - radius, radius * 2, radius * 2);
+                ctx.restore();
+
+                baseCanvas.style.display = 'block';
+                modalQrcode.innerHTML = '';
+                modalQrcode.appendChild(baseCanvas);
+            };
+
+            profileImg.onerror = function() {
+                console.warn('Gagal memuat foto profil untuk overlay QR:', profileSrc);
+            };
+        }
+
+        waitForCanvas();
+    }
+
+    function openModal() {
+        if (!modal) return;
+        blurUI(true);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // buat QR besar supaya hasil unduhan lebih tajam; tampilkan di ukuran modal
+        generateQrWithProfile();
+    }
+
+    function closeModal() {
+        if (!modal) return;
+        blurUI(false);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        // bersihkan DOM
+        modalQrcode.innerHTML = '';
+        qrInstance = null;
+    }
+
+    // tombol open/close
+    openBtn && openBtn.addEventListener('click', openModal);
+    closeBtn && closeBtn.addEventListener('click', closeModal);
+
+    // tutup saat klik overlay
+    modal && modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
     });
-    </script>
+
+    // close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+
+    // Download PNG dengan padding putih
+    downloadBtn && downloadBtn.addEventListener('click', function() {
+        const canvas = modalQrcode.querySelector('canvas');
+        if (!canvas) {
+            alert('QR Code belum tersedia.');
+            return;
+        }
+
+        // coba tunggu overlay jika belum selesai (retry singkat)
+        let attempts = 0;
+        function tryDownload() {
+            const c = modalQrcode.querySelector('canvas');
+            if (!c && attempts < 10) {
+                attempts++;
+                return setTimeout(tryDownload, 80);
+            }
+            if (!c) {
+                alert('Gagal menyiapkan QR untuk diunduh.');
+                return;
+            }
+
+            const padding = Math.round(c.width * 0.08);
+            const size = c.width + padding * 2;
+            const padded = document.createElement('canvas');
+            padded.width = size;
+            padded.height = size;
+            const ctx = padded.getContext('2d');
+
+            // putih background
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, size, size);
+            // gambar QR di tengah dengan padding
+            ctx.drawImage(c, padding, padding, c.width, c.height);
+
+            // trigger download
+            padded.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'qrcode_{{ current_user.id }}.png';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            }, 'image/png', 0.95);
+        }
+
+        tryDownload();
+    });
+});
+</script>
+
     {% endblock %}

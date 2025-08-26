@@ -1,13 +1,10 @@
-{% extends "base.html" %}
 
-{% block head %}
 <title>{% block title %}Siswa{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.output.css') }}">
-{% endblock head %}
 
-{% block body %}
 <aside class="w-[260px] bg-white h-dvh fixed left-0 top-0 p-4 shadow-[3px_0_15px_rgba(0,0,0,0.05)] flex flex-col z-[100] hidden md:flex">
     <div title="beranda" class="text-left mb-2 pb-5 border-b border-gray-200 mx-auto">
         <a href="{{ url_for('dashboard') }}" class="flex items-center gap-2 no-underline">
@@ -111,9 +108,11 @@
     </a>
 </nav>
 
-<div class="md:ml-[260px] p-0 md:w-[calc(100%-260px)] w-full h-screen overflow-y-auto fixed top-0 pb-[70px] md:pb-0">
+<div class="md:ml-[260px] p-0 md:w-[calc(100%-260px)] w-full h-screen overflow-y-auto top-0 pb-[70px] md:pb-0">
     {% block content %}{% endblock %}
 </div>
+
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -136,4 +135,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% endblock body %}

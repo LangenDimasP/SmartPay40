@@ -1,0 +1,75 @@
+{% extends 'base_siswa.html' %}
+{% block content %}
+<div class="container mx-auto p-6 max-w-md">
+    <h2 class="text-xl font-bold mb-4 text-purple-700">Verifikasi Device</h2>
+    <p class="mb-4 text-gray-600">Silakan verifikasi dengan sidik jari/wajah/PIN device Anda untuk melanjutkan.</p>
+    <button id="btn-webauthn" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition">Verifikasi Sekarang</button>
+    <div id="webauthn-status" class="mt-3 text-sm text-gray-600"></div>
+</div>
+<script>
+document.getElementById('btn-webauthn').onclick = async function() {
+    if (!window.PublicKeyCredential) {
+        document.getElementById('webauthn-status').textContent = 'Browser Anda belum mendukung WebAuthn.';
+        return;
+    }
+    document.getElementById('webauthn-status').textContent = 'Memulai verifikasi...';
+    const csrfToken = "{{ csrf_token() }}";
+    try {
+        const resp = await fetch('/webauthn/login_challenge', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        if (!resp.ok) {
+            document.getElementById('webauthn-status').textContent = 'Gagal mengambil challenge dari server.';
+            return;
+        }
+        const options = await resp.json();
+        options.publicKey.challenge = Uint8Array.from(atob(options.publicKey.challenge), c => c.charCodeAt(0));
+        options.publicKey.allowCredentials.forEach(function(cred) {
+            cred.id = Uint8Array.from(atob(cred.id), c => c.charCodeAt(0));
+        });
+
+        const assertion = await navigator.credentials.get({publicKey: options.publicKey});
+        const credential = {
+            id: assertion.id,
+            rawId: btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))),
+            type: assertion.type,
+            response: {
+                clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(assertion.response.clientDataJSON))),
+                authenticatorData: btoa(String.fromCharCode(...new Uint8Array(assertion.response.authenticatorData))),
+                signature: btoa(String.fromCharCode(...new Uint8Array(assertion.response.signature))),
+                userHandle: assertion.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(assertion.response.userHandle))) : null
+            }
+        };
+        const verifyResp = await fetch('/webauthn/login_finish', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(credential)
+        });
+        if (!verifyResp.ok) {
+            document.getElementById('webauthn-status').textContent = 'Gagal verifikasi ke server.';
+            return;
+        }
+        let result;
+        try {
+            result = await verifyResp.json();
+        } catch (err) {
+            document.getElementById('webauthn-status').textContent = 'Server error: response tidak valid.';
+            return;
+        }
+        if (result.success) {
+            window.location.href = '/dashboard';
+        } else {
+            document.getElementById('webauthn-status').textContent = 'Verifikasi gagal. Silakan coba lagi.';
+        }
+    } catch (err) {
+        document.getElementById('webauthn-status').textContent = 'Verifikasi dibatalkan atau gagal.';
+    }
+};
+</script>
+{% endblock %}

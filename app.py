@@ -12,7 +12,11 @@ from flask import send_file, request
 import qrcode
 import logging
 import io
+import string
+import random
 import requests
+from flask_mail import Mail, Message
+from flask import jsonify, request, session
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from flask_limiter import Limiter
@@ -34,7 +38,7 @@ from werkzeug.utils import secure_filename  # Untuk mengamankan nama file
 import uuid  # Untuk membuat nama file unik
 import pytz
 from werkzeug.security import generate_password_hash, check_password_hash
-import os  # Digunakan untuk secret key
+import os, base64
 
 app = Flask(__name__)
 
@@ -101,6 +105,15 @@ def short_rupiah(value, max_length=15):
     return s
 
 app.jinja_env.filters['short_rupiah'] = short_rupiah
+
+# Konfigurasi Flask-Mail (isi sesuai SMTP Anda)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'pramudyadimas510@gmail.com'
+app.config['MAIL_PASSWORD'] = 'qmzhjtjpsljsozuo'
+mail = Mail(app)
+
 # ...existing code...
 
 try:
@@ -196,6 +209,10 @@ class User(db.Model, UserMixin):
     active_border_id = db.Column(db.Integer, db.ForeignKey('border.id'), nullable=True)
     active_border = db.relationship('Border', backref=db.backref('users', lazy=True))
     pin_transfer = db.Column(db.String(6), nullable=True)
+    credential_id = db.Column(db.String(255), nullable=True)  # Untuk WebAuthn
+    webauthn_enabled = db.Column(db.Boolean, default=False)   # Status fitur WebAuthn
+    email = db.Column(db.String(255), nullable=True)
+    email_verified = db.Column(db.Boolean, default=False)
 
     # =====================================
 
@@ -349,6 +366,41 @@ def index():
 
 # --- Route Registrasi ---
 
+@app.route('/send_email_otp', methods=['POST'])
+@login_required
+def send_email_otp():
+    data = request.get_json()
+    email = data.get('email')
+    if not email:
+        return jsonify({'success': False}), 400
+    otp = ''.join(random.choices(string.digits, k=6))
+    session['email_otp'] = otp
+    session['email_otp_address'] = email
+    # Kirim email
+    msg = Message('Kode Verifikasi Email', sender=app.config['MAIL_USERNAME'], recipients=[email])
+    msg.body = f'Kode verifikasi Anda: {otp}'
+    try:
+        mail.send(msg)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/verify_email_otp', methods=['POST'])
+@login_required
+def verify_email_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    if session.get('email_otp') == otp and session.get('email_otp_address') == email:
+        # Tandai email sudah diverifikasi di database user
+        current_user.email = email
+        current_user.email_verified = True
+        db.session.commit()
+        session.pop('email_otp', None)
+        session.pop('email_otp_address', None)
+        return jsonify({'success': True})
+    return jsonify({'success': False})
+
 
 # --- Route Login (Update) ---
 logging.basicConfig(level=logging.DEBUG)
@@ -379,7 +431,7 @@ def login():
             flash('reCAPTCHA wajib diisi!', 'error')
             return redirect(url_for('login'))
 
-        secret_key = "6Ldsf6krAAAAAN6pwfXSRs2NVNF-YtT1Y9khmElK"
+        secret_key = "6LdJH7ErAAAAAIiNnKm3EVF7nWHikwBem0O7MSpl"
         payload = {
             'secret': secret_key,
             'response': recaptcha_response,
@@ -406,6 +458,9 @@ def login():
             return redirect(url_for('login'))
 
         login_user(user, remember=remember)
+
+        if user.webauthn_enabled:
+            return redirect(url_for('verify_device'))
 
         # Redirect berdasarkan role
         if user.role == 'admin':
@@ -629,11 +684,12 @@ def penjual_profile():
 
 
 @app.route('/logout')
-@login_required  # Decorator: hanya user yang sudah login bisa akses route ini
+@login_required
 def logout():
-    logout_user()  # Fungsi dari Flask-Login untuk menghapus sesi user
+    logout_user()
+    session.pop('device_verified', None)
     flash('Anda telah berhasil logout.', 'info')
-    return redirect(url_for('index'))  # Kembali ke halaman utama
+    return redirect(url_for('index'))
 
 
 # --- Route Dashboard ---
@@ -659,6 +715,9 @@ else:
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    # Jika user mengaktifkan WebAuthn dan belum verifikasi device, redirect ke /verify_device
+    if current_user.webauthn_enabled and not session.get('device_verified'):
+        return redirect(url_for('verify_device'))
     if current_user.role != 'siswa':
         return redirect(url_for('admin_dashboard_content'))
 
@@ -1805,13 +1864,22 @@ def profile():
         flash(f"Terjadi kesalahan saat memperbarui status border: {str(e)}", "danger")
 
 
+    filename = current_user.profile_pic_filename if current_user.profile_pic_filename else 'default.png'
+
     return render_template('siswa/profile.html',
                          available_borders=available_borders,
                          unlocked_border_ids=unlocked_border_ids,
                          total_transactions=total_transactions,
-                         active_page='profile')
+                         active_page='profile',
+                         profile_pic_filename=filename  # <-- Tambahkan ini!
+                         )
 
 # Tambahkan route baru
+
+@app.route('/pengaturan_profile')
+@login_required
+def pengaturan_profile():
+    return render_template('siswa/pengaturan_profile.html', active_page='pengaturan_profile')
 
 
 @app.route('/change_border/<int:border_id>', methods=['POST'])
@@ -2679,6 +2747,14 @@ def admin_export_users():
     filename = "export_pengguna.xlsx"
     return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+@app.route('/verify_device')
+@login_required
+def verify_device():
+    # Jika user belum aktifkan WebAuthn, langsung ke dashboard
+    if not current_user.webauthn_enabled:
+        return redirect(url_for('dashboard'))
+    return render_template('siswa/verify_device.html')
+
 @app.route('/admin/margin', methods=['GET', 'POST'])
 @login_required
 def admin_margin():
@@ -2703,6 +2779,99 @@ def admin_margin():
 
     return render_template('admin/admin_margin.html', margin=margin)
 
+
+@app.route('/webauthn/register_challenge', methods=['POST'])
+@login_required
+def webauthn_register_challenge():
+    # Buat challenge dan user info
+    challenge = os.urandom(32)
+    session['webauthn_challenge'] = base64.b64encode(challenge).decode()
+    publicKey = {
+        "challenge": base64.b64encode(challenge).decode(),
+        "rp": {"name": "Kantin40 Digital"},
+        "user": {
+            "id": base64.b64encode(str(current_user.id).encode()).decode(),
+            "name": current_user.username,
+            "displayName": current_user.username
+        },
+        "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+        "timeout": 60000,
+        "attestation": "direct"
+    }
+    return jsonify({"publicKey": publicKey})
+
+@app.route('/webauthn/register_finish', methods=['POST'])
+@login_required
+def webauthn_register_finish():
+    data = request.get_json()
+    current_user.credential_id = data['id']
+    current_user.webauthn_enabled = True
+    db.session.commit()
+    return jsonify({"success": True})
+
+@app.route('/webauthn/login_challenge', methods=['POST'])
+@login_required
+def webauthn_login_challenge():
+    user = current_user
+    if not user or not user.credential_id:
+        return jsonify({"error": "User belum aktivasi WebAuthn"}), 400
+    challenge = os.urandom(32)
+    session['webauthn_challenge'] = base64.b64encode(challenge).decode()
+    publicKey = {
+        "challenge": base64.b64encode(challenge).decode(),
+        "allowCredentials": [{
+            "type": "public-key",
+            "id": base64.b64encode(user.credential_id.encode()).decode()
+        }],
+        "timeout": 60000
+    }
+    return jsonify({"publicKey": publicKey})
+
+@app.route('/webauthn/deactivate', methods=['POST'])
+@login_required
+def webauthn_deactivate():
+    current_user.webauthn_enabled = False
+    current_user.credential_id = None
+    db.session.commit()
+    return jsonify({"success": True})
+
+@app.route('/pengaturan_keamanan')
+@login_required
+def pengaturan_keamanan():
+    return render_template('siswa/pengaturan_keamanan.html')
+
+@app.route('/webauthn/login_finish', methods=['POST'])
+@login_required
+def webauthn_login_finish():
+    # Ambil data dari frontend
+    data = request.get_json()
+    challenge = session.get('webauthn_challenge')
+    credential_id = current_user.credential_id
+
+    # --- PSEUDOCODE: Verifikasi credential ---
+    # Gunakan library WebAuthn untuk memverifikasi signature, authenticatorData, dsb.
+    # Contoh (dengan library webauthn, Anda harus install dan setup dulu):
+    # from webauthn import verify_authentication_response
+    # try:
+    #     verification = verify_authentication_response(
+    #         credential_id=credential_id,
+    #         client_data_json=data['response']['clientDataJSON'],
+    #         authenticator_data=data['response']['authenticatorData'],
+    #         signature=data['response']['signature'],
+    #         challenge=challenge,
+    #         origin='https://kantin40.yourdomain.com',  # Ganti dengan domain Anda
+    #         rp_id='kantin40.yourdomain.com',           # Ganti dengan domain Anda
+    #         user_handle=data['response'].get('userHandle')
+    #     )
+    #     if verification.is_successful():
+    #         session['device_verified'] = True
+    #         return jsonify({"success": True})
+    # except Exception as e:
+    #     return jsonify({"success": False, "message": str(e)}), 400
+
+    # --- Sementara, anggap selalu sukses ---
+    session['device_verified'] = True
+    return jsonify({"success": True})
 
 def initialize_borders():
     default_borders = [
