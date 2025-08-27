@@ -1,0 +1,68 @@
+{% extends 'admin_base.html' %}
+{% block admin_content %}
+<div class="container mx-auto p-6 max-w-lg">
+  <h1 class="text-2xl font-bold mb-4">Pengaturan Kunci Aplikasi</h1>
+
+  <!-- Kunci Semua User (Global Lock) -->
+  <form method="post" class="mb-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3">
+      <label class="block mb-1 font-medium">Status Saat Ini</label>
+      <div class="mb-2">{{ 'TERKUNCI' if cfg.app_locked else 'TERBUKA' }}</div>
+      <label class="block mb-1 font-medium">Pesan saat terkunci</label>
+      <input type="text" name="lock_message" value="{{ cfg.lock_message }}" class="w-full p-2 border rounded">
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" name="action" value="lock" class="bg-red-600 text-white px-4 py-2 rounded">Kunci Semua User</button>
+      <button type="submit" name="action" value="unlock" class="bg-green-600 text-white px-4 py-2 rounded">Buka Kunci Semua User</button>
+    </div>
+  </form>
+
+  <!-- Kunci User Tertentu -->
+  <form method="post" class="mb-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3">
+      <label class="block mb-1 font-medium">Kunci User Tertentu (ID, pisahkan dengan koma)</label>
+      <input type="text" name="locked_user_ids" value="{{ cfg.locked_user_ids | join(',') if cfg.locked_user_ids else '' }}" class="w-full p-2 border rounded" placeholder="Contoh: 12,15,22">
+    </div>
+    <button type="submit" name="action" value="update_user_lock" class="bg-purple-600 text-white px-4 py-2 rounded">Update Kunci User Tertentu</button>
+  </form>
+
+  <!-- Kunci Berdasarkan Kelas & Jurusan (Dropdown) -->
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-3">
+      <label class="block mb-1 font-medium">Kelas yang sedang dikunci:</label>
+      <div class="mb-2 text-red-600 font-bold">
+        {{ cfg.locked_kelas | join(', ') if cfg.locked_kelas else 'Tidak ada' }}
+      </div>
+      <label class="block mb-1 font-medium">Kunci Kelas</label>
+      <select name="locked_kelas" multiple class="w-full p-2 border rounded">
+        {% for kelas in all_kelas %}
+          <option value="{{ kelas }}" {% if cfg.locked_kelas and kelas in cfg.locked_kelas %}selected{% endif %}>{{ kelas }}</option>
+        {% endfor %}
+      </select>
+      <small class="text-gray-500">Tekan Ctrl (atau Cmd di Mac) untuk memilih lebih dari satu kelas</small>
+    </div>
+    <div class="mb-3">
+      <label class="block mb-1 font-medium">Jurusan yang sedang dikunci:</label>
+      <div class="mb-2 text-red-600 font-bold">
+        {{ cfg.locked_jurusan | join(', ') if cfg.locked_jurusan else 'Tidak ada' }}
+      </div>
+      <label class="block mb-1 font-medium">Kunci Jurusan</label>
+      <select name="locked_jurusan" multiple class="w-full p-2 border rounded">
+        {% for jurusan in all_jurusan %}
+          <option value="{{ jurusan }}" {% if cfg.locked_jurusan and jurusan in cfg.locked_jurusan %}selected{% endif %}>{{ jurusan }}</option>
+        {% endfor %}
+      </select>
+      <small class="text-gray-500">Tekan Ctrl (atau Cmd di Mac) untuk memilih lebih dari satu jurusan</small>
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" name="action" value="update_kelas_jurusan_lock" class="bg-purple-600 text-white px-4 py-2 rounded">Update Kunci Kelas & Jurusan</button>
+      <button type="submit" name="action" value="reset_kelas_jurusan_lock" class="bg-gray-400 text-black px-4 py-2 rounded">Reset Kunci</button>
+    </div>
+  </form>
+  
+  <!-- ...existing code... -->
+</div>
+{% endblock %}

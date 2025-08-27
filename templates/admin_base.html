@@ -322,6 +322,24 @@
     <div
       class="flex-1 p-4 pt-20 h-screen overflow-y-auto lg:ml-0 lg:pt-8"
     >
+        <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %} 
+    {% if messages %}
+    <div class="mb-6">
+        {% for category, message in messages %}
+            {% if category == 'success' %}
+            <p class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg shadow-sm mb-3 text-green-800">
+                {{ message }}
+            </p>
+            {% elif category == 'danger' %}
+            <p class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-sm mb-3 text-red-800">
+                {{ message }}
+            </p>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %} 
+    {% endwith %}
       {% block admin_content %}{% endblock %}
     </div>
 

@@ -49,17 +49,6 @@
     </div>
 
     <div class="history-container max-w-[1000px] mx-auto mt-[30px] px-5 animate-slideIn md:px-[15px]">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages mb-5">
-                    {% for category, message in messages %}
-                        <p class="flash-{{ category }} p-[12px_15px] mb-[10px] rounded-lg text-[0.95em] border {% if category == 'success' %}bg-[#d4edda] text-[#155724] border-[#c3e6cb]{% elif category == 'danger' %}bg-[#f8d7da] text-[#721c24] border-[#f5c6cb]{% elif category == 'warning' %}bg-[#fff3cd] text-[#664d03] border-[#ffecb5]{% else %}bg-[#cff4fc] text-[#055160] border-[#b6effb]{% endif %}">
-                            {{ message }}
-                        </p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
 
         <div class="filter-card bg-white rounded-[16px] p-[25px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] mb-[30px] hover:-translate-y-[5px] transition-transform duration-300 md:p-5">
             <form method="GET" action="{{ url_for('riwayat_siswa') }}" class="filter-form flex flex-wrap items-end gap-5 md:flex-col md:items-stretch">

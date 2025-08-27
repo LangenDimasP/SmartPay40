@@ -43,6 +43,9 @@
     border-radius: 12px;
     transition: all 0.2s cubic-bezier(.4,2,.3,1);
 }
+.action-label[aria-disabled="true"] {
+  pointer-events: none;
+}
 </style>
 
 <div class="p-0">
@@ -101,6 +104,7 @@
             </div>
         </div>
     </div>
+    {% include 'partials/messages.html' %}
 
 
     <div class="balance-card bg-white mx-auto mt-[30px] rounded-[20px] p-6 w-[90%] max-w-[420px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] relative hover:-translate-y-[5px] transition-transform duration-300 animate-slideIn md:w-[95%] md:mt-5">
@@ -140,7 +144,7 @@
                     transition-all duration-300">
             <i class="fas fa-paper-plane"></i>
         </div>
-        <span class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Kirim</span>
+        <span data-action="transfer" class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Kirim</span>
     </a>
 
     <a href="{{ url_for('pay_vendor') }}" 
@@ -154,7 +158,7 @@
                     transition-all duration-300">
             <i class="fas fa-qrcode"></i>
         </div>
-        <span class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Bayar</span>
+        <span data-action="pay" class="action-label mt-2 text-[11px] sm:text-[13px] text-[#666] font-medium">Bayar</span>
     </a>
 </div>
 
@@ -286,6 +290,91 @@ document.addEventListener('DOMContentLoaded', function() {
             eyeIcon.classList.add('fa-eye-slash');
         }
     });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Status lock dan pesan lock dari backend
+  const appLocked = {{ 'true' if app_locked else 'false' }};
+  if (!appLocked) return; // hanya aktifkan saat kondisi terkunci
+
+  const lockMsg = {{ app_lock_message|tojson }};
+
+  // Modal lock (hanya dibuat sekali)
+  let lockModal = document.createElement('div');
+  lockModal.id = 'app-lock-modal';
+  lockModal.innerHTML = `
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;">
+      <div id="app-lock-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
+      <div role="dialog" aria-modal="true" style="position:relative;z-index:2001;max-width:420px;width:90%;background:#fff;border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        <h3 style="margin:0 0 8px 0;font-size:18px;color:#7c4dff;">Informasi</h3>
+        <p id="app-lock-message" style="margin:0 0 16px 0;color:#333;font-size:14px;"></p>
+        <div style="text-align:right;">
+          <button id="app-lock-close" style="background:#7c4dff;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;">Tutup</button>
+        </div>
+      </div>
+    </div>
+  `;
+  lockModal.style.display = 'none';
+  document.body.appendChild(lockModal);
+
+  function showLockModal(msg){
+    const modal = document.getElementById('app-lock-modal');
+    const msgEl = modal.querySelector('#app-lock-message');
+    msgEl.textContent = msg || lockMsg;
+    modal.style.display = 'block';
+    modal.querySelector('#app-lock-close').focus();
+  }
+
+  // Tutup modal jika klik backdrop/close atau tekan Escape
+  document.body.addEventListener('click', function(e){
+    if (e.target && (e.target.id === 'app-lock-close' || e.target.id === 'app-lock-backdrop')) {
+      document.getElementById('app-lock-modal').style.display = 'none';
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      const m = document.getElementById('app-lock-modal');
+      if (m && m.style.display === 'block') m.style.display = 'none';
+    }
+  });
+
+  // Disable tombol dan label "Kirim" & "Bayar"
+  document.querySelectorAll('[data-action="pay"], [data-action="transfer"]').forEach(el => {
+    const interactive = el.closest('a, button') || el;
+
+    // Untuk anchor: simpan href asli lalu hapus href
+    if (interactive.tagName.toLowerCase() === 'a') {
+      interactive.dataset.origHref = interactive.getAttribute('href') || '';
+      interactive.removeAttribute('href');
+      interactive.setAttribute('role','button');
+    }
+
+    // Visual disable & aksesibilitas pada tombol
+    interactive.classList.add('opacity-50', 'cursor-not-allowed');
+    interactive.setAttribute('aria-disabled', 'true');
+    try { interactive.tabIndex = -1; } catch(e){}
+
+    // Visual disable & aksesibilitas pada label <span>
+    el.classList.add('opacity-50', 'cursor-not-allowed');
+    el.setAttribute('aria-disabled', 'true');
+    el.setAttribute('title', lockMsg);
+
+    // Jika user klik/memaksa, tampilkan modal pesan
+    interactive.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      showLockModal(lockMsg);
+    }, { passive: false });
+
+    // Tangani Enter/Space untuk aksesibilitas
+    interactive.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        showLockModal(lockMsg);
+      }
+    });
+  });
 });
 </script>
 {% endblock %}

@@ -109,6 +109,7 @@
 </nav>
 
 <div class="md:ml-[260px] p-0 md:w-[calc(100%-260px)] w-full h-screen overflow-y-auto top-0 pb-[70px] md:pb-0">
+
     {% block content %}{% endblock %}
 </div>
 
@@ -132,6 +133,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!isNavPage) {
         list.forEach(i => i.classList.remove('text-[#7c4dff]', 'font-bold'));
         return;
+    }
+
+    const flashWrap = document.getElementById('flash-messages');
+    if (flashWrap) {
+        setTimeout(() => {
+            flashWrap.style.transition = 'opacity 0.6s, transform 0.6s';
+            flashWrap.style.opacity = '0';
+            flashWrap.style.transform = 'translateY(-10px)';
+            setTimeout(() => {
+                if (flashWrap) flashWrap.remove();
+            }, 700);
+        }, 4000);
     }
 });
 </script>

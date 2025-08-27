@@ -10,6 +10,7 @@ from flask_wtf.csrf import CSRFProtect
 from pyngrok import ngrok
 from flask import send_file, request
 import qrcode
+from flask import abort
 import logging
 import io
 import string
@@ -354,6 +355,123 @@ class Laporan(db.Model):
 
     def __repr__(self):
         return f'<Laporan {self.id} oleh User {self.user_id}>'
+
+class AppConfig(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    app_locked = db.Column(db.Boolean, nullable=False, default=False)
+    lock_message = db.Column(db.String(255), nullable=True, default='Belum jam istirahat')
+    locked_user_ids = db.Column(db.PickleType, nullable=True, default=[])
+    locked_kelas = db.Column(db.PickleType, nullable=True, default=[])
+    locked_jurusan = db.Column(db.PickleType, nullable=True, default=[])
+
+def get_app_config():
+    cfg = AppConfig.query.first()
+    if not cfg:
+        cfg = AppConfig(app_locked=False, lock_message='Belum jam istirahat')
+        db.session.add(cfg)
+        db.session.commit()
+    return cfg
+
+@app.context_processor
+def inject_app_lock():
+    cfg = None
+    try:
+        cfg = get_app_config()
+    except Exception:
+        cfg = None
+    return {
+        'app_locked': cfg.app_locked if cfg else False,
+        'app_lock_message': cfg.lock_message if cfg else 'Layanan terkunci'
+    }
+
+# Admin view untuk toggle lock (hanya admin)
+@app.route('/admin/app_lock', methods=['GET', 'POST'])
+@login_required
+def admin_app_lock():
+    if current_user.role != 'admin':
+        flash('Akses ditolak.', 'danger')
+        return redirect(url_for('dashboard'))
+    cfg = get_app_config()
+
+    # Ambil semua kelas & jurusan untuk dropdown
+    all_kelas = sorted(set([u.kelas for u in User.query.filter(User.kelas.isnot(None)).all() if u.kelas]))
+    all_jurusan = sorted(set([u.jurusan for u in User.query.filter(User.jurusan.isnot(None)).all() if u.jurusan]))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        # Kunci semua user (global)
+        if action == 'lock':
+            cfg.app_locked = True
+            cfg.lock_message = request.form.get('lock_message') or cfg.lock_message
+            db.session.commit()
+            flash('Status kunci aplikasi diperbarui.', 'success')
+            return redirect(url_for('admin_app_lock'))
+        elif action == 'unlock':
+            cfg.app_locked = False
+            db.session.commit()
+            flash('Status kunci aplikasi diperbarui.', 'success')
+            return redirect(url_for('admin_app_lock'))
+        # Kunci beberapa user
+        elif action == 'update_user_lock':
+            raw_ids = request.form.get('locked_user_ids', '')
+            # Simpan sebagai list of int (atau str jika id bisa non-int)
+            cfg.locked_user_ids = [i.strip() for i in raw_ids.split(',') if i.strip()]
+            db.session.commit()
+            flash('Daftar user yang dikunci diperbarui.', 'success')
+            return redirect(url_for('admin_app_lock'))
+        # Kunci kelas & jurusan
+        elif action == 'update_kelas_jurusan_lock':
+            cfg.locked_kelas = request.form.getlist('locked_kelas')
+            cfg.locked_jurusan = request.form.getlist('locked_jurusan')
+            print("DEBUG locked_kelas:", cfg.locked_kelas)
+            print("DEBUG locked_jurusan:", cfg.locked_jurusan)
+            db.session.add(cfg) 
+            db.session.commit()
+            flash('Daftar kelas & jurusan yang dikunci diperbarui.', 'success')
+            return redirect(url_for('admin_app_lock'))
+
+    # Pastikan field ada di config (untuk render awal)
+    if not hasattr(cfg, 'locked_user_ids'):
+        cfg.locked_user_ids = []
+    if not hasattr(cfg, 'locked_kelas'):
+        cfg.locked_kelas = []
+    if not hasattr(cfg, 'locked_jurusan'):
+        cfg.locked_jurusan = []
+
+    return render_template(
+        'admin/admin_app_lock.html',
+        cfg=cfg,
+        all_kelas=all_kelas,
+        all_jurusan=all_jurusan,
+        active_page='admin_app_lock'
+    )
+
+# helper check untuk route yang butuh block saat locked
+def ensure_app_unlocked():
+    cfg = get_app_config()
+    # Global lock (semua user)
+    if cfg.app_locked:
+        return False, (cfg.lock_message or 'Aplikasi sedang dikunci oleh admin')
+
+    # --- Lock khusus user, kelas, jurusan ---
+    # Pastikan field ada di config, jika belum, set default
+    locked_user_ids = getattr(cfg, 'locked_user_ids', []) or []
+    locked_kelas = getattr(cfg, 'locked_kelas', []) or []
+    locked_jurusan = getattr(cfg, 'locked_jurusan', []) or []
+
+    # Jika user sudah login
+    if current_user.is_authenticated:
+        # Lock by user id
+        if str(current_user.id) in [str(uid) for uid in locked_user_ids]:
+            return False, cfg.lock_message or "Akun Anda sedang dikunci oleh admin."
+        # Lock by kelas
+        if current_user.kelas and current_user.kelas in locked_kelas:
+            return False, cfg.lock_message or "Akses kelas Anda sedang dikunci oleh admin."
+        # Lock by jurusan
+        if current_user.jurusan and current_user.jurusan in locked_jurusan:
+            return False, cfg.lock_message or "Akses jurusan Anda sedang dikunci oleh admin."
+
+    return True, None
 
 
 # --- Routes (Halaman Web) ---
@@ -1005,6 +1123,12 @@ def pay():
     # 1. Otorisasi: Pastikan yang bayar adalah siswa
     if current_user.role != 'siswa':
         flash("Hanya siswa yang dapat melakukan pembayaran.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # CEK APP LOCK DI AWAL
+    ok, msg = ensure_app_unlocked()
+    if not ok:
+        flash(msg, 'warning')
         return redirect(url_for('dashboard'))
 
     # 2. Ambil data dari form yang dikirim
@@ -1662,6 +1786,12 @@ def pay_vendor():
         logger.warning(
             f"Unauthorized access to /pay_vendor by user {current_user.username}, role: {current_user.role}")
         flash("Hanya siswa yang dapat mengakses halaman pembayaran.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # CEK APP LOCK DI AWAL (block baik GET maupun POST)
+    ok, msg = ensure_app_unlocked()
+    if not ok:
+        flash(msg, 'warning')
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -2533,6 +2663,13 @@ def admin_laporan():
 @app.route('/transfer', methods=['GET', 'POST'])
 @login_required
 def transfer_user():
+
+    # CEK APP LOCK DI AWAL (block baik GET maupun POST)
+    ok, msg = ensure_app_unlocked()
+    if not ok:
+        flash(msg, 'warning')
+        return redirect(url_for('dashboard'))
+    
     if request.method == 'POST':
         target_id = request.form.get('target_id')
         amount = float(request.form.get('amount', 0))
@@ -2873,124 +3010,6 @@ def webauthn_login_finish():
     session['device_verified'] = True
     return jsonify({"success": True})
 
-def initialize_borders():
-    default_borders = [
-        {
-            'name': 'Basic',
-            'image_path': 'borders/basic.png',
-            'required_transactions': 0,
-            'description': 'Border dasar untuk semua pengguna'
-        },
-        {
-            'name': 'Bronze',
-            'image_path': 'borders/bronze.png',
-            'required_transactions': 10,
-            'description': 'Selesaikan 10 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Silver',
-            'image_path': 'borders/silver.png',
-            'required_transactions': 25,
-            'description': 'Selesaikan 25 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Gold',
-            'image_path': 'borders/gold.png',
-            'required_transactions': 50,
-            'description': 'Selesaikan 50 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Platinum',
-            'image_path': 'borders/platinum.png',
-            'required_transactions': 100,
-            'description': 'Selesaikan 100 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Diamond',
-            'image_path': 'borders/diamond.png',
-            'required_transactions': 200,
-            'description': 'Selesaikan 200 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Master',
-            'image_path': 'borders/master.png',
-            'required_transactions': 350,
-            'description': 'Selesaikan 350 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Grandmaster',
-            'image_path': 'borders/grandmaster.png',
-            'required_transactions': 500,
-            'description': 'Selesaikan 500 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Elite',
-            'image_path': 'borders/elite.png',
-            'required_transactions': 750,
-            'description': 'Selesaikan 750 transaksi untuk membuka border ini'
-        },
-        {
-            'name': 'Legend',
-            'image_path': 'borders/legend.png',
-            'required_transactions': 1000,
-            'description': 'Selesaikan 1000 transaksi untuk membuka border ini'
-        },
-        {   
-            'name': 'RPL Border',
-            'image_path': 'borders/rpl.png',
-            'required_transactions': 3,
-            'jurusan': 'RPL',
-            'description': 'Border khusus untuk siswa RPL, buka dengan 3 transaksi'
-        },
-        {   
-            'name': 'DKV 1 Border',
-            'image_path': 'borders/dkv1.png',
-            'required_transactions': 3,
-            'jurusan': 'DKV 1',
-            'description': 'Border khusus untuk siswa DKV 1, buka dengan 3 transaksi'
-        },
-        {   
-            'name': 'DKV 2 Border',
-            'image_path': 'borders/dkv2.png',
-            'required_transactions': 3,
-            'jurusan': 'DKV 2',
-            'description': 'Border khusus untuk siswa DKV 2, buka dengan 3 transaksi'
-        },
-        {   
-            'name': 'AK Border',
-            'image_path': 'borders/ak.png',
-            'required_transactions': 3,
-            'jurusan': 'AK',
-            'description': 'Border khusus untuk siswa AK, buka dengan 3 transaksi'
-        },
-        {   
-            'name': 'MP Border',
-            'image_path': 'borders/mp.png',
-            'required_transactions': 3,
-            'jurusan': 'MP',
-            'description': 'Border khusus untuk siswa MP, buka dengan 3 transaksi'
-        },
-        {   
-            'name': 'BR Border',
-            'image_path': 'borders/br.png',
-            'required_transactions': 3,
-            'jurusan': 'BR',
-            'description': 'Border khusus untuk siswa BR, buka dengan 3 transaksi'
-        }
-    ]
-
-    for border_data in default_borders:
-        if not Border.query.filter_by(name=border_data['name']).first():
-            new_border = Border(**border_data)
-            db.session.add(new_border)
-
-    try:
-        db.session.commit()
-    except Exception as e:
-        print(f"Error initializing borders: {e}")
-        db.session.rollback()
-
-# Tambahkan setelah initialize_borders()
 
 
 def check_and_unlock_borders(user_id):
@@ -3057,18 +3076,22 @@ def add_border_column():
             db.session.rollback()
             print(f"Error adding jurusan column: {e}")
 
+# ...existing code...
+
 if __name__ == '__main__':
     with app.app_context():
-        # Buat tabel jika belum ada (tidak menghapus yang sudah ada)
-        db.create_all()
-        
-        # Tambah kolom jurusan jika belum ada
+        # DROP dan CREATE khusus tabel AppConfig
+        AppConfig.__table__.drop(db.engine, checkfirst=True)
+        print("Tabel app_config berhasil dihapus.")
+        AppConfig.__table__.create(db.engine, checkfirst=True)
+        print("Tabel app_config berhasil dibuat ulang.")
+
+        # Tambah kolom jurusan ke border jika perlu
         add_border_column()
         
-        # Update atau tambah border baru
-        initialize_borders()
-        
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+# ...existing code...
 
 
 # !!! PENTING: Hapus atau komentari route @app.route('/pay', methods=['POST']) yang lama

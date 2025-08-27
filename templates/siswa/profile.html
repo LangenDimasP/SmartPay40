@@ -134,10 +134,12 @@
                             </form>
                         {% else %}
                             <div class="text-sm text-red-500 mb-2 flex items-center gap-1"><i class="fas fa-lock"></i> Terkunci</div>
-                            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
-                                <div class="bg-purple-600 h-1.5 rounded-full" style="width: {{ (total_transactions / border.required_transactions * 100) if total_transactions < border.required_transactions else 100 }}%"></div>
-                            </div>
-                            <div class="text-xs text-gray-500">{{ total_transactions }}/{{ border.required_transactions }} transaksi</div>
+                            {% if not border.jurusan or border.jurusan == current_user.jurusan %}
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                                    <div class="bg-purple-600 h-1.5 rounded-full" style="width: {{ (total_transactions / border.required_transactions * 100) if total_transactions < border.required_transactions else 100 }}%"></div>
+                                </div>
+                                <div class="text-xs text-gray-500">{{ total_transactions }}/{{ border.required_transactions }} transaksi</div>
+                            {% endif %}
                         {% endif %}
                     </div>
                     {% endfor %}
