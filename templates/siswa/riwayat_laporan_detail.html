@@ -1,0 +1,153 @@
+{% extends 'base_siswa.html' %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-8">
+  <div class="bg-white rounded-2xl shadow p-6">
+    <div class="flex justify-between items-start mb-6">
+      <h3 class="text-xl font-semibold">Detail Laporan</h3>
+      <a href="{{ url_for('riwayat_pesan') }}" class="text-sm text-gray-500 hover:underline flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Kembali
+      </a>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="space-y-4">
+          <!-- Pesan Laporan User (Kanan) -->
+          <div class="flex justify-end">
+            <div class="relative max-w-lg w-full">
+              <div class="bg-[#7c4dff] text-white p-4 rounded-2xl rounded-br-md shadow-sm">
+                <!-- Header: avatar + username (kanan) -->
+                <div class="flex justify-end items-center gap-3 mb-3">
+                  <div class="text-sm font-medium text-white/90 hidden sm:inline">
+                    {{ laporan.user.username if laporan.user else 'Anda' }}
+                  </div>
+                  {% if laporan.user and laporan.user.profile_pic_filename %}
+                    <img src="{{ url_for('static', filename='profile_pics/' + laporan.user.profile_pic_filename) }}?v={{ range(1,1000)|random }}" alt="Avatar" class="w-8 h-8 rounded-full object-cover border-2 border-white">
+                  {% else %}
+                    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
+                      <i class="fas fa-user"></i>
+                    </div>
+                  {% endif %}
+                </div>
+    
+                <div class="mb-3">
+                  <div class="text-right font-medium mb-2">{{ laporan.keterangan }}</div>
+                  
+                  <!-- Bukti/File -->
+                  {% if file_url %}
+                    <div class="mt-3 p-2 bg-white/10 rounded-lg">
+                      {% if file_url.endswith('.mp4') or file_url.endswith('.mov') or file_url.endswith('.avi') %}
+                        <video src="{{ file_url }}" controls class="w-full rounded max-h-64"></video>
+                      {% else %}
+                        <a href="{{ file_url }}" target="_blank" class="block">
+                          <img src="{{ file_url }}" alt="Bukti" class="w-full rounded max-h-64 object-cover" />
+                        </a>
+                      {% endif %}
+                      <div class="text-xs opacity-90 mt-1"> Bukti lampiran</div>
+                    </div>
+                  {% endif %}
+                </div>
+                
+                <div class="text-xs opacity-90 text-right">
+                  {{ laporan.timestamp|wib }}
+                </div>
+              </div>
+              
+              <!-- Status Icon -->
+              <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-sm">
+                {% if laporan.ditanggapi %}
+                  <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                  </svg>
+                {% else %}
+                  <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                  </svg>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+      <!-- Balasan Admin (Kiri) - Hanya tampil jika sudah ditanggapi -->
+      {% if laporan.ditanggapi and laporan.response_text %}
+        <div class="flex justify-start">
+          <div class="max-w-lg w-full">
+            <div class="bg-white border-2 border-[#7c4dff] text-[#1a1a1a] p-4 rounded-2xl rounded-bl-md shadow-sm">
+              <div class="text-sm font-semibold text-[#7c4dff] mb-2 flex items-center gap-2">
+                <div class="w-8 h-8 bg-[#7c4dff] text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  A
+                </div>
+                Admin
+              </div>
+              <div class="text-sm mb-2 whitespace-pre-line">{{ laporan.response_text }}</div>
+              <div class="text-xs text-[#666] text-right">
+                {{ laporan.response_timestamp|wib if laporan.response_timestamp }}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% elif laporan.ditanggapi %}
+        <!-- Jika ditanggapi tapi tidak ada response_text -->
+        <div class="flex justify-start">
+          <div class="max-w-lg w-full">
+            <div class="bg-white border-2 border-[#7c4dff] text-[#1a1a1a] p-4 rounded-2xl rounded-bl-md shadow-sm">
+              <div class="text-sm font-semibold text-[#7c4dff] mb-2 flex items-center gap-2">
+                <div class="w-8 h-8 bg-[#7c4dff] text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  A
+                </div>
+                Admin
+              </div>
+              <div class="text-sm text-[#666] italic">Laporan telah ditanggapi dan ditindaklanjuti.</div>
+              <div class="text-xs text-[#666] text-right">
+                {{ laporan.response_timestamp.strftime('%d %B %Y, %H:%M:%S') if laporan.response_timestamp }}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Status Info -->
+      <div class="flex justify-center mt-6">
+        <div class="bg-gray-50 px-4 py-2 rounded-full text-sm">
+          {% if laporan.ditanggapi %}
+            <span class="text-green-600 font-semibold flex items-center gap-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              Laporan sudah ditanggapi
+            </span>
+          {% else %}
+            <span class="text-yellow-600 font-semibold flex items-center gap-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+              </svg>
+              Menunggu tanggapan admin
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Animasi hover untuk bubble chat */
+.bg-[#7c4dff]:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+.border-[#7c4dff]:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+/* Smooth scroll untuk konten yang panjang */
+.whitespace-pre-line {
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+</style>
+{% endblock %}

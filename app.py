@@ -10,6 +10,7 @@ from flask_wtf.csrf import CSRFProtect
 from pyngrok import ngrok
 from flask import send_file, request
 import qrcode
+from uuid import uuid4
 from flask import abort
 import logging
 import io
@@ -45,8 +46,8 @@ app = Flask(__name__)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 csrf = CSRFProtect(app)
+utc_tz = pytz.utc
 wib_tz = pytz.timezone("Asia/Jakarta")
-utc_tz = pytz.timezone("UTC")
 # === Konfigurasi Upload Foto Profil ===
 # Tentukan path absolut ke folder statis
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -127,43 +128,27 @@ except ImportError:
     class ZoneInfo:  # Dummy class
         def __init__(self, key): pass
 
-# ... (import lain, app, db, model, dll) ...
 
-# === Fungsi Custom Filter untuk Format WIB ===
-
-
-def format_wib(utc_dt):
-    """Mengkonversi datetime UTC ke string format WIB."""
-    if not utc_dt:
-        return "-"  # Tampilkan strip jika data tidak ada
-    try:
-        utc_tz = pytz.timezone("UTC")
-        wib_tz = pytz.timezone("Asia/Jakarta")
-        utc_dt_aware = utc_dt.replace(
-            tzinfo=utc_tz) if not utc_dt.tzinfo else utc_dt
-        wib_dt = utc_dt_aware.astimezone(wib_tz)
-        return wib_dt.strftime('%d %b %Y, %H:%M:%S') + " WIB"
-    except Exception as e:
-        print(f"Error formatting date {utc_dt} to WIB: {e}")
+def format_wib(dt, fmt='%d %b %Y, %H:%M'):
+    if not dt:
+        return ''
+    # jika datetime naive, anggap UTC
+    if dt.tzinfo is None:
         try:
-            wib_dt_fallback = utc_dt + timedelta(hours=7)
-            return wib_dt_fallback.strftime('%d %b %Y, %H:%M:%S') + " WIB (Fallback)"
-        except:
-            return str(utc_dt) + " UTC (Error)"
-# === Akhir Fungsi Custom Filter ===
+            dt = utc_tz.localize(dt)
+        except Exception:
+            # fallback: set tzinfo directly
+            dt = dt.replace(tzinfo=utc_tz)
+    dt_wib = dt.astimezone(wib_tz)
+    return dt_wib.strftime(fmt)
 
-
-# Registrasikan filter (SETELAH app = Flask(__name__) dan SETELAH definisi fungsi format_wib)
 app.jinja_env.filters['wib'] = format_wib
 
-# --- Secret Key (PENTING!) ---
-# Dibutuhkan Flask untuk mengamankan session (data login) dan flash messages.
-# Ganti 'isi-dengan-kunci-rahasia-super-aman-dan-unik' dengan string acak yang panjang.
-# Di aplikasi nyata, ini tidak boleh ditulis langsung di kode.
 app.config['SECRET_KEY'] = os.environ.get(
     'SECRET_KEY', 'isi-dengan-kunci-rahasia-super-aman-dan-unik')
 # --------------------------
-
+NEWS_FOLDER = os.path.join(basedir, 'static', 'news')
+os.makedirs(NEWS_FOLDER, exist_ok=True)
 # --- Konfigurasi Database ---
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kantin.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -302,6 +287,12 @@ class Notification(db.Model):
     # Opsional: Link terkait notif (misal ke riwayat)
     related_link = db.Column(db.String(200), nullable=True)
 
+    # NEW: optional image filename untuk notifikasi broadcast
+    image_filename = db.Column(db.String(200), nullable=True)
+
+    # NEW: tanda bahwa notif dikirim sebagai broadcast oleh admin
+    is_broadcast = db.Column(db.Boolean, nullable=False, default=False)
+
     # Relasi ke User (agar mudah akses user dari notif)
     user = db.relationship('User', backref=db.backref(
         'notifications', lazy='dynamic', order_by='Notification.timestamp.desc()'))
@@ -310,7 +301,19 @@ class Notification(db.Model):
         return f'<Notification {self.id} for User {self.user_id} - Read: {self.is_read}>'
 
 
-# Tambahkan setelah class Notification
+class News(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=True)
+    image_filename = db.Column(db.String(200), nullable=True)  # disimpan di static/news/
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    creator = db.relationship('User', backref=db.backref('created_news', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<News {self.id} "{self.title}">'
 
 class Border(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -350,8 +353,17 @@ class Laporan(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     ditanggapi = db.Column(db.Boolean, default=False)
 
+    # NEW: kolom balasan dari admin
+    response_text = db.Column(db.Text, nullable=True)
+    responder_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    response_timestamp = db.Column(db.DateTime, nullable=True)
 
-    user = db.relationship('User', backref=db.backref('laporan', lazy='dynamic'))
+    # Relasi — tentukan foreign_keys untuk menghindari ambiguitas
+    user = db.relationship('User', foreign_keys=[user_id],
+                           backref=db.backref('laporan', lazy='dynamic'))
+    responder = db.relationship('User', foreign_keys=[responder_id],
+                                backref=db.backref('laporan_responses', lazy='dynamic'),
+                                lazy='joined')
 
     def __repr__(self):
         return f'<Laporan {self.id} oleh User {self.user_id}>'
@@ -879,6 +891,14 @@ def dashboard():
 
         filtered_notifications = filtered_notifications[:3]
 
+    messages = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).limit(6).all()
+    laporan_preview = Laporan.query.filter_by(user_id=current_user.id).order_by(Laporan.timestamp.desc()).limit(6).all()
+
+    try:
+        latest_news = News.query.filter_by(is_active=True).order_by(News.timestamp.desc()).limit(3).all()
+    except Exception:
+        latest_news = []
+
     # Count unread notifications
     unread_count = (Notification.query
         .filter(
@@ -892,8 +912,21 @@ def dashboard():
                         todays_spending=todays_spending,
                         unread_count=unread_count,
                         recent_notifications=filtered_notifications,
+                        messages=messages,
+                        laporan_preview=laporan_preview,
+                        latest_news=latest_news,
                         active_page='dashboard',)
 
+
+@app.route('/berita/<int:news_id>')
+@login_required
+def berita_detail(news_id):
+    # ambil berita, hanya yang aktif atau jika admin bisa lihat semua
+    berita = News.query.get_or_404(news_id)
+    if not berita.is_active and current_user.role != 'admin':
+        flash("Berita tidak tersedia.", "danger")
+        return redirect(url_for('dashboard'))
+    return render_template('siswa/berita_detail.html', berita=berita, active_page='dashboard')
 
 @app.route('/admin/topup', methods=['GET', 'POST'])
 @login_required
@@ -2330,6 +2363,7 @@ def admin_approve_topup(request_id):
 
 @app.route('/notifications/mark_read', methods=['POST'])
 @login_required
+@csrf.exempt 
 def mark_notifications_read():
     # Hanya user yg login yg bisa tandai notifnya sendiri
     if not current_user.is_authenticated:
@@ -2741,6 +2775,43 @@ def api_username(user_id):
         }
     return {'username': None}
 
+@app.route('/admin/laporan/balas/<int:laporan_id>', methods=['POST'])
+@login_required
+def admin_balas_laporan(laporan_id):
+    # Hanya admin
+    if current_user.role != 'admin':
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for('admin_laporan'))
+
+    laporan = Laporan.query.get_or_404(laporan_id)
+    # Ambil teks balasan dari form (atau JSON)
+    response_text = request.form.get('response') or (request.get_json() or {}).get('response')
+    if not response_text:
+        flash("Balasan tidak boleh kosong.", "danger")
+        return redirect(url_for('admin_laporan'))
+
+    try:
+        laporan.response_text = response_text.strip()
+        laporan.responder_id = current_user.id
+        laporan.response_timestamp = datetime.utcnow()
+        laporan.ditanggapi = True
+
+        # Buat notifikasi untuk pemilik laporan
+        preview = (laporan.response_text[:120] + '...') if len(laporan.response_text) > 120 else laporan.response_text
+        notif = Notification(
+            user_id=laporan.user_id,
+            message=f"Laporan Anda (ID {laporan.id}) telah dibalas: {preview}"
+        )
+        db.session.add(notif)
+        db.session.add(laporan)
+        db.session.commit()
+        flash("Balasan untuk laporan berhasil dikirim.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Gagal mengirim balasan: {str(e)}", "danger")
+
+    return redirect(url_for('admin_laporan'))
+
 @app.route('/admin/laporan/tanggapi/<int:laporan_id>', methods=['POST'])
 @login_required
 def tanggapi_laporan(laporan_id):
@@ -2784,6 +2855,99 @@ def buat_laporan():
         return redirect(url_for('buat_laporan'))  # Redirect ke halaman yang sama agar pesan muncul
 
     return render_template('siswa/buat_laporan.html', pengirim=current_user.username)
+
+@app.route('/riwayat_laporan')
+@login_required
+def riwayat_laporan():
+    # Hanya siswa yang boleh akses halaman ini
+    if current_user.role != 'siswa':
+        flash("Halaman ini hanya untuk siswa.", "danger")
+        return redirect(url_for('dashboard'))
+
+    reports = (Laporan.query
+               .filter_by(user_id=current_user.id)
+               .order_by(Laporan.timestamp.desc())
+               .all())
+
+    return render_template('siswa/riwayat_laporan.html',
+                           reports=reports,
+                           active_page='riwayat_laporan')
+
+                           
+
+
+@app.route('/riwayat_laporan/<int:laporan_id>')
+@login_required
+def riwayat_laporan_detail(laporan_id):
+    laporan = Laporan.query.get_or_404(laporan_id)
+
+    # Pastikan hanya pemilik laporan atau admin yang bisa lihat detail
+    if laporan.user_id != current_user.id and current_user.role != 'admin':
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for('riwayat_laporan'))
+
+    file_url = None
+    if laporan.bukti_filename:
+        # bukti disimpan di UPLOAD_FOLDER (static/profile_pics)
+        file_url = url_for('static', filename=f'profile_pics/{laporan.bukti_filename}')
+
+    return render_template('siswa/riwayat_laporan_detail.html',
+                           laporan=laporan,
+                           file_url=file_url,
+                           active_page='riwayat_laporan')
+
+
+@app.route('/riwayat_pesan')
+@login_required
+def riwayat_pesan():
+    # Hanya siswa yang boleh akses
+    if current_user.role != 'siswa':
+        flash("Halaman ini hanya untuk siswa.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Laporan milik user
+    reports = Laporan.query.filter_by(user_id=current_user.id).order_by(Laporan.timestamp.desc()).all()
+
+    # Notifikasi balasan laporan (deteksi kata 'laporan' di message)
+    response_notifications = Notification.query.filter(
+        Notification.user_id == current_user.id,
+        Notification.message.ilike('%laporan%')
+    ).order_by(Notification.timestamp.desc()).all()
+
+    # Pesan dari admin broadcast saja
+    general_messages = Notification.query.filter_by(
+        user_id=current_user.id,
+        is_broadcast=True
+    ).order_by(Notification.timestamp.desc()).all()
+
+    return render_template('siswa/riwayat_pesan.html',
+                           reports=reports,
+                           response_notifications=response_notifications,
+                           general_messages=general_messages,
+                           active_page='riwayat_pesan')
+
+
+@app.route('/pesan/<int:notif_id>')
+@login_required
+def detail_pesan(notif_id):
+    notif = Notification.query.get_or_404(notif_id)
+    # Pastikan hanya penerima pesan atau admin yang bisa melihat
+    if notif.user_id != current_user.id and current_user.role != 'admin':
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for('riwayat_pesan'))
+
+    # Tandai terbaca jika belum
+    if not notif.is_read:
+        try:
+            notif.is_read = True
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    return render_template('siswa/detail_pesan.html', notif=notif, active_page='riwayat_pesan')
+
+# ...existing code...
+
 
 @app.route('/atur_pin', methods=['GET', 'POST'])
 @login_required
@@ -2915,6 +3079,227 @@ def admin_margin():
         return redirect(url_for('admin_margin'))
 
     return render_template('admin/admin_margin.html', margin=margin)
+
+@app.route('/admin/broadcast', methods=['GET', 'POST'])
+@login_required
+def admin_broadcast():
+    if current_user.role != 'admin':
+        flash("Akses ditolak. Hanya admin.", "danger")
+        return redirect(url_for('admin_dashboard_content'))
+
+    if request.method == 'POST':
+        send_to = request.form.get('send_to')
+        selected_ids = request.form.getlist('selected_ids')
+        target_kelas = request.form.get('target_kelas')
+        target_jurusan = request.form.get('target_jurusan')
+        message = request.form.get('message', '').strip()
+
+        if not message:
+            flash("Pesan tidak boleh kosong.", "danger")
+            return redirect(url_for('admin_broadcast'))
+
+        # handle optional image
+        image_file = request.files.get('image')
+        image_filename = None
+        if image_file and image_file.filename:
+            if allowed_file(image_file.filename):
+                ext = image_file.filename.rsplit('.', 1)[1].lower()
+                image_filename = secure_filename(f"notif_{uuid4().hex}.{ext}")
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+                image_file.save(image_path)
+            else:
+                flash("Tipe file gambar tidak diizinkan.", "danger")
+                return redirect(url_for('admin_broadcast'))
+
+        # build recipients
+        recipients = []
+        if send_to == 'all':
+            recipients = User.query.filter_by(role='siswa', is_active=True).all()
+        elif send_to == 'selected' and selected_ids:
+            ids = [int(i) for i in selected_ids if str(i).isdigit()]
+            recipients = User.query.filter(User.id.in_(ids), User.role=='siswa').all()
+        elif send_to == 'kelas' and target_kelas:
+            recipients = User.query.filter_by(role='siswa', kelas=target_kelas, is_active=True).all()
+        elif send_to == 'jurusan' and target_jurusan:
+            recipients = User.query.filter_by(role='siswa', jurusan=target_jurusan, is_active=True).all()
+        else:
+            flash("Penerima tidak valid atau belum dipilih.", "danger")
+            return redirect(url_for('admin_broadcast'))
+
+        try:
+            for u in recipients:
+                n = Notification(user_id=u.id, message=message, image_filename=image_filename)
+                n = Notification(user_id=u.id, message=message, image_filename=image_filename, is_broadcast=True)
+                db.session.add(n)
+            db.session.commit()
+            flash(f"Pesan terkirim ke {len(recipients)} siswa.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Gagal mengirim pesan: {str(e)}", "danger")
+
+        return redirect(url_for('admin_broadcast'))
+
+    # GET
+    students = User.query.filter_by(role='siswa').order_by(User.username).all()
+    kelas_list = sorted(set([s.kelas for s in students if s.kelas]))
+    jurusan_list = sorted(set([s.jurusan for s in students if s.jurusan]))
+    return render_template('admin/admin_broadcast.html',
+                           students=students,
+                           kelas_list=kelas_list,
+                           jurusan_list=jurusan_list,
+                           active_page='admin_broadcast')
+
+@app.route('/admin/news')
+@login_required
+def admin_news():
+    if current_user.role != 'admin':
+        flash("Akses ditolak. Hanya admin.", "danger")
+        return redirect(url_for('admin_dashboard_content'))
+    news_list = News.query.order_by(News.timestamp.desc()).all()
+    return render_template('admin/admin_news.html', news_list=news_list, active_page='admin_news')
+
+
+@app.route('/admin/news/create', methods=['GET', 'POST'])
+@login_required
+def admin_news_create():
+    if current_user.role != 'admin':
+        flash("Akses ditolak. Hanya admin.", "danger")
+        return redirect(url_for('admin_dashboard_content'))
+
+    if request.method == 'POST':
+        title = (request.form.get('title') or '').strip()
+        content = request.form.get('content') or ''
+        is_active = True if request.form.get('is_active') == 'on' else False
+
+        if not title:
+            flash("Judul berita wajib diisi.", "danger")
+            return redirect(url_for('admin_news_create'))
+
+        image_file = request.files.get('image')
+        image_filename = None
+        if image_file and image_file.filename:
+            if allowed_file(image_file.filename):
+                ext = image_file.filename.rsplit('.', 1)[1].lower()
+                image_filename = secure_filename(f"news_{uuid.uuid4().hex}.{ext}")
+                image_path = os.path.join(NEWS_FOLDER, image_filename)
+                image_file.save(image_path)
+            else:
+                flash("Tipe file gambar tidak diizinkan.", "danger")
+                return redirect(url_for('admin_news_create'))
+
+        berita = News(
+            title=title,
+            content=content,
+            image_filename=image_filename,
+            is_active=is_active,
+            created_by=current_user.id
+        )
+        try:
+            db.session.add(berita)
+            db.session.commit()
+            flash("Berita berhasil dibuat.", "success")
+            return redirect(url_for('admin_news'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Gagal membuat berita: {e}", "danger")
+            return redirect(url_for('admin_news_create'))
+
+    return render_template('admin/admin_news_create.html', active_page='admin_news')
+
+
+@app.route('/admin/news/edit/<int:news_id>', methods=['GET', 'POST'])
+@login_required
+def admin_news_edit(news_id):
+    if current_user.role != 'admin':
+        flash("Akses ditolak. Hanya admin.", "danger")
+        return redirect(url_for('admin_dashboard_content'))
+
+    berita = News.query.get_or_404(news_id)
+
+    if request.method == 'POST':
+        title = (request.form.get('title') or '').strip()
+        content = request.form.get('content') or ''
+        is_active = True if request.form.get('is_active') == 'on' else False
+
+        if not title:
+            flash("Judul berita wajib diisi.", "danger")
+            return redirect(url_for('admin_news_edit', news_id=news_id))
+
+        image_file = request.files.get('image')
+        if image_file and image_file.filename:
+            if allowed_file(image_file.filename):
+                # hapus file lama jika ada
+                if berita.image_filename:
+                    try:
+                        old_path = os.path.join(NEWS_FOLDER, berita.image_filename)
+                        if os.path.exists(old_path):
+                            os.remove(old_path)
+                    except Exception:
+                        pass
+                ext = image_file.filename.rsplit('.', 1)[1].lower()
+                image_filename = secure_filename(f"news_{uuid.uuid4().hex}.{ext}")
+                image_path = os.path.join(NEWS_FOLDER, image_filename)
+                image_file.save(image_path)
+                berita.image_filename = image_filename
+            else:
+                flash("Tipe file gambar tidak diizinkan.", "danger")
+                return redirect(url_for('admin_news_edit', news_id=news_id))
+
+        berita.title = title
+        berita.content = content
+        berita.is_active = is_active
+        try:
+            db.session.commit()
+            flash("Berita berhasil diperbarui.", "success")
+            return redirect(url_for('admin_news'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Gagal memperbarui berita: {e}", "danger")
+            return redirect(url_for('admin_news_edit', news_id=news_id))
+
+    return render_template('admin/admin_news_edit.html', berita=berita, active_page='admin_news')
+
+
+@app.route('/admin/news/delete/<int:news_id>', methods=['POST'])
+@login_required
+def admin_news_delete(news_id):
+    if current_user.role != 'admin':
+        flash("Akses ditolak. Hanya admin.", "danger")
+        return redirect(url_for('admin_dashboard_content'))
+
+    berita = News.query.get_or_404(news_id)
+    try:
+        # hapus file gambar jika ada
+        if berita.image_filename:
+            try:
+                path = os.path.join(NEWS_FOLDER, berita.image_filename)
+                if os.path.exists(path):
+                    os.remove(path)
+            except Exception:
+                pass
+        db.session.delete(berita)
+        db.session.commit()
+        flash("Berita berhasil dihapus.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Gagal menghapus berita: {e}", "danger")
+    return redirect(url_for('admin_news'))
+
+
+@app.route('/admin/news/toggle/<int:news_id>', methods=['POST'])
+@login_required
+@csrf.exempt
+def admin_news_toggle(news_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'unauthorized'}), 403
+    berita = News.query.get_or_404(news_id)
+    berita.is_active = not berita.is_active
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'is_active': berita.is_active})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}),
 
 
 @app.route('/webauthn/register_challenge', methods=['POST'])
@@ -3053,6 +3438,29 @@ def check_and_unlock_borders(user_id):
         print(f"Error unlocking borders: {e}")
         db.session.rollback()
 
+def add_laporan_response_columns():
+    """Pastikan kolom response_* ada di tabel laporan (simple ALTER jika perlu)."""
+    with app.app_context():
+        try:
+            insp = db.inspect(db.engine)
+            cols = [c['name'] for c in insp.get_columns('laporan')]
+            altered = False
+            if 'response_text' not in cols:
+                db.session.execute(db.text('ALTER TABLE laporan ADD COLUMN response_text TEXT'))
+                altered = True
+            if 'responder_id' not in cols:
+                db.session.execute(db.text('ALTER TABLE laporan ADD COLUMN responder_id INTEGER'))
+                altered = True
+            if 'response_timestamp' not in cols:
+                db.session.execute(db.text('ALTER TABLE laporan ADD COLUMN response_timestamp DATETIME'))
+                altered = True
+            if altered:
+                db.session.commit()
+                print("Added laporan response columns")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error ensuring laporan response columns: {e}")
+
 
 
 def add_border_column():
@@ -3076,23 +3484,29 @@ def add_border_column():
             db.session.rollback()
             print(f"Error adding jurusan column: {e}")
 
-# ...existing code...
+def add_notification_image_column():
+    """Tambah kolom image_filename dan is_broadcast ke tabel notification bila belum ada."""
+    with app.app_context():
+        try:
+            insp = db.inspect(db.engine)
+            cols = [c['name'] for c in insp.get_columns('notification')]
+            altered = False
+            if 'image_filename' not in cols:
+                db.session.execute(db.text('ALTER TABLE notification ADD COLUMN image_filename VARCHAR(200)'))
+                altered = True
+            if 'is_broadcast' not in cols:
+                db.session.execute(db.text('ALTER TABLE notification ADD COLUMN is_broadcast BOOLEAN DEFAULT 0'))
+                altered = True
+            if altered:
+                db.session.commit()
+                print("Added image_filename and/or is_broadcast to notification table")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error ensuring notification image/is_broadcast column: {e}")
 
 if __name__ == '__main__':
     with app.app_context():
-        # DROP dan CREATE khusus tabel AppConfig
-        AppConfig.__table__.drop(db.engine, checkfirst=True)
-        print("Tabel app_config berhasil dihapus.")
-        AppConfig.__table__.create(db.engine, checkfirst=True)
-        print("Tabel app_config berhasil dibuat ulang.")
-
-        # Tambah kolom jurusan ke border jika perlu
         add_border_column()
-        
+        add_laporan_response_columns()
+        add_notification_image_column()
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-# ...existing code...
-
-
-# !!! PENTING: Hapus atau komentari route @app.route('/pay', methods=['POST']) yang lama
-# karena logikanya akan dipindah ke /pay_vendor !!!

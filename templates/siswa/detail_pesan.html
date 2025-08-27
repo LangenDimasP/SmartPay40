@@ -1,0 +1,295 @@
+{% extends 'base_siswa.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Back Navigation -->
+    <div class="mb-6">
+      <a href="{{ url_for('riwayat_pesan') }}" 
+         class="inline-flex items-center text-[#7c4dff] hover:text-[#5c35cc] font-medium 
+                transition-colors duration-200 group">
+        <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform duration-200"></i>
+        <span>Kembali ke Riwayat</span>
+      </a>
+    </div>
+
+    <!-- Message Card -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <!-- Header -->
+      <div class="bg-[#7c4dff] text-white p-6">
+        <div class="flex items-center">
+          <div class="bg-white bg-opacity-20 rounded-lg p-3 mr-4">
+            <i class="fas fa-envelope-open text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-semibold">Detail Pesan</h1>
+            <p class="text-purple-100 mt-1">Pesan dari Admin / Sistem</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6">
+        <!-- Message Content Layout -->
+        <div class="flex flex-col lg:flex-row items-start gap-6">
+          <!-- Media Section -->
+          {% if notif.image_filename %}
+            <div class="w-full lg:w-1/3">
+              <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                {% set fname = notif.image_filename.lower() %}
+                {% if fname.endswith('.mp4') or fname.endswith('.mov') or fname.endswith('.avi') %}
+                  <div class="relative">
+                    <video src="{{ url_for('static', filename='profile_pics/' + notif.image_filename) }}" 
+                           controls 
+                           class="w-full h-auto rounded-lg border-2 border-[#7c4dff] shadow-sm">
+                    </video>
+                    <div class="absolute top-2 left-2">
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                   bg-[#7c4dff] text-white">
+                        <i class="fas fa-video mr-1"></i>
+                        Video
+                      </span>
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="relative group">
+                    <button type="button" 
+                            onclick="openImageViewer('{{ url_for('static', filename='profile_pics/' + notif.image_filename) }}')" 
+                            class="w-full p-0 bg-transparent border-0 relative overflow-hidden rounded-lg">
+                      <img src="{{ url_for('static', filename='profile_pics/' + notif.image_filename) }}" 
+                           alt="Gambar pesan" 
+                           class="w-full h-auto rounded-lg border-2 border-[#7c4dff] shadow-sm 
+                                  cursor-zoom-in transition-transform duration-200 group-hover:scale-105">
+                      <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 
+                                  transition-all duration-200 rounded-lg flex items-center justify-center">
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <div class="bg-white rounded-full p-3 shadow-lg">
+                            <i class="fas fa-search-plus text-[#7c4dff] text-xl"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    <div class="absolute top-2 left-2">
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                   bg-[#7c4dff] text-white">
+                        <i class="fas fa-image mr-1"></i>
+                        Gambar
+                      </span>
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <div class="w-full lg:w-1/3 flex justify-center lg:justify-start">
+              <div class="bg-[#7c4dff] bg-opacity-10 rounded-xl p-8 border border-[#7c4dff] border-opacity-20">
+                <div class="w-16 h-16 bg-[#7c4dff] bg-opacity-20 text-[#7c4dff] rounded-lg 
+                            flex items-center justify-center mx-auto">
+                  <i class="fas fa-envelope text-2xl"></i>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Text Content Section -->
+          <div class="flex-1 space-y-4">
+            <!-- Timestamp -->
+            <div class="flex items-center text-sm text-gray-500">
+              <div class="bg-gray-100 rounded-lg p-2 mr-3">
+                <i class="fas fa-clock text-[#7c4dff]"></i>
+              </div>
+              <span class="font-medium">{{ notif.timestamp | wib }}</span>
+            </div>
+
+            <!-- Message Content -->
+            <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <div class="text-gray-900 text-base">
+                {{ notif.message }}
+              </div>
+            </div>
+
+            <!-- Related Link -->
+            {% if notif.related_link %}
+              <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div class="flex items-center">
+                  <div class="bg-blue-100 rounded-lg p-2 mr-3">
+                    <i class="fas fa-external-link-alt text-blue-600"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-blue-900 mb-1">Tautan Terkait</p>
+                    <a href="{{ notif.related_link }}" 
+                       class="text-[#7c4dff] hover:text-[#5c35cc] font-medium 
+                              transition-colors duration-200 flex items-center group">
+                      <span>Klik untuk membuka</span>
+                      <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform duration-200"></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Image Viewer Modal -->
+<div id="image-viewer" 
+     class="fixed inset-0 hidden flex items-center justify-center bg-black bg-opacity-80 z-[99999] p-4 
+            backdrop-blur-sm" 
+     aria-hidden="true" 
+     role="dialog" 
+     aria-label="Image preview">
+  <div class="relative w-full max-w-[95%] max-h-[95%] flex items-center justify-center">
+    <!-- Close Button -->
+    <button type="button" 
+            id="close-image-btn" 
+            class="absolute -top-4 -right-4 bg-white hover:bg-gray-100 rounded-full p-3 
+                   text-gray-700 shadow-lg z-[100001] transition-colors duration-200" 
+            onclick="closeImageViewer()" 
+            aria-label="Tutup">
+      <i class="fas fa-times text-lg"></i>
+    </button>
+    
+    <!-- Image Container -->
+    <div class="bg-white rounded-2xl p-4 shadow-2xl max-w-full max-h-full overflow-hidden">
+      <img id="image-viewer-img" 
+           src="" 
+           alt="Full image" 
+           class="block w-auto h-auto max-w-full max-h-[85vh] object-contain rounded-lg mx-auto">
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="image-loading" class="absolute inset-0 flex items-center justify-center">
+      <div class="bg-white rounded-full p-4 shadow-lg">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7c4dff]"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var viewer = document.getElementById('image-viewer');
+  var img = document.getElementById('image-viewer-img');
+  var loading = document.getElementById('image-loading');
+
+  window.openImageViewer = function(src) {
+    if (!viewer || !img) return;
+    
+    // Show loading
+    if (loading) loading.classList.remove('hidden');
+    
+    // Set image source
+    img.onload = function() {
+      if (loading) loading.classList.add('hidden');
+    };
+    img.src = src;
+    
+    // Show viewer
+    viewer.classList.remove('hidden');
+    viewer.setAttribute('aria-hidden', 'false');
+    
+    // Disable page scrolling
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    
+    // Add smooth entrance animation
+    requestAnimationFrame(() => {
+      viewer.style.opacity = '1';
+      viewer.style.transform = 'scale(1)';
+    });
+  };
+
+  window.closeImageViewer = function() {
+    if (!viewer || !img) return;
+    
+    // Add smooth exit animation
+    viewer.style.opacity = '0';
+    viewer.style.transform = 'scale(0.95)';
+    
+    setTimeout(() => {
+      viewer.classList.add('hidden');
+      viewer.setAttribute('aria-hidden', 'true');
+      img.src = '';
+      if (loading) loading.classList.remove('hidden');
+      
+      // Re-enable page scrolling
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }, 200);
+  };
+
+  // Close on ESC key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeImageViewer();
+  });
+
+  // Close when clicking on overlay background
+  if (viewer) {
+    viewer.addEventListener('click', function(e){
+      if (e.target === viewer) closeImageViewer();
+    });
+  }
+
+  // Initialize viewer styles
+  viewer.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+  viewer.style.opacity = '0';
+  viewer.style.transform = 'scale(0.95)';
+})();
+</script>
+
+<style>
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Focus states for accessibility */
+button:focus, a:focus {
+  outline: 2px solid #7c4dff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Enhanced hover effects */
+.group:hover .group-hover\:scale-105 {
+  transform: scale(1.05);
+}
+
+.group:hover .group-hover\:translate-x-1 {
+  transform: translateX(0.25rem);
+}
+
+.group:hover .group-hover\:-translate-x-1 {
+  transform: translateX(-0.25rem);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+}
+</style>
+{% endblock %}

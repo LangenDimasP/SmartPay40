@@ -1,0 +1,136 @@
+{% extends 'admin_base.html' %}
+
+{% block admin_content %}
+<div class="container py-4">
+  <h2 class="mb-3">Broadcast Pesan ke Siswa</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, text in messages %}
+        <div class="alert alert-{{ 'danger' if category in ['danger','error'] else ('success' if category=='success' else 'info') }}" role="alert">
+          {{ text }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form action="{{ url_for('admin_broadcast') }}" method="post" enctype="multipart/form-data" class="card p-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <div class="mb-3">
+      <label class="form-label"><strong>Pilih Penerima</strong></label>
+      <div>
+        <label class="me-3"><input type="radio" name="send_to" value="all" checked> Semua Siswa</label>
+        <label class="me-3"><input type="radio" name="send_to" value="selected"> Beberapa Siswa</label>
+        <label class="me-3"><input type="radio" name="send_to" value="kelas"> Per Kelas</label>
+        <label class="me-3"><input type="radio" name="send_to" value="jurusan"> Per Jurusan</label>
+      </div>
+    </div>
+
+    <div id="section-selected" class="mb-3 d-none">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <strong>Pilih Siswa</strong>
+        <div>
+          <button type="button" id="select-all" class="btn btn-sm btn-outline-secondary">Pilih Semua</button>
+          <button type="button" id="clear-all" class="btn btn-sm btn-outline-secondary">Bersihkan</button>
+          <span class="ms-2">Terpilih: <span id="selected-count">0</span></span>
+        </div>
+      </div>
+      <div class="border rounded p-2" style="max-height:300px; overflow:auto;">
+        {% for s in students %}
+          <div class="form-check">
+            <input class="form-check-input chk-student" type="checkbox" name="selected_ids" value="{{ s.id }}" id="stu-{{ s.id }}">
+            <label class="form-check-label" for="stu-{{ s.id }}">
+              {{ s.id }} — {{ s.username }} {% if s.kelas %}({{ s.kelas }} / {{ s.jurusan or '-' }}){% endif %}
+            </label>
+          </div>
+        {% else %}
+          <div>Tidak ada siswa.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div id="section-kelas" class="mb-3 d-none">
+      <label class="form-label"><strong>Pilih Kelas</strong></label>
+      <select name="target_kelas" class="form-select">
+        <option value="">-- Pilih Kelas --</option>
+        {% for k in kelas_list %}
+          <option value="{{ k }}">{{ k }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="section-jurusan" class="mb-3 d-none">
+      <label class="form-label"><strong>Pilih Jurusan</strong></label>
+      <select name="target_jurusan" class="form-select">
+        <option value="">-- Pilih Jurusan --</option>
+        {% for j in jurusan_list %}
+          <option value="{{ j }}">{{ j }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label"><strong>Pesan</strong></label>
+      <textarea name="message" class="form-control" rows="6" required placeholder="Tulis pesan..."></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label"><strong>Gambar (opsional)</strong></label>
+      <input type="file" name="image" accept="image/*" class="form-control">
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Kirim Pesan</button>
+      <a href="{{ url_for('admin_dashboard_content') }}" class="btn btn-secondary">Batal</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const radios = document.querySelectorAll('input[name="send_to"]');
+  const secSelected = document.getElementById('section-selected');
+  const secKelas = document.getElementById('section-kelas');
+  const secJurusan = document.getElementById('section-jurusan');
+  const checkboxes = () => Array.from(document.querySelectorAll('.chk-student'));
+  const countEl = document.getElementById('selected-count');
+  const selectAllBtn = document.getElementById('select-all');
+  const clearAllBtn = document.getElementById('clear-all');
+
+  function refreshSections(){
+    const v = document.querySelector('input[name="send_to"]:checked').value;
+    secSelected.classList.toggle('d-none', v !== 'selected');
+    secKelas.classList.toggle('d-none', v !== 'kelas');
+    secJurusan.classList.toggle('d-none', v !== 'jurusan');
+  }
+
+  function updateCount(){
+    const c = checkboxes().filter(cb=>cb.checked).length;
+    countEl.textContent = c;
+  }
+
+  radios.forEach(r => r.addEventListener('change', refreshSections));
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('chk-student')) updateCount();
+  }, true);
+
+  if(selectAllBtn){
+    selectAllBtn.addEventListener('click', function(){
+      checkboxes().forEach(cb => cb.checked = true);
+      updateCount();
+    });
+  }
+  if(clearAllBtn){
+    clearAllBtn.addEventListener('click', function(){
+      checkboxes().forEach(cb => cb.checked = false);
+      updateCount();
+    });
+  }
+
+  // init
+  refreshSections();
+  updateCount();
+})();
+</script>
+{% endblock %}

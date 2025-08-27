@@ -64,89 +64,107 @@
             <!-- Table Content -->
             <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead>
-                        <tr class="bg-[#ede7f6] border-b border-purple-100">
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Waktu</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Pengirim</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Keterangan</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Bukti</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Tanggapi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-purple-50">
-                        {% for laporan in daftar_laporan %}
-                        <tr class="hover:bg-purple-25 transition-colors duration-200 group">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
-                                    {{ laporan.timestamp|wib }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="ml-3">
-                                        <p class="text-sm font-semibold text-gray-900">{{ laporan.user.username }}</p>
-                                        <p class="text-xs text-gray-500">Siswa</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="max-w-xs">
-                                    <p class="text-sm text-gray-900 leading-relaxed">{{ laporan.keterangan }}</p>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                {% if laporan.bukti_filename %}
-                                    {% set ext = laporan.bukti_filename.split('.')[-1]|lower %}
-                                    {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
-                                        <img src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}"
-                                             alt="Bukti"
-                                             class="w-20 h-20 object-cover rounded-lg shadow-md border border-gray-200 cursor-pointer"
-                                             onclick="showModal('{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}')">
-                                    {% elif ext in ['mp4', 'mov', 'avi'] %}
-                                        <video controls class="w-32 h-20 rounded-lg shadow-md border border-gray-200 object-cover">
-                                            <source src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}" type="video/{{ ext }}">
-                                            Video tidak didukung.
-                                        </video>
-                                    {% else %}
-                                        <span class="text-sm text-gray-600">File tidak didukung</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-sm italic text-gray-400">Tidak ada bukti</span>
-                                {% endif %}
-                            </td>
-                            
-                            <!-- Modal untuk gambar full screen -->
-                            <div id="imgModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
-                                <span class="absolute top-6 right-8 text-white text-3xl cursor-pointer" onclick="closeModal()">&times;</span>
-                                <img id="modalImg" src="" class="max-w-full max-h-[90vh] rounded-lg shadow-2xl border-4 border-white" alt="Bukti Laporan">
+            <thead>
+                <tr class="bg-[#ede7f6] border-b border-purple-100">
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Waktu</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Pengirim</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Keterangan</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Bukti</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Balasan</th>
+                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Tanggapi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-purple-50">
+                {% for laporan in daftar_laporan %}
+                <tr class="hover:bg-purple-25 transition-colors duration-200 group">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                            {{ laporan.timestamp|wib }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="ml-3">
+                                <p class="text-sm font-semibold text-gray-900">{{ laporan.user.username }}</p>
+                                <p class="text-xs text-gray-500">Siswa</p>
                             </div>
-                            
-                            <td class="px-6 py-4 text-center">
-                                <form method="POST" action="{{ url_for('tanggapi_laporan', laporan_id=laporan.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="focus:outline-none">
-                                        {% if laporan.ditanggapi %}
-                                            <span class="inline-block w-8 h-8 bg-green-100 rounded-full flex items-center justify-center border border-green-300">
-                                                <i class="fas fa-check text-green-600 text-xl"></i>
-                                            </span>
-                                        {% else %}
-                                            <span class="inline-block w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-300 hover:bg-green-200 hover:border-green-400 transition">
-                                                <i class="fas fa-check text-gray-400 group-hover:text-green-600 text-xl"></i>
-                                            </span>
-                                        {% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% if daftar_laporan|length == 0 %}
-                        <tr>
-                            <td colspan="5" class="text-center py-6 text-gray-400">Belum ada laporan masuk.</td>
-                        </tr>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="max-w-xs">
+                            <p class="text-sm text-gray-900 leading-relaxed">{{ laporan.keterangan }}</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if laporan.bukti_filename %}
+                            {% set ext = laporan.bukti_filename.split('.')[-1]|lower %}
+                            {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+                                <img src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}"
+                                     alt="Bukti"
+                                     class="w-20 h-20 object-cover rounded-lg shadow-md border border-gray-200 cursor-pointer"
+                                     onclick="showModal('{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}')">
+                            {% elif ext in ['mp4', 'mov', 'avi'] %}
+                                <video controls class="w-32 h-20 rounded-lg shadow-md border border-gray-200 object-cover">
+                                    <source src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}" type="video/{{ ext }}">
+                                    Video tidak didukung.
+                                </video>
+                            {% else %}
+                                <span class="text-sm text-gray-600">File tidak didukung</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-sm italic text-gray-400">Tidak ada bukti</span>
                         {% endif %}
-                    </tbody>
-                </table>
-            </div>
+                    </td>
+
+                    <!-- Balasan preview -->
+                    <td class="px-6 py-4">
+                        {% if laporan.response_text %}
+                            <div class="text-sm text-gray-800 max-w-xs">
+                                <strong class="text-xs text-gray-500">Oleh:</strong>
+                                <span class="text-xs text-gray-600">{{ laporan.responder.username if laporan.responder else 'Admin' }}</span>
+                                <div class="mt-1 whitespace-pre-line rounded-md bg-gray-50 p-2 text-sm border border-gray-100">{{ laporan.response_text|truncate(120) }}</div>
+                            </div>
+                        {% else %}
+                            <span class="text-sm italic text-gray-400">Belum ada balasan</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex items-center justify-center gap-3">
+                            <!-- Tombol ubah status tanggapi (tetap ada) -->
+                            <form method="POST" action="{{ url_for('tanggapi_laporan', laporan_id=laporan.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="focus:outline-none">
+                                    {% if laporan.ditanggapi %}
+                                        <span class="inline-block w-8 h-8 bg-green-100 rounded-full flex items-center justify-center border border-green-300">
+                                            <i class="fas fa-check text-green-600 text-xl"></i>
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-block w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-300 hover:bg-green-200 hover:border-green-400 transition">
+                                            <i class="fas fa-check text-gray-400 group-hover:text-green-600 text-xl"></i>
+                                        </span>
+                                    {% endif %}
+                                </button>
+                            </form>
+
+                            <!-- Tombol Balas (buka modal) -->
+                            <button type="button"
+                                    class="inline-flex items-center px-3 py-2 bg-[#7c4dff] text-white rounded-lg hover:bg-[#5e35b1] transition"
+                                    onclick="openReplyModal({{ laporan.id|tojson }}, {{ laporan.response_text|tojson }})">
+                                <i class="fas fa-reply mr-2"></i> Balas
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if daftar_laporan|length == 0 %}
+                <tr>
+                    <td colspan="6" class="text-center py-6 text-gray-400">Belum ada laporan masuk.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
             <div class="bg-gray-50 px-6 py-4 border-t border-purple-100">
                 <p class="text-sm text-gray-600 text-center">
                     Total {{ daftar_laporan|length }} laporan ditemukan
@@ -155,13 +173,59 @@
         </div>
     </div>
 </div>
+<!-- Reply Modal (satu modal untuk semua laporan) -->
+<div id="replyModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-xl w-[95%] max-w-2xl p-6 relative">
+    <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-800" onclick="closeReplyModal()">&times;</button>
+    <h3 class="text-lg font-semibold mb-3">Balas Laporan</h3>
+    <form id="replyForm" method="POST" action="{{ url_for('admin_balas_laporan', laporan_id=0) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="block text-sm text-gray-600 mb-1">Isi Balasan</label>
+        <textarea name="response" id="replyText" rows="6" class="w-full border rounded p-3" required></textarea>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="px-4 py-2 rounded border" onclick="closeReplyModal()">Batal</button>
+        <button type="submit" class="px-4 py-2 bg-[#7c4dff] text-white rounded hover:bg-[#5e35b1]">Kirim Balasan</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script>
+// fungsi modal gambar (tetap)
 function showModal(imgSrc) {
     document.getElementById('modalImg').src = imgSrc;
     document.getElementById('imgModal').style.display = 'flex';
 }
 function closeModal() {
     document.getElementById('imgModal').style.display = 'none';
+}
+
+// Balas modal
+function openReplyModal(id, existingResponse) {
+    const modal = document.getElementById('replyModal');
+    const form = document.getElementById('replyForm');
+    const textarea = document.getElementById('replyText');
+
+    // set action: ganti trailing /0 dengan /{id}
+    form.action = form.action.replace('/0', '/' + id);
+    textarea.value = existingResponse || '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    // fokus di textarea
+    setTimeout(() => textarea.focus(), 150);
+}
+
+function closeReplyModal() {
+    const modal = document.getElementById('replyModal');
+    const form = document.getElementById('replyForm');
+    const textarea = document.getElementById('replyText');
+
+    // reset action kembali ke 0 untuk konsistensi saat buka modal untuk laporan lain
+    form.action = form.action.replace(/\/\d+$/, '/0');
+    textarea.value = '';
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
 }
 </script>
 {% endblock %}

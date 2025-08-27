@@ -102,6 +102,17 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Pesan / Laporan icon (baru) -->
+            <div class="message-icon-wrapper relative z-[1100]">
+                <a href="{{ url_for('riwayat_pesan') }}" id="message-btn" title="Riwayat Laporan" class="text-white text-2xl p-2 hover:text-[#ede7f6] transition-colors duration-300">
+                    <span class="icon-placeholder"><i class="fas fa-envelope"></i></span>
+                    {% set pending_reports = current_user.laporan.filter_by(ditanggapi=False).count() if current_user.is_authenticated else 0 %}
+                    {% if pending_reports and pending_reports > 0 %}
+                        <span class="notif-badge absolute -top-[2px] right-0 bg-blue-500 text-white rounded-full px-[6px] py-[2px] text-[0.75em] md:text-[0.25em] font-semibold border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">{{ pending_reports if pending_reports <= 9 else '9+' }}</span>
+                    {% endif %}
+                </a>
+            </div>
         </div>
     </div>
     {% include 'partials/messages.html' %}
@@ -184,6 +195,236 @@
             <div>Saldo Anda Habis (Rp 0). Harap lakukan Top Up.</div>
         </div>
     {% endif %}
+
+    
+        <!-- Berita banner (muncul jika ada latest_news) -->
+        {% if latest_news and latest_news|length > 0 %}
+        <div class="news-banner-container w-[90%] max-w-[900px] mx-auto my-6">
+          <h4 class="text-lg font-semibold text-[#1a1a1a] mb-3">Berita Terbaru</h4>
+
+          <style>
+            /* Banner aspect ratio 21:9 and basic styling */
+            .news-banner { position: relative; overflow: hidden; border-radius: 0.75rem; }
+            .news-banner-inner { aspect-ratio: 21 / 9; width: 100%; height: auto; background:#f3f3f3; }
+            .news-track { display: flex; height: 100%; will-change: transform; }
+            .news-slide { flex: 0 0 100%; max-width: 100%; display:block; position:relative; }
+            .news-slide .slide-media { width:100%; height:100%; display:block; object-fit:cover; }
+            .news-controls { position:absolute; inset:0; pointer-events:none; }
+            .news-btn { pointer-events:auto; background:rgba(255,255,255,0.92); border-radius:9999px; padding:0.5rem; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+            .news-prev, .news-next { position:absolute; top:50%; transform:translateY(-50%); z:20; }
+            .news-prev { left:0.5rem; }
+            .news-next { right:0.5rem; }
+            .news-dots { position:absolute; left:50%; transform:translateX(-50%); bottom:0.5rem; display:flex; gap:0.5rem; z:20; }
+            .news-dot { width:8px; height:8px; border-radius:9999px; background:rgba(255,255,255,0.7); cursor:pointer; border:1px solid rgba(0,0,0,0.05); }
+            .news-dot.active { background:#7c4dff; box-shadow:0 2px 6px rgba(124,77,255,0.18); }
+            .news-btn[disabled] { opacity:0.5; pointer-events:none; }
+            @media (max-width:640px) {
+              .news-btn { padding:0.4rem; }
+              .news-dot { width:10px; height:10px; }
+            }
+          </style>
+
+          <div class="news-banner">
+            <div class="news-banner-inner" aria-hidden="false">
+              <div id="news-track" class="news-track">
+                {% for n in latest_news[:3] %}
+                <a href="{{ url_for('berita_detail', news_id=n.id) }}" class="news-slide" role="group" aria-label="Slide {{ loop.index }}">
+                  <img src="{{ url_for('static', filename='news/' + n.image_filename) }}" alt="{{ n.title }}" class="slide-media" />
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="news-controls" aria-hidden="false">
+              <div class="news-prev news-btn" title="Prev" id="news-prev-btn" aria-label="Previous slide">
+                <i class="fas fa-chevron-left text-[#7c4dff]"></i>
+              </div>
+              <div class="news-next news-btn" title="Next" id="news-next-btn" aria-label="Next slide">
+                <i class="fas fa-chevron-right text-[#7c4dff]"></i>
+              </div>
+
+              <div id="news-dots" class="news-dots" role="tablist" aria-label="Slide dots"></div>
+            </div>
+          </div>
+
+<script>
+(function(){
+  const track = document.getElementById('news-track');
+  if(!track) return;
+  const prevBtn = document.getElementById('news-prev-btn');
+  const nextBtn = document.getElementById('news-next-btn');
+  const dotsContainer = document.getElementById('news-dots');
+
+  let slides = Array.from(track.children);
+  const originalCount = slides.length;
+
+  if (originalCount <= 1) {
+    if (prevBtn) prevBtn.setAttribute('disabled','');
+    if (nextBtn) nextBtn.setAttribute('disabled','');
+    track.style.transform = `translateX(0px)`;
+    return;
+  }
+
+  const firstClone = slides[0].cloneNode(true);
+  const lastClone  = slides[slides.length - 1].cloneNode(true);
+  track.appendChild(firstClone);
+  track.insertBefore(lastClone, track.firstChild);
+
+  slides = Array.from(track.children);
+  let index = 1;
+  let slideWidth = 0;
+  let autoTimer = null;
+  const transitionMs = 500;
+  const cooldownMs = transitionMs + 300; // jeda untuk mencegah rapid slide
+
+  let isSliding = false;
+
+  const dots = [];
+  for (let i=0;i<originalCount;i++){
+    const d = document.createElement('button');
+    d.className = 'news-dot';
+    d.type = 'button';
+    d.setAttribute('aria-label','Go to slide '+(i+1));
+    d.dataset.slide = i;
+    dotsContainer.appendChild(d);
+    dots.push(d);
+    d.addEventListener('click', ()=> {
+      if (isSliding) return;
+      isSliding = true;
+      disableControls();
+      goToSlide(i);
+      resetAuto();
+      setTimeout(()=> { isSliding = false; enableControls(); }, cooldownMs);
+    });
+  }
+
+  function setActiveDot() {
+    const active = ((index - 1) % originalCount + originalCount) % originalCount;
+    dots.forEach((d, i) => d.classList.toggle('active', i === active));
+  }
+
+  function updateSize() {
+    const bannerInner = track.parentElement;
+    slideWidth = bannerInner.getBoundingClientRect().width;
+    track.style.transition = 'none';
+    track.style.transform = `translateX(${-index * slideWidth}px)`;
+    void track.offsetWidth;
+    track.style.transition = `transform ${transitionMs}ms ease`;
+  }
+
+  function disableControls() {
+    if (prevBtn) prevBtn.setAttribute('disabled','');
+    if (nextBtn) nextBtn.setAttribute('disabled','');
+  }
+  function enableControls() {
+    if (prevBtn) prevBtn.removeAttribute('disabled');
+    if (nextBtn) nextBtn.removeAttribute('disabled');
+  }
+
+  function next() {
+    if (isSliding) return;
+    isSliding = true;
+    disableControls();
+    index++; moveTrack();
+  }
+  function prev() {
+    if (isSliding) return;
+    isSliding = true;
+    disableControls();
+    index--; moveTrack();
+  }
+
+  function moveTrack() {
+    track.style.transition = `transform ${transitionMs}ms ease`;
+    track.style.transform = `translateX(${-index * slideWidth}px)`;
+    setActiveDot();
+  }
+
+  function goToSlide(n) {
+    index = n + 1;
+    moveTrack();
+  }
+
+  track.addEventListener('transitionend', ()=> {
+    // jika berada pada clone di akhir -> snap ke nyata tanpa animasi
+    if (index === slides.length - 1) {
+      track.style.transition = 'none';
+      index = 1;
+      track.style.transform = `translateX(${-index * slideWidth}px)`;
+      void track.offsetWidth;
+      setTimeout(()=> { track.style.transition = `transform ${transitionMs}ms ease`; }, 20);
+    }
+    if (index === 0) {
+      track.style.transition = 'none';
+      index = slides.length - 2;
+      track.style.transform = `translateX(${-index * slideWidth}px)`;
+      void track.offsetWidth;
+      setTimeout(()=> { track.style.transition = `transform ${transitionMs}ms ease`; }, 20);
+    }
+    setActiveDot();
+    // selesai animasi utama -> beri jeda kecil sebelum mengizinkan interaksi lagi
+    setTimeout(()=> { isSliding = false; enableControls(); }, 20);
+  });
+
+  nextBtn.addEventListener('click', ()=> { next(); resetAuto(); });
+  prevBtn.addEventListener('click', ()=> { prev(); resetAuto(); });
+
+  function startAuto(){ stopAuto(); autoTimer = setInterval(()=> { if(!isSliding){ next(); } }, 4000); }
+  function stopAuto(){ if(autoTimer) clearInterval(autoTimer); autoTimer = null; }
+  function resetAuto(){ stopAuto(); startAuto(); }
+
+  window.addEventListener('load', ()=> {
+    updateSize();
+    setActiveDot();
+    startAuto();
+  });
+
+  let resizeTimeout = null;
+  window.addEventListener('resize', ()=> {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(()=> updateSize(), 80);
+  });
+
+  // swipe/touch handling with cooldown
+  let startX = 0, deltaX = 0, isTouch = false;
+  track.addEventListener('touchstart', (e) => {
+    if (isSliding) return;
+    stopAuto();
+    isTouch = true;
+    startX = e.touches[0].clientX;
+    track.style.transition = 'none';
+  }, {passive:true});
+  track.addEventListener('touchmove', (e)=> {
+    if(!isTouch) return;
+    deltaX = e.touches[0].clientX - startX;
+    track.style.transform = `translateX(${ -index * slideWidth + deltaX }px)`;
+  }, {passive:true});
+  track.addEventListener('touchend', ()=> {
+    if (isSliding) { isTouch = false; deltaX = 0; resetAuto(); return; }
+    isTouch = false;
+    track.style.transition = `transform ${transitionMs}ms ease`;
+    if (Math.abs(deltaX) > (slideWidth * 0.15)) {
+      if (deltaX < 0) { next(); } else { prev(); }
+    } else {
+      track.style.transform = `translateX(${-index * slideWidth}px)`;
+    }
+    // beri cooldown sebelum memperbolehkan interaksi lagi
+    setTimeout(()=> { isSliding = false; enableControls(); }, cooldownMs);
+    deltaX = 0;
+    resetAuto();
+  });
+
+  // keyboard accessibility
+  track.parentElement.addEventListener('keydown', (e)=> {
+    if(e.key === 'ArrowLeft') { prev(); resetAuto(); }
+    if(e.key === 'ArrowRight') { next(); resetAuto(); }
+  });
+
+})();
+</script>
+        </div>
+        {% endif %}
+
 
     <div class="history-preview-card bg-white rounded-[20px] w-[90%] max-w-[800px] mx-auto my-5 p-6 shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] relative hover:-translate-y-[5px] transition-transform duration-300 animate-slideIn md:w-[95%]">
         <h4 class="m-0 mb-[15px] text-lg font-semibold text-[#1a1a1a] border-b border-[#e8ecef] pb-3">Riwayat Terakhir</h4>

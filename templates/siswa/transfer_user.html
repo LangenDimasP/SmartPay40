@@ -218,13 +218,19 @@
 let qrCodeScanner = null;
 let scrollPosition = 0;
 
-// QR Code Scanner
-document.getElementById('scan-btn').onclick = function() {
+// safer QR Code Scanner: prefer deviceId from getCameras(), fall back to allowed constraints
+document.getElementById('scan-btn').onclick = async function() {
     const qrReader = document.getElementById('qr-reader');
     const scanBtn = document.getElementById('scan-btn');
-    
+
+    // If scanner active -> stop it (safe)
     if (qrCodeScanner) {
-        qrCodeScanner.stop().then(() => {
+        try {
+            await qrCodeScanner.stop();
+        } catch (stopErr) {
+            console.warn('qrCodeScanner.stop() error (ignored):', stopErr);
+            try { await qrCodeScanner.clear(); } catch(e){ /* ignore */ }
+        } finally {
             qrReader.classList.add('hidden');
             scanBtn.innerHTML = `
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,10 +239,11 @@ document.getElementById('scan-btn').onclick = function() {
                 Scan QR Code
             `;
             qrCodeScanner = null;
-        });
+        }
         return;
     }
-    
+
+    // show UI
     qrReader.classList.remove('hidden');
     scanBtn.innerHTML = `
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,38 +251,98 @@ document.getElementById('scan-btn').onclick = function() {
         </svg>
         Berhenti Scan
     `;
-    
+
     qrCodeScanner = new Html5Qrcode("qr-reader");
-    qrCodeScanner.start(
-        { facingMode: { exact: "environment" } },
-        { fps: 10, qrbox: { width: 200, height: 200 } },
-        (decodedText, decodedResult) => {
-            document.getElementById('target_id').value = decodedText;
-            fetchUsername(decodedText);
-            qrCodeScanner.stop().then(() => {
-                qrReader.classList.add('hidden');
-                scanBtn.innerHTML = `
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
-                    </svg>
-                    Scan QR Code
-                `;
-                qrCodeScanner = null;
-            });
-        },
-        (errorMessage) => {
-            console.log(`QR Code scan error: ${errorMessage}`);
+
+    const startOptions = { fps: 10, qrbox: { width: 200, height: 200 } };
+
+    // Try to enumerate cameras first (preferred, stable)
+    let started = false;
+    try {
+        const cams = await Html5Qrcode.getCameras();
+        if (cams && cams.length) {
+            // prefer back/rear/environment if label exists, otherwise first camera
+            const preferred = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[0];
+            try {
+                await qrCodeScanner.start(preferred.id, startOptions,
+                    (decodedText) => {
+                        document.getElementById('target_id').value = decodedText;
+                        fetchUsername(decodedText);
+                        // safe stop after decode
+                        qrCodeScanner.stop().catch(err => {
+                            console.warn('stop() after decode error (ignored):', err);
+                            try { qrCodeScanner.clear(); } catch(e){/*ignore*/ }
+                        }).finally(() => {
+                            qrReader.classList.add('hidden');
+                            scanBtn.innerHTML = 'Scan QR Code';
+                            qrCodeScanner = null;
+                        });
+                    },
+                    (errorMessage) => { /* ignore frequent scan errors */ }
+                );
+                started = true;
+            } catch (err) {
+                console.warn('Failed to start with deviceId, will try fallbacks', err);
+            }
         }
-    ).catch(err => {
-        console.log(`Unable to start scanning: ${err}`);
+    } catch (err) {
+        console.warn('getCameras() failed or not supported, will try fallbacks', err);
+    }
+
+    // If not started, try safer fallbacks that html5-qrcode accepts:
+    // library expects either a deviceId string or a string like "environment" (not object with ideal).
+    if (!started) {
+        const fallbacks = [
+            "environment",
+            { facingMode: { exact: "environment" } }, // may fail on some devices -> caught below
+            "user"
+        ];
+
+        for (const cfg of fallbacks) {
+            try {
+                await qrCodeScanner.start(
+                    cfg,
+                    startOptions,
+                    (decodedText) => {
+                        document.getElementById('target_id').value = decodedText;
+                        fetchUsername(decodedText);
+                        qrCodeScanner.stop().catch(err => {
+                            console.warn('stop() after decode error (ignored):', err);
+                            try { qrCodeScanner.clear(); } catch(e){/*ignore*/ }
+                        }).finally(() => {
+                            qrReader.classList.add('hidden');
+                            scanBtn.innerHTML = 'Scan QR Code';
+                            qrCodeScanner = null;
+                        });
+                    },
+                    (errorMessage) => { /* ignore frequent scan errors */ }
+                );
+                started = true;
+                break;
+            } catch (err) {
+                console.warn('Scanner start attempt failed for config', cfg, err);
+                const name = err && err.name ? err.name : '';
+                const msg = String(err || '');
+                // If Overconstrained, continue to next fallback
+                if (name === 'OverconstrainedError' || msg.toLowerCase().includes('overconstrain')) {
+                    continue;
+                }
+                // other unrecoverable error -> show and stop
+                qrReader.classList.add('hidden');
+                scanBtn.innerHTML = 'Scan QR Code';
+                qrCodeScanner = null;
+                alert('Gagal memulai scanner: ' + (err.message || err));
+                return;
+            }
+        }
+    }
+
+    if (!started) {
         qrReader.classList.add('hidden');
-        scanBtn.innerHTML = `
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
-            </svg>
-            Scan QR Code
-        `;
-    });
+        scanBtn.innerHTML = 'Scan QR Code';
+        qrCodeScanner = null;
+        alert('Tidak ada kamera yang cocok atau akses kamera ditolak pada perangkat ini.');
+    }
 };
 
 // Fetch username function

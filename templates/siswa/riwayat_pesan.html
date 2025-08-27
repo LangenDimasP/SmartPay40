@@ -1,0 +1,272 @@
+{% extends 'base_siswa.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h2 class="text-3xl font-bold text-gray-900 mb-2">Riwayat Pesan & Laporan</h2>
+      <p class="text-gray-600">Kelola laporan dan pesan Anda dengan mudah</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex justify-center mb-8">
+      <div class="bg-white rounded-xl p-1 shadow-sm border border-gray-200">
+        <div class="flex space-x-1">
+          <button id="tab-laporan" 
+                  class="flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 
+                         bg-[#7c4dff] text-white shadow-sm">
+            <i class="fas fa-file-alt mr-2"></i>
+            <span class="hidden sm:inline">Laporan</span>
+            <span class="sm:hidden">Laporan</span>
+          </button>
+          <button id="tab-pesan" 
+                  class="flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 
+                         text-gray-600 hover:text-[#7c4dff] hover:bg-gray-50">
+            <i class="fas fa-envelope mr-2"></i>
+            <span class="hidden sm:inline">Pesan</span>
+            <span class="sm:hidden">Pesan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="max-w-4xl mx-auto">
+      <!-- Laporan Tab Content -->
+      <div id="content-laporan" class="tab-content">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div class="bg-[#7c4dff] text-white p-6">
+            <div class="flex items-center">
+              <div class="bg-white bg-opacity-20 rounded-lg p-3 mr-4">
+                <i class="fas fa-clipboard-list text-2xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold">Daftar Laporan Anda</h3>
+                <p class="text-purple-100 mt-1">Pantau status laporan yang telah Anda kirimkan</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-6">
+            {% if reports %}
+              <div class="space-y-4">
+                {% for lap in reports %}
+                  <div class="bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md hover:border-[#7c4dff] 
+                              transition-all duration-200 group">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div class="flex-1">
+                        <div class="flex items-center mb-3">
+                          <div class="bg-[#7c4dff] bg-opacity-10 rounded-lg p-2 mr-3">
+                            <i class="fas fa-calendar-alt text-[#7c4dff] text-sm"></i>
+                          </div>
+                          <span class="text-sm text-gray-500 font-medium">{{ lap.timestamp | wib }}</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                          <p class="font-semibold text-gray-900 text-lg leading-relaxed">{{ lap.keterangan }}</p>
+                        </div>
+                        
+                        {% if lap.bukti_filename %}
+                          <div class="flex items-center">
+                            <i class="fas fa-paperclip text-[#7c4dff] mr-2"></i>
+                            <a href="{{ url_for('riwayat_laporan_detail', laporan_id=lap.id) }}" 
+                               class="text-[#7c4dff] hover:text-[#5c35cc] font-medium transition-colors duration-200 
+                                      flex items-center group-hover:underline">
+                              <span>Lihat bukti & detail</span>
+                              <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                            </a>
+                          </div>
+                        {% endif %}
+                      </div>
+                      
+                      <div class="lg:text-right lg:min-w-[280px]">
+                        {% if lap.ditanggapi %}
+                          <div class="mb-3">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold 
+                                         bg-green-100 text-green-800 border border-green-200">
+                              <i class="fas fa-check-circle mr-1"></i>
+                              Sudah ditanggapi
+                            </span>
+                          </div>
+                          {% if lap.response_text %}
+                            <div class="bg-white rounded-lg p-4 border border-gray-200 mb-2">
+                              <div class="text-sm text-gray-700 leading-relaxed">{{ lap.response_text }}</div>
+                            </div>
+                            <div class="flex items-center justify-end text-xs text-gray-500">
+                              <i class="fas fa-clock mr-1"></i>
+                              {{ lap.response_timestamp | wib if lap.response_timestamp }}
+                            </div>
+                          {% endif %}
+                        {% else %}
+                          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold 
+                                       bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <i class="fas fa-clock mr-1"></i>
+                            Belum ditanggapi
+                          </span>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-12">
+                <div class="bg-gray-100 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                  <i class="fas fa-inbox text-3xl text-gray-400"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2">Belum ada laporan</h4>
+                <p class="text-gray-500">Anda belum mengirim laporan apapun.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Pesan Tab Content -->
+      <div id="content-pesan" class="tab-content hidden">
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div class="bg-[#7c4dff] text-white p-6">
+            <div class="flex items-center">
+              <div class="bg-white bg-opacity-20 rounded-lg p-3 mr-4">
+                <i class="fas fa-comments text-2xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold">Pesan dari Admin / Sistem</h3>
+                <p class="text-purple-100 mt-1">Informasi penting dan pemberitahuan untuk Anda</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-6">
+            {% if general_messages %}
+              <div class="space-y-3">
+                {% for notif in general_messages %}
+                  <a href="{{ url_for('detail_pesan', notif_id=notif.id) }}" 
+                     class="block bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md 
+                            hover:border-[#7c4dff] transition-all duration-200 group no-underline text-inherit">
+                    <div class="flex items-start gap-4">
+                      <div class="flex-shrink-0">
+                        {% if notif.image_filename %}
+                          <img src="{{ url_for('static', filename='profile_pics/' + notif.image_filename) }}" 
+                               alt="img" class="w-14 h-14 object-cover rounded-xl border-2 border-white shadow-sm">
+                        {% else %}
+                          <div class="w-14 h-14 bg-[#7c4dff] bg-opacity-10 text-[#7c4dff] rounded-xl 
+                                      flex items-center justify-center border border-[#7c4dff] border-opacity-20">
+                            <i class="fas fa-envelope text-xl"></i>
+                          </div>
+                        {% endif %}
+                      </div>
+                      
+                      <div class="flex-1 min-w-0">
+                        <div class="mb-2">
+                          <p class="text-gray-900 font-medium text-base leading-relaxed line-clamp-3">
+                            {{ notif.message|truncate(120) }}
+                          </p>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                          <i class="fas fa-clock mr-1"></i>
+                          {{ notif.timestamp | wib }}
+                        </div>
+                      </div>
+                      
+                      <div class="flex-shrink-0 flex items-center gap-2">
+                        {% if not notif.is_read %}
+                          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold 
+                                       bg-blue-100 text-blue-800 border border-blue-200">
+                            <i class="fas fa-star mr-1"></i>
+                            Baru
+                          </span>
+                        {% endif %}
+                        <div class="text-[#7c4dff] group-hover:text-[#5c35cc] transition-colors duration-200">
+                          <i class="fas fa-chevron-right"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-12">
+                <div class="bg-gray-100 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                  <i class="fas fa-envelope-open text-3xl text-gray-400"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-2">Belum ada pesan</h4>
+                <p class="text-gray-500">Anda belum menerima pesan dari admin.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const btnLaporan = document.getElementById('tab-laporan');
+  const btnPesan = document.getElementById('tab-pesan');
+  const contentLaporan = document.getElementById('content-laporan');
+  const contentPesan = document.getElementById('content-pesan');
+
+  function activateTab(t) {
+    if (t === 'laporan') {
+      // Active state for Laporan
+      btnLaporan.className = 'flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-[#7c4dff] text-white shadow-sm';
+      btnPesan.className = 'flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 text-gray-600 hover:text-[#7c4dff] hover:bg-gray-50';
+      
+      contentLaporan.classList.remove('hidden');
+      contentPesan.classList.add('hidden');
+    } else {
+      // Active state for Pesan
+      btnPesan.className = 'flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 bg-[#7c4dff] text-white shadow-sm';
+      btnLaporan.className = 'flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 text-gray-600 hover:text-[#7c4dff] hover:bg-gray-50';
+      
+      contentPesan.classList.remove('hidden');
+      contentLaporan.classList.add('hidden');
+    }
+  }
+
+  btnLaporan.addEventListener('click', () => activateTab('laporan'));
+  btnPesan.addEventListener('click', () => activateTab('pesan'));
+});
+</script>
+
+<style>
+/* Custom styles for better text truncation */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced hover effects */
+.group:hover .group-hover\:underline {
+  text-decoration: underline;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Focus states for accessibility */
+button:focus, a:focus {
+  outline: 2px solid #7c4dff;
+  outline-offset: 2px;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'admin_base.html' %}
+
+{% block admin_content %}
+<div class="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-3xl mx-auto">
+    <a href="{{ url_for('admin_news') }}" class="inline-flex items-center text-[#7c4dff] hover:underline mb-4">
+      <i class="fas fa-arrow-left mr-2"></i> Kembali ke Daftar Berita
+    </a>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for category, msg in messages %}
+            <div class="px-4 py-2 rounded-md text-sm {% if category == 'success' %}bg-green-50 text-green-800{% elif category == 'danger' or category == 'error' %}bg-red-50 text-red-800{% else %}bg-yellow-50 text-yellow-800{% endif %}">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-xl font-semibold mb-4">Buat Berita Baru</h2>
+
+      <form action="{{ url_for('admin_news_create') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Judul</label>
+          <input name="title" type="text" required maxlength="200" class="block w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#7c4dff]" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Konten (opsional)</label>
+          <textarea name="content" rows="6" class="block w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#7c4dff]" placeholder="Tulis isi berita (boleh kosong)"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Gambar (opsional)</label>
+          <input name="image" type="file" accept="image/*" class="block w-full text-sm text-gray-600" />
+          <p class="text-xs text-gray-500 mt-1">Gambar akan disimpan di static/news/. Tipe yang diizinkan: png, jpg, jpeg, gif.</p>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <label class="inline-flex items-center">
+            <input type="checkbox" name="is_active" class="h-4 w-4 text-[#7c4dff] focus:ring-[#7c4dff] border-gray-300 rounded" checked>
+            <span class="ml-2 text-sm text-gray-700">Publikasikan langsung</span>
+          </label>
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3">
+          <a href="{{ url_for('admin_news') }}" class="px-4 py-2 rounded-md border border-gray-200 text-sm hover:bg-gray-50">Batal</a>
+          <button type="submit" class="px-4 py-2 bg-[#7c4dff] text-white rounded-md hover:bg-[#5e35b1]">Simpan Berita</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
