@@ -1,231 +1,256 @@
 {% extends 'admin_base.html' %}
 {% block admin_content %}
-<div class="min-h-screen py-8 px-4">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header Section -->
-        <div class="mb-8 text-center">
-            <h2 class="text-4xl font-bold bg-gradient-to-r from-[#7c4dff] to-[#5e35b1] bg-clip-text text-transparent mb-2">
-                Daftar Laporan Siswa
-            </h2>
-            <p class="text-gray-600">Kelola dan pantau laporan dari siswa dengan mudah</p>
+<div class="min-h-screen py-8">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="flex items-center mb-6">
+        <div class="w-12 h-12 bg-[#7c4dff] rounded-lg flex items-center justify-center mr-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Laporan Siswa</h1>
+          <p class="text-gray-600 mt-1">Kelola dan pantau laporan dari siswa secara efisien</p>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-green-50 border border-green-200 rounded-lg p-5 flex items-center">
+          <div class="p-3 bg-green-100 rounded-full">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-xl font-bold text-gray-900">
+              {{ daftar_laporan|selectattr('ditanggapi', 'equalto', True)|list|length }}
+            </p>
+            <p class="text-sm text-gray-600">Sudah Ditanggapi</p>
+          </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-lg border border-purple-100 p-6 hover:shadow-xl transition-shadow duration-300">
-                <div class="flex items-center">
-                    <div class="p-3 bg-green-100 rounded-full">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-2xl font-bold text-gray-900">
-                            {{ daftar_laporan|selectattr('ditanggapi')|selectattr('ditanggapi', 'equalto', True)|list|length }}
-                        </p>
-                        <p class="text-gray-600">Laporan Sudah Ditanggapi</p>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg border border-purple-100 p-6 hover:shadow-xl transition-shadow duration-300">
-                <div class="flex items-center">
-                    <div class="p-3 bg-red-100 rounded-full">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-2xl font-bold text-gray-900">
-                            {{ daftar_laporan|selectattr('ditanggapi', 'equalto', 0)|list|length }}
-                        </p>
-                        <p class="text-gray-600">Laporan Belum Ditanggapi</p>
-                    </div>
-                </div>
-            </div>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-5 flex items-center">
+          <div class="p-3 bg-red-100 rounded-full">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-xl font-bold text-gray-900">
+              {{ daftar_laporan|selectattr('ditanggapi', 'equalto', 0)|list|length }}
+            </p>
+            <p class="text-sm text-gray-600">Belum Ditanggapi</p>
+          </div>
         </div>
+      </div>
 
-                        <!-- Filter -->
-        <form method="get" class="mb-6 flex justify-center gap-4">
-            <select name="filter" class="p-2 rounded-lg border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                <option value="all" {% if request.args.get('filter', 'all') == 'all' %}selected{% endif %}>Semua</option>
-                <option value="belum" {% if request.args.get('filter') == 'belum' %}selected{% endif %}>Belum Ditanggapi</option>
-                <option value="sudah" {% if request.args.get('filter') == 'sudah' %}selected{% endif %}>Sudah Ditanggapi</option>
-            </select>
-            <button type="submit" class="bg-[#7c4dff] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#5e35b1] transition">Filter</button>
-        </form>
+      <!-- Filter Form -->
+      <form method="get" class="grid md:grid-cols-3 gap-4 items-end">
+        <div>
+          <label for="filter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select id="filter" name="filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+            <option value="all" {% if request.args.get('filter', 'all') == 'all' %}selected{% endif %}>Semua Laporan</option>
+            <option value="belum" {% if request.args.get('filter') == 'belum' %}selected{% endif %}>Belum Ditanggapi</option>
+            <option value="sudah" {% if request.args.get('filter') == 'sudah' %}selected{% endif %}>Sudah Ditanggapi</option>
+          </select>
+        </div>
+        <div></div> <!-- Spacer -->
+        <div class="flex gap-2">
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white font-medium rounded-lg shadow-sm hover:from-[#6a3de8] hover:to-[#7c4dff] transition-all">
+            Filter
+          </button>
+          <a href="{{ url_for('admin_laporan') }}" class="px-4 py-2.5 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
 
-        <!-- Main Table Card -->
-        <div class="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
-            <!-- Table Header -->
-            <div class="bg-[#7c4dff] px-6 py-4">
-                <h3 class="text-xl font-semibold text-white">Detail Laporan</h3>
-            </div>
+    <!-- Laporan Table Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Detail Laporan Siswa
+        </h2>
+      </div>
 
-            <!-- Table Content -->
-            <div class="overflow-x-auto">
-                <table class="w-full">
-            <thead>
-                <tr class="bg-[#ede7f6] border-b border-purple-100">
-                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Waktu</th>
-                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Pengirim</th>
-                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Keterangan</th>
-                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Bukti</th>
-                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Balasan</th>
-                    <th class="px-6 py-4 text-left text-sm font-semibold text-[#5e35b1] uppercase tracking-wider">Tanggapi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-purple-50">
-                {% for laporan in daftar_laporan %}
-                <tr class="hover:bg-purple-25 transition-colors duration-200 group">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
-                            {{ laporan.timestamp|wib }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="ml-3">
-                                <p class="text-sm font-semibold text-gray-900">{{ laporan.user.username }}</p>
-                                <p class="text-xs text-gray-500">Siswa</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="max-w-xs">
-                            <p class="text-sm text-gray-900 leading-relaxed">{{ laporan.keterangan }}</p>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        {% if laporan.bukti_filename %}
-                            {% set ext = laporan.bukti_filename.split('.')[-1]|lower %}
-                            {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
-                                <img src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}"
-                                     alt="Bukti"
-                                     class="w-20 h-20 object-cover rounded-lg shadow-md border border-gray-200 cursor-pointer"
-                                     onclick="showModal('{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}')">
-                            {% elif ext in ['mp4', 'mov', 'avi'] %}
-                                <video controls class="w-32 h-20 rounded-lg shadow-md border border-gray-200 object-cover">
-                                    <source src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}" type="video/{{ ext }}">
-                                    Video tidak didukung.
-                                </video>
-                            {% else %}
-                                <span class="text-sm text-gray-600">File tidak didukung</span>
-                            {% endif %}
-                        {% else %}
-                            <span class="text-sm italic text-gray-400">Tidak ada bukti</span>
-                        {% endif %}
-                    </td>
-
-                    <!-- Balasan preview -->
-                    <td class="px-6 py-4">
-                        {% if laporan.response_text %}
-                            <div class="text-sm text-gray-800 max-w-xs">
-                                <strong class="text-xs text-gray-500">Oleh:</strong>
-                                <span class="text-xs text-gray-600">{{ laporan.responder.username if laporan.responder else 'Admin' }}</span>
-                                <div class="mt-1 whitespace-pre-line rounded-md bg-gray-50 p-2 text-sm border border-gray-100">{{ laporan.response_text|truncate(120) }}</div>
-                            </div>
-                        {% else %}
-                            <span class="text-sm italic text-gray-400">Belum ada balasan</span>
-                        {% endif %}
-                    </td>
-
-                    <td class="px-6 py-4 text-center">
-                        <div class="flex items-center justify-center gap-3">
-                            <!-- Tombol ubah status tanggapi (tetap ada) -->
-                            <form method="POST" action="{{ url_for('tanggapi_laporan', laporan_id=laporan.id) }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="focus:outline-none">
-                                    {% if laporan.ditanggapi %}
-                                        <span class="inline-block w-8 h-8 bg-green-100 rounded-full flex items-center justify-center border border-green-300">
-                                            <i class="fas fa-check text-green-600 text-xl"></i>
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-block w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-300 hover:bg-green-200 hover:border-green-400 transition">
-                                            <i class="fas fa-check text-gray-400 group-hover:text-green-600 text-xl"></i>
-                                        </span>
-                                    {% endif %}
-                                </button>
-                            </form>
-
-                            <!-- Tombol Balas (buka modal) -->
-                            <button type="button"
-                                    class="inline-flex items-center px-3 py-2 bg-[#7c4dff] text-white rounded-lg hover:bg-[#5e35b1] transition"
-                                    onclick="openReplyModal({{ laporan.id|tojson }}, {{ laporan.response_text|tojson }})">
-                                <i class="fas fa-reply mr-2"></i> Balas
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-                {% if daftar_laporan|length == 0 %}
-                <tr>
-                    <td colspan="6" class="text-center py-6 text-gray-400">Belum ada laporan masuk.</td>
-                </tr>
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pengirim</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keterangan</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balasan</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            {% for laporan in daftar_laporan %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4 text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded w-fit">
+                {{ laporan.timestamp|wib }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                <div class="font-medium text-gray-900">{{ laporan.user.username }}</div>
+                <div class="text-xs text-gray-500">Siswa</div>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate" title="{{ laporan.keterangan }}">
+                {{ laporan.keterangan }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {% if laporan.bukti_filename %}
+                  {% set ext = laporan.bukti_filename.split('.')[-1]|lower %}
+                  {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+                    <img src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}"
+                         alt="Bukti"
+                         class="w-16 h-16 object-cover rounded-lg shadow border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                         onclick="showModal('{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}')">
+                  {% elif ext in ['mp4', 'mov', 'avi'] %}
+                    <video controls class="w-24 h-16 rounded-lg shadow border border-gray-200 object-cover">
+                      <source src="{{ url_for('static', filename='profile_pics/' ~ laporan.bukti_filename) }}" type="video/{{ ext }}">
+                      Video tidak didukung.
+                    </video>
+                  {% else %}
+                    <span class="text-xs text-gray-400">File</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-xs italic text-gray-400">Tidak ada</span>
                 {% endif %}
-            </tbody>
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {% if laporan.response_text %}
+                  <div class="text-xs text-gray-500">Oleh: {{ laporan.responder.username if laporan.responder else 'Admin' }}</div>
+                  <div class="mt-1 text-sm bg-gray-50 p-2 rounded border border-gray-100">
+                    {{ laporan.response_text|truncate(80) }}
+                  </div>
+                {% else %}
+                  <span class="text-xs italic text-gray-400">Belum ada balasan</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 text-sm text-center space-x-2">
+                <!-- Toggle Tanggapi -->
+                <form method="POST" action="{{ url_for('tanggapi_laporan', laporan_id=laporan.id) }}" class="inline-block">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+                    {% if laporan.ditanggapi %}
+                      bg-green-100 text-green-800 hover:bg-green-200
+                    {% else %}
+                      bg-gray-100 text-gray-800 hover:bg-green-200 hover:text-green-800
+                    {% endif %}">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {% if laporan.ditanggapi %}Ditanggapi{% else %}Tanggapi{% endif %}
+                  </button>
+                </form>
+
+                <!-- Balas Button -->
+                <button type="button"
+                        class="inline-flex items-center px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-sm font-medium rounded-lg transition-colors"
+                        onclick="openReplyModal({{ laporan.id|tojson }}, {{ laporan.response_text|tojson }})">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Balas
+                </button>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="text-lg font-medium mb-1">Belum ada laporan masuk</p>
+                <p class="text-sm">Laporan akan muncul di sini saat siswa mengirimkan keluhan atau masukan</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
         </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <p class="text-sm text-gray-600">
+          Menampilkan <span class="font-medium">{{ daftar_laporan|length }}</span> laporan
+        </p>
+      </div>
     </div>
-            <div class="bg-gray-50 px-6 py-4 border-t border-purple-100">
-                <p class="text-sm text-gray-600 text-center">
-                    Total {{ daftar_laporan|length }} laporan ditemukan
-                </p>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
-<!-- Reply Modal (satu modal untuk semua laporan) -->
+
+<!-- Modal Gambar -->
+<div id="imgModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-80">
+  <div class="relative max-w-3xl max-h-full">
+    <button class="absolute top-4 right-4 text-white text-3xl hover:text-gray-200 z-10" onclick="closeModal()">&times;</button>
+    <img id="modalImg" class="max-w-full max-h-screen object-contain rounded-lg shadow-2xl" alt="Bukti Laporan" />
+  </div>
+</div>
+
+<!-- Modal Balas -->
 <div id="replyModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
   <div class="bg-white rounded-xl w-[95%] max-w-2xl p-6 relative">
-    <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-800" onclick="closeReplyModal()">&times;</button>
-    <h3 class="text-lg font-semibold mb-3">Balas Laporan</h3>
+    <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl" onclick="closeReplyModal()">&times;</button>
+    <h3 class="text-lg font-semibold mb-4">Balas Laporan</h3>
     <form id="replyForm" method="POST" action="{{ url_for('admin_balas_laporan', laporan_id=0) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="mb-3">
-        <label class="block text-sm text-gray-600 mb-1">Isi Balasan</label>
-        <textarea name="response" id="replyText" rows="6" class="w-full border rounded p-3" required></textarea>
+      <div class="mb-4">
+        <label for="replyText" class="block text-sm font-medium text-gray-700 mb-1">Isi Balasan</label>
+        <textarea name="response" id="replyText" rows="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff]" required></textarea>
       </div>
       <div class="flex justify-end gap-3">
-        <button type="button" class="px-4 py-2 rounded border" onclick="closeReplyModal()">Batal</button>
-        <button type="submit" class="px-4 py-2 bg-[#7c4dff] text-white rounded hover:bg-[#5e35b1]">Kirim Balasan</button>
+        <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" onclick="closeReplyModal()">Batal</button>
+        <button type="submit" class="px-4 py-2 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white rounded-lg hover:from-[#6a3de8] hover:to-[#7c4dff] transition-colors">
+          Kirim Balasan
+        </button>
       </div>
     </form>
   </div>
 </div>
+
 <script>
-// fungsi modal gambar (tetap)
 function showModal(imgSrc) {
-    document.getElementById('modalImg').src = imgSrc;
-    document.getElementById('imgModal').style.display = 'flex';
+  document.getElementById('modalImg').src = imgSrc;
+  document.getElementById('imgModal').classList.remove('hidden');
+  document.getElementById('imgModal').classList.add('flex');
 }
+
 function closeModal() {
-    document.getElementById('imgModal').style.display = 'none';
+  document.getElementById('imgModal').classList.remove('flex');
+  document.getElementById('imgModal').classList.add('hidden');
 }
 
-// Balas modal
 function openReplyModal(id, existingResponse) {
-    const modal = document.getElementById('replyModal');
-    const form = document.getElementById('replyForm');
-    const textarea = document.getElementById('replyText');
+  const modal = document.getElementById('replyModal');
+  const form = document.getElementById('replyForm');
+  const textarea = document.getElementById('replyText');
 
-    // set action: ganti trailing /0 dengan /{id}
-    form.action = form.action.replace('/0', '/' + id);
-    textarea.value = existingResponse || '';
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    // fokus di textarea
-    setTimeout(() => textarea.focus(), 150);
+  form.action = form.action.replace(/\/0$/, '/' + id);
+  textarea.value = existingResponse || '';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  setTimeout(() => textarea.focus(), 150);
 }
 
 function closeReplyModal() {
-    const modal = document.getElementById('replyModal');
-    const form = document.getElementById('replyForm');
-    const textarea = document.getElementById('replyText');
+  const modal = document.getElementById('replyModal');
+  const form = document.getElementById('replyForm');
+  const textarea = document.getElementById('replyText');
 
-    // reset action kembali ke 0 untuk konsistensi saat buka modal untuk laporan lain
-    form.action = form.action.replace(/\/\d+$/, '/0');
-    textarea.value = '';
-    modal.classList.remove('flex');
-    modal.classList.add('hidden');
+  form.action = form.action.replace(/\/\d+$/, '/0');
+  textarea.value = '';
+  modal.classList.remove('flex');
+  modal.classList.add('hidden');
 }
 </script>
 {% endblock %}

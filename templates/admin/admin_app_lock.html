@@ -1,68 +1,432 @@
 {% extends 'admin_base.html' %}
 {% block admin_content %}
-<div class="container mx-auto p-6 max-w-lg">
-  <h1 class="text-2xl font-bold mb-4">Pengaturan Kunci Aplikasi</h1>
-
-  <!-- Kunci Semua User (Global Lock) -->
-  <form method="post" class="mb-6">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mb-3">
-      <label class="block mb-1 font-medium">Status Saat Ini</label>
-      <div class="mb-2">{{ 'TERKUNCI' if cfg.app_locked else 'TERBUKA' }}</div>
-      <label class="block mb-1 font-medium">Pesan saat terkunci</label>
-      <input type="text" name="lock_message" value="{{ cfg.lock_message }}" class="w-full p-2 border rounded">
-    </div>
-    <div class="flex gap-2">
-      <button type="submit" name="action" value="lock" class="bg-red-600 text-white px-4 py-2 rounded">Kunci Semua User</button>
-      <button type="submit" name="action" value="unlock" class="bg-green-600 text-white px-4 py-2 rounded">Buka Kunci Semua User</button>
-    </div>
-  </form>
-
-  <!-- Kunci User Tertentu -->
-  <form method="post" class="mb-6">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mb-3">
-      <label class="block mb-1 font-medium">Kunci User Tertentu (ID, pisahkan dengan koma)</label>
-      <input type="text" name="locked_user_ids" value="{{ cfg.locked_user_ids | join(',') if cfg.locked_user_ids else '' }}" class="w-full p-2 border rounded" placeholder="Contoh: 12,15,22">
-    </div>
-    <button type="submit" name="action" value="update_user_lock" class="bg-purple-600 text-white px-4 py-2 rounded">Update Kunci User Tertentu</button>
-  </form>
-
-  <!-- Kunci Berdasarkan Kelas & Jurusan (Dropdown) -->
-  <form method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mb-3">
-      <label class="block mb-1 font-medium">Kelas yang sedang dikunci:</label>
-      <div class="mb-2 text-red-600 font-bold">
-        {{ cfg.locked_kelas | join(', ') if cfg.locked_kelas else 'Tidak ada' }}
+<div class="min-h-screen py-8">
+  <div class="container mx-auto px-6 max-w-6xl">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="flex items-center mb-6">
+        <div class="w-12 h-12 bg-[#7c4dff] rounded-lg flex items-center justify-center mr-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Pengaturan Kunci Aplikasi</h1>
+          <p class="text-gray-600 mt-1">Kelola akses pengguna ke aplikasi dengan mudah</p>
+        </div>
       </div>
-      <label class="block mb-1 font-medium">Kunci Kelas</label>
-      <select name="locked_kelas" multiple class="w-full p-2 border rounded">
-        {% for kelas in all_kelas %}
-          <option value="{{ kelas }}" {% if cfg.locked_kelas and kelas in cfg.locked_kelas %}selected{% endif %}>{{ kelas }}</option>
-        {% endfor %}
-      </select>
-      <small class="text-gray-500">Tekan Ctrl (atau Cmd di Mac) untuk memilih lebih dari satu kelas</small>
-    </div>
-    <div class="mb-3">
-      <label class="block mb-1 font-medium">Jurusan yang sedang dikunci:</label>
-      <div class="mb-2 text-red-600 font-bold">
-        {{ cfg.locked_jurusan | join(', ') if cfg.locked_jurusan else 'Tidak ada' }}
+
+      <!-- Global Lock Section -->
+      <div class="bg-gray-50 rounded-lg p-6 mb-8">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+          </svg>
+          Kunci Global Semua User
+        </h2>
+        
+        <form method="post" class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Status Aplikasi Saat Ini</label>
+              <div class="flex items-center p-4 rounded-lg border-2 {{ 'border-red-200 bg-red-50' if cfg.app_locked else 'border-green-200 bg-green-50' }}">
+                <div class="w-3 h-3 rounded-full {{ 'bg-red-500' if cfg.app_locked else 'bg-green-500' }} mr-3"></div>
+                <span class="font-semibold {{ 'text-red-700' if cfg.app_locked else 'text-green-700' }}">
+                  {{ 'TERKUNCI' if cfg.app_locked else 'TERBUKA' }}
+                </span>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Pesan Saat Terkunci</label>
+              <input type="text" name="lock_message" value="{{ cfg.lock_message }}" 
+                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] transition-colors"
+                     placeholder="Masukkan pesan untuk user yang terkunci...">
+            </div>
+          </div>
+          
+          <div class="flex gap-3 pt-2">
+            <button type="submit" name="action" value="lock" 
+                    class="flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              Kunci Semua User
+            </button>
+            <button type="submit" name="action" value="unlock"
+                    class="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+              </svg>
+              Buka Kunci Semua User
+            </button>
+          </div>
+        </form>
       </div>
-      <label class="block mb-1 font-medium">Kunci Jurusan</label>
-      <select name="locked_jurusan" multiple class="w-full p-2 border rounded">
-        {% for jurusan in all_jurusan %}
-          <option value="{{ jurusan }}" {% if cfg.locked_jurusan and jurusan in cfg.locked_jurusan %}selected{% endif %}>{{ jurusan }}</option>
-        {% endfor %}
-      </select>
-      <small class="text-gray-500">Tekan Ctrl (atau Cmd di Mac) untuk memilih lebih dari satu jurusan</small>
+
+      <!-- Class & Major Lock Section -->
+      <div class="bg-gray-50 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+          Kunci Berdasarkan Kelas & Jurusan
+        </h2>
+        
+        <form method="post" class="space-y-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <!-- Kelas Section -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Kelas Yang Dikunci</label>
+              <div class="mb-3 p-3 bg-white rounded-lg border">
+                <div class="text-sm text-gray-600 mb-1">Status saat ini:</div>
+                <div class="font-semibold {{ 'text-red-600' if cfg.locked_kelas else 'text-gray-500' }}">
+                  {{ cfg.locked_kelas | join(', ') if cfg.locked_kelas else 'Tidak ada kelas yang dikunci' }}
+                </div>
+              </div>
+              <select name="locked_kelas" multiple 
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] transition-colors"
+                      size="4">
+                {% for kelas in all_kelas %}
+                  <option value="{{ kelas }}" 
+                          class="py-2 {{ 'bg-[#7c4dff] text-white' if cfg.locked_kelas and kelas in cfg.locked_kelas else '' }}"
+                          {% if cfg.locked_kelas and kelas in cfg.locked_kelas %}selected{% endif %}>
+                    {{ kelas }}
+                  </option>
+                {% endfor %}
+              </select>
+              <p class="text-xs text-gray-500 mt-2">Tekan Ctrl (atau Cmd di Mac) untuk memilih lebih dari satu kelas</p>
+            </div>
+
+            <!-- Jurusan Section -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Jurusan Yang Dikunci</label>
+              <div class="mb-3 p-3 bg-white rounded-lg border">
+                <div class="text-sm text-gray-600 mb-1">Status saat ini:</div>
+                <div class="font-semibold {{ 'text-red-600' if cfg.locked_jurusan else 'text-gray-500' }}">
+                  {{ cfg.locked_jurusan | join(', ') if cfg.locked_jurusan else 'Tidak ada jurusan yang dikunci' }}
+                </div>
+              </div>
+              <select name="locked_jurusan" multiple 
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] transition-colors"
+                      size="4">
+                {% for jurusan in all_jurusan %}
+                  <option value="{{ jurusan }}" 
+                          class="py-2 {{ 'bg-[#7c4dff] text-white' if cfg.locked_jurusan and jurusan in cfg.locked_jurusan else '' }}"
+                          {% if cfg.locked_jurusan and jurusan in cfg.locked_jurusan %}selected{% endif %}>
+                    {{ jurusan }}
+                  </option>
+                {% endfor %}
+              </select>
+              <p class="text-xs text-gray-500 mt-2">Tekan Ctrl (atau Cmd di Mac) untuk memilih lebih dari satu jurusan</p>
+            </div>
+          </div>
+          
+          <div class="flex gap-3 pt-2">
+            <button type="submit" name="action" value="update_kelas_jurusan_lock" 
+                    class="flex items-center px-6 py-3 bg-[#7c4dff] hover:bg-[#6c3ce6] text-white font-medium rounded-lg transition-colors shadow-sm">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              Update Kunci Kelas & Jurusan
+            </button>
+            <button type="submit" name="action" value="reset_kelas_jurusan_lock"
+                    class="flex items-center px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors shadow-sm">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Reset Semua Kunci
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="flex gap-2">
-      <button type="submit" name="action" value="update_kelas_jurusan_lock" class="bg-purple-600 text-white px-4 py-2 rounded">Update Kunci Kelas & Jurusan</button>
-      <button type="submit" name="action" value="reset_kelas_jurusan_lock" class="bg-gray-400 text-black px-4 py-2 rounded">Reset Kunci</button>
+
+    <!-- Users Table Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900 flex items-center mb-4">
+          <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-1a5 5 0 11-10 0 5 5 0 0110 0z"/>
+          </svg>
+          Manajemen User Terkunci
+        </h2>
+
+        <!-- Filters -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-medium text-gray-700">Kelas</label>
+              <select id="filter-kelas" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] transition-colors">
+                <option value="">Semua Kelas</option>
+                {% for k in all_kelas %}
+                <option value="{{ k }}">{{ k }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-medium text-gray-700">Jurusan</label>
+              <select id="filter-jurusan" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] transition-colors">
+                <option value="">Semua Jurusan</option>
+                {% for j in all_jurusan %}
+                <option value="{{ j }}">{{ j }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <svg class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input id="search-user" type="search" placeholder="Cari nama atau ID..." 
+                     class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] transition-colors w-64" />
+            </div>
+            <button id="clear-filters" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors">
+              Reset Filter
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jurusan</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alasan</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="locked-users-tbody" class="bg-white divide-y divide-gray-200">
+            <!-- rows diisi oleh JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-600">
+            Menampilkan <span id="showing-range" class="font-medium">0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="prev-page" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              Previous
+            </button>
+            <div id="pagination-pages" class="flex gap-1"></div>
+            <button id="next-page" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </form>
-  
-  <!-- ...existing code... -->
+  </div>
 </div>
+
+<script>
+(function(){
+  // Data dari server: locked_users harus disediakan dari backend
+  const rawData = {{ locked_users|tojson | safe }} || [];
+  const PER_PAGE = 12;
+
+  // Elements
+  const tbody = document.getElementById('locked-users-tbody');
+  const filterKelas = document.getElementById('filter-kelas');
+  const filterJurusan = document.getElementById('filter-jurusan');
+  const searchInput = document.getElementById('search-user');
+  const clearBtn = document.getElementById('clear-filters');
+
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+  const pagesWrap = document.getElementById('pagination-pages');
+  const showingRange = document.getElementById('showing-range');
+
+  let filtered = rawData.slice();
+  let page = 1;
+
+  function applyFilters() {
+    const kelas = filterKelas.value.trim().toLowerCase();
+    const jurusan = filterJurusan.value.trim().toLowerCase();
+    const q = searchInput.value.trim().toLowerCase();
+
+    filtered = rawData.filter(u=>{
+      if (kelas && String(u.kelas || '').toLowerCase() !== kelas) return false;
+      if (jurusan && String(u.jurusan || '').toLowerCase() !== jurusan) return false;
+      if (q) {
+        const hay = (String(u.name || '') + ' ' + String(u.id || '') + ' ' + String(u.nis || '')).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    page = 1;
+    render();
+  }
+
+  function render() {
+    // pagination
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    if (page > totalPages) page = totalPages;
+
+    const start = (page - 1) * PER_PAGE;
+    const end = Math.min(total, start + PER_PAGE);
+    const pageData = filtered.slice(start, end);
+
+    // fill tbody
+    tbody.innerHTML = '';
+    if (pageData.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+          <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-1a5 5 0 11-10 0 5 5 0 0110 0z"/>
+          </svg>
+          <p class="text-lg font-medium mb-2">Tidak ada data yang ditemukan</p>
+          <p class="text-sm">Coba ubah filter atau kata kunci pencarian</p>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    } else {
+      pageData.forEach((u, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 transition-colors';
+        tr.innerHTML = `
+          <td class="px-6 py-4 text-sm text-gray-600">${start + i + 1}</td>
+          <td class="px-6 py-4 text-sm font-medium text-gray-900">${u.id}</td>
+          <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(u.name || '')}</td>
+          <td class="px-6 py-4 text-sm text-gray-600">${escapeHtml(u.kelas || '')}</td>
+          <td class="px-6 py-4 text-sm text-gray-600">${escapeHtml(u.jurusan || '')}</td>
+          <td class="px-6 py-4 text-sm">
+            ${u.is_locked ? 
+              '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"><div class="w-2 h-2 bg-red-400 rounded-full mr-2"></div>TERKUNCI</span>' : 
+              '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><div class="w-2 h-2 bg-green-400 rounded-full mr-2"></div>TERBUKA</span>'
+            }
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-600">${escapeHtml(u.lock_reason || '-')}</td>
+          <td class="px-6 py-4 text-sm">
+            <button data-id="${u.id}" class="toggle-lock-btn inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              u.is_locked ? 
+                'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 
+                'bg-blue-100 text-blue-800 hover:bg-blue-200'
+            }">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${u.is_locked ? 
+                  '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>' :
+                  '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>'
+                }
+              </svg>
+              ${u.is_locked ? 'Buka Kunci' : 'Kunci User'}
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // pagination controls (pages)
+    pagesWrap.innerHTML = '';
+    const maxPagesToShow = 7;
+    const half = Math.floor(maxPagesToShow/2);
+    let startPage = Math.max(1, page - half);
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow -1);
+    if (endPage - startPage < maxPagesToShow -1) {
+      startPage = Math.max(1, endPage - maxPagesToShow +1);
+    }
+    for (let p = startPage; p <= endPage; p++) {
+      const b = document.createElement('button');
+      b.className = `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+        p===page ? 
+          'bg-[#7c4dff] text-white shadow-sm' : 
+          'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+      }`;
+      b.textContent = p;
+      b.addEventListener('click', ()=> { page = p; render(); });
+      pagesWrap.appendChild(b);
+    }
+
+    prevBtn.disabled = page <= 1;
+    nextBtn.disabled = page >= totalPages;
+
+    showingRange.textContent = `${total===0?0:start+1}-${end} dari ${total} user`;
+
+    // attach toggle actions
+    document.querySelectorAll('.toggle-lock-btn').forEach(btn=>{
+      btn.addEventListener('click', onToggleClick);
+    });
+  }
+
+  function onToggleClick(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    // prevent rapid clicking
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const currentLock = btn.textContent.trim().includes('Buka') ? true : false;
+    // optimistic UI: flip visually
+    const newDesired = currentLock ? false : true;
+    btn.innerHTML = `
+      <svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      ${newDesired ? 'Mengunci...' : 'Membuka...'}
+    `;
+
+    // POST to backend toggle endpoint (adjust URL jika berbeda)
+    fetch(`/admin/app_lock/toggle_user/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({}),
+      credentials: 'same-origin'
+    }).then(r => r.json())
+    .then(j => {
+      if (j && j.success) {
+        // update rawData and filtered
+        const u = rawData.find(x=> String(x.id) === String(id));
+        if (u) u.is_locked = j.is_locked === undefined ? newDesired : j.is_locked;
+        applyFilters(); // re-render (resets page to 1)
+      } else {
+        alert(j && j.message ? j.message : 'Gagal toggle kunci');
+        btn.disabled = false;
+      }
+    }).catch(()=> {
+      alert('Gagal koneksi ke server.');
+      btn.disabled = false;
+    });
+  }
+
+  prevBtn.addEventListener('click', ()=> { if (page>1) { page--; render(); } });
+  nextBtn.addEventListener('click', ()=> { page++; render(); });
+
+  filterKelas.addEventListener('change', applyFilters);
+  filterJurusan.addEventListener('change', applyFilters);
+  searchInput.addEventListener('input', function(){ page=1; applyFilters(); });
+
+  clearBtn.addEventListener('click', function(){
+    filterKelas.value = ''; filterJurusan.value = ''; searchInput.value = '';
+    applyFilters();
+  });
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+  // init
+  applyFilters();
+})();
+</script>
+
 {% endblock %}

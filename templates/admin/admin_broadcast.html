@@ -1,90 +1,162 @@
 {% extends 'admin_base.html' %}
-
 {% block admin_content %}
-<div class="container py-4">
-  <h2 class="mb-3">Broadcast Pesan ke Siswa</h2>
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, text in messages %}
-        <div class="alert alert-{{ 'danger' if category in ['danger','error'] else ('success' if category=='success' else 'info') }}" role="alert">
-          {{ text }}
+<div class="min-h-screen py-8">
+  <div class="container mx-auto px-6 max-w-4xl">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="flex items-center">
+        <div class="w-12 h-12 bg-[#7c4dff] rounded-lg flex items-center justify-center mr-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
         </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  <form action="{{ url_for('admin_broadcast') }}" method="post" enctype="multipart/form-data" class="card p-3">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-    <div class="mb-3">
-      <label class="form-label"><strong>Pilih Penerima</strong></label>
-      <div>
-        <label class="me-3"><input type="radio" name="send_to" value="all" checked> Semua Siswa</label>
-        <label class="me-3"><input type="radio" name="send_to" value="selected"> Beberapa Siswa</label>
-        <label class="me-3"><input type="radio" name="send_to" value="kelas"> Per Kelas</label>
-        <label class="me-3"><input type="radio" name="send_to" value="jurusan"> Per Jurusan</label>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Broadcast Pesan ke Siswa</h1>
+          <p class="text-gray-600 mt-1">Kirim pesan penting ke siswa secara massal</p>
+        </div>
       </div>
     </div>
 
-    <div id="section-selected" class="mb-3 d-none">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <strong>Pilih Siswa</strong>
-        <div>
-          <button type="button" id="select-all" class="btn btn-sm btn-outline-secondary">Pilih Semua</button>
-          <button type="button" id="clear-all" class="btn btn-sm btn-outline-secondary">Bersihkan</button>
-          <span class="ms-2">Terpilih: <span id="selected-count">0</span></span>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for category, text in messages %}
+            <div class="p-4 rounded-lg border-l-4 
+              {% if category in ['danger', 'error'] %}bg-red-50 border-red-600 text-red-800
+              {% elif category == 'success' %}bg-green-50 border-green-600 text-green-800
+              {% else %}bg-blue-50 border-blue-600 text-blue-800
+              {% endif %}">
+              {{ text }}
+            </div>
+          {% endfor %}
         </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Broadcast Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Kirim Pesan Massal
+        </h2>
       </div>
-      <div class="border rounded p-2" style="max-height:300px; overflow:auto;">
-        {% for s in students %}
-          <div class="form-check">
-            <input class="form-check-input chk-student" type="checkbox" name="selected_ids" value="{{ s.id }}" id="stu-{{ s.id }}">
-            <label class="form-check-label" for="stu-{{ s.id }}">
-              {{ s.id }} — {{ s.username }} {% if s.kelas %}({{ s.kelas }} / {{ s.jurusan or '-' }}){% endif %}
+
+      <form action="{{ url_for('admin_broadcast') }}" method="post" enctype="multipart/form-data" class="p-6 space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <!-- Pilih Penerima -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-3"><strong>Pilih Penerima</strong></label>
+          <div class="flex flex-wrap gap-4">
+            <label class="inline-flex items-center">
+              <input type="radio" name="send_to" value="all" checked class="text-[#7c4dff] focus:ring-[#7c4dff] mr-2">
+              <span class="text-sm">Semua Siswa</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" name="send_to" value="selected" class="text-[#7c4dff] focus:ring-[#7c4dff] mr-2">
+              <span class="text-sm">Beberapa Siswa</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" name="send_to" value="kelas" class="text-[#7c4dff] focus:ring-[#7c4dff] mr-2">
+              <span class="text-sm">Per Kelas</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" name="send_to" value="jurusan" class="text-[#7c4dff] focus:ring-[#7c4dff] mr-2">
+              <span class="text-sm">Per Jurusan</span>
+            </label>
+            <label class="inline-flex items-center">
+              <input type="radio" name="send_to" value="kelas_jurusan" class="text-[#7c4dff] focus:ring-[#7c4dff] mr-2">
+              <span class="text-sm">Per Kelas & Jurusan</span>
             </label>
           </div>
-        {% else %}
-          <div>Tidak ada siswa.</div>
-        {% endfor %}
-      </div>
-    </div>
+        </div>
 
-    <div id="section-kelas" class="mb-3 d-none">
-      <label class="form-label"><strong>Pilih Kelas</strong></label>
-      <select name="target_kelas" class="form-select">
-        <option value="">-- Pilih Kelas --</option>
-        {% for k in kelas_list %}
-          <option value="{{ k }}">{{ k }}</option>
-        {% endfor %}
-      </select>
-    </div>
+        <!-- Filter Kelas -->
+        <div id="section-kelas" class="d-none">
+          <label for="target_kelas" class="block text-sm font-medium text-gray-700 mb-1"><strong>Pilih Kelas</strong></label>
+          <select name="target_kelas" id="target_kelas" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white"
+                  onchange="fetchFilteredStudents()">
+            <option value="">-- Pilih Kelas --</option>
+            {% for k in kelas_list %}
+              <option value="{{ k }}">{{ k }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-    <div id="section-jurusan" class="mb-3 d-none">
-      <label class="form-label"><strong>Pilih Jurusan</strong></label>
-      <select name="target_jurusan" class="form-select">
-        <option value="">-- Pilih Jurusan --</option>
-        {% for j in jurusan_list %}
-          <option value="{{ j }}">{{ j }}</option>
-        {% endfor %}
-      </select>
-    </div>
+        <!-- Filter Jurusan -->
+        <div id="section-jurusan" class="d-none">
+          <label for="target_jurusan" class="block text-sm font-medium text-gray-700 mb-1"><strong>Pilih Jurusan</strong></label>
+          <select name="target_jurusan" id="target_jurusan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white"
+                  onchange="fetchFilteredStudents()">
+            <option value="">-- Pilih Jurusan --</option>
+            {% for j in jurusan_list %}
+              <option value="{{ j }}">{{ j }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-    <div class="mb-3">
-      <label class="form-label"><strong>Pesan</strong></label>
-      <textarea name="message" class="form-control" rows="6" required placeholder="Tulis pesan..."></textarea>
-    </div>
+        <!-- Pilih Siswa (Dinamis) -->
+        <div id="section-selected" class="d-none space-y-3">
+          <div class="flex flex-wrap justify-between items-center">
+            <h3 class="text-sm font-medium text-gray-900">Pilih Siswa</h3>
+            <div class="flex gap-2">
+              <button type="button" id="select-all" class="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 transition">
+                Pilih Semua
+              </button>
+              <button type="button" id="clear-all" class="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 transition">
+                Bersihkan
+              </button>
+              <span class="text-xs text-gray-500">Terpilih: <span id="selected-count">0</span></span>
+            </div>
+          </div>
 
-    <div class="mb-3">
-      <label class="form-label"><strong>Gambar (opsional)</strong></label>
-      <input type="file" name="image" accept="image/*" class="form-control">
-    </div>
+          <!-- Search Input -->
+          <div class="relative">
+            <input type="text" id="search-student" placeholder="Cari siswa..." 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white text-sm" />
+            <svg class="w-4 h-4 text-gray-500 absolute right-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
 
-    <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Kirim Pesan</button>
-      <a href="{{ url_for('admin_dashboard_content') }}" class="btn btn-secondary">Batal</a>
+          <!-- Daftar Siswa -->
+          <div id="student-list-container" class="border border-gray-200 rounded-lg p-3 max-h-60 overflow-auto bg-gray-50">
+            <p class="text-sm text-gray-500 italic">Pilih opsi penerima untuk melihat daftar siswa.</p>
+          </div>
+        </div>
+
+        <!-- Pesan -->
+        <div>
+          <label for="message" class="block text-sm font-medium text-gray-700 mb-1"><strong>Pesan</strong></label>
+          <textarea name="message" id="message" rows="6" required placeholder="Tulis pesan..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white"></textarea>
+        </div>
+
+        <!-- Gambar -->
+        <div>
+          <label for="image" class="block text-sm font-medium text-gray-700 mb-1"><strong>Gambar (opsional)</strong></label>
+          <input type="file" name="image" id="image" accept="image/*"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white text-sm" />
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex gap-3 pt-2">
+          <button type="submit"
+                  class="px-5 py-2.5 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white font-medium rounded-lg shadow-sm hover:from-[#6a3de8] hover:to-[#7c4dff] transition-all">
+            Kirim Pesan
+          </button>
+          <a href="{{ url_for('admin_dashboard_content') }}"
+             class="px-5 py-2.5 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+            Batal
+          </a>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>
 
 <script>
@@ -93,44 +165,124 @@
   const secSelected = document.getElementById('section-selected');
   const secKelas = document.getElementById('section-kelas');
   const secJurusan = document.getElementById('section-jurusan');
-  const checkboxes = () => Array.from(document.querySelectorAll('.chk-student'));
-  const countEl = document.getElementById('selected-count');
+  const studentListContainer = document.getElementById('student-list-container');
+  const searchInput = document.getElementById('search-student');
   const selectAllBtn = document.getElementById('select-all');
   const clearAllBtn = document.getElementById('clear-all');
+  const countEl = document.getElementById('selected-count');
 
-  function refreshSections(){
-    const v = document.querySelector('input[name="send_to"]:checked').value;
-    secSelected.classList.toggle('d-none', v !== 'selected');
-    secKelas.classList.toggle('d-none', v !== 'kelas');
-    secJurusan.classList.toggle('d-none', v !== 'jurusan');
-  }
-
-  function updateCount(){
-    const c = checkboxes().filter(cb=>cb.checked).length;
+  // Fungsi update jumlah terpilih
+  function updateCount() {
+    const c = Array.from(document.querySelectorAll('.chk-student')).filter(cb => cb.checked).length;
     countEl.textContent = c;
   }
 
+  // Tampilkan daftar siswa dari data
+  function renderStudentList(students) {
+    studentListContainer.innerHTML = '';
+    if (students.length === 0) {
+      studentListContainer.innerHTML = '<p class="text-sm text-gray-500 italic">Tidak ada siswa ditemukan.</p>';
+      return;
+    }
+
+    students.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center p-2 hover:bg-white rounded';
+      div.innerHTML = `
+        <input class="chk-student h-4 w-4 text-[#7c4dff] focus:ring-[#7c4dff] rounded border-gray-300 mr-3" 
+               type="checkbox" name="selected_ids" value="${s.id}" id="stu-${s.id}">
+        <label for="stu-${s.id}" class="text-sm text-gray-700">
+          ${s.id} — ${s.username} 
+          <span class="text-gray-500">(${s.kelas || '-'} / ${s.jurusan || '-'})</span>
+        </label>
+      `;
+      studentListContainer.appendChild(div);
+    });
+
+    // Rebind event listener untuk checkbox
+    document.querySelectorAll('.chk-student').forEach(cb => {
+      cb.addEventListener('change', updateCount);
+    });
+    updateCount();
+  }
+
+  // Ambil siswa berdasarkan filter
+  function fetchFilteredStudents() {
+    const sendTo = document.querySelector('input[name="send_to"]:checked').value;
+    const kelas = document.getElementById('target_kelas')?.value;
+    const jurusan = document.getElementById('target_jurusan')?.value;
+
+    if (sendTo === 'all') return;
+
+    let url = '/admin/api/students?';
+    if (kelas) url += `kelas=${encodeURIComponent(kelas)}&`;
+    if (jurusan) url += `jurusan=${encodeURIComponent(jurusan)}&`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => renderStudentList(data))
+      .catch(err => {
+        console.error('Gagal ambil data siswa:', err);
+        studentListContainer.innerHTML = '<p class="text-sm text-red-600">Gagal memuat data siswa.</p>';
+      });
+  }
+
+  // Tampilkan/hilangkan section sesuai pilihan
+  function refreshSections() {
+    const v = document.querySelector('input[name="send_to"]:checked').value;
+
+    secKelas.classList.toggle('d-none', !['kelas', 'kelas_jurusan'].includes(v));
+    secJurusan.classList.toggle('d-none', !['jurusan', 'kelas_jurusan'].includes(v));
+    secSelected.classList.toggle('d-none', v === 'all');
+
+    // Jika "all", tidak tampilkan daftar
+    if (v === 'all') {
+      studentListContainer.innerHTML = '<p class="text-sm text-gray-500 italic">Pesan akan dikirim ke semua siswa.</p>';
+    } 
+    // Jika "selected", tampilkan semua siswa (bisa dari backend tambahan)
+    else if (v === 'selected') {
+      fetch('/admin/api/students') // Ambil semua siswa
+        .then(res => res.json())
+        .then(data => renderStudentList(data));
+    } 
+    // Untuk kelas, jurusan, atau kombinasi
+    else {
+      fetchFilteredStudents();
+    }
+  }
+
+  // Filter pencarian
+  searchInput?.addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#student-list-container > div').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(q) ? 'flex' : 'none';
+    });
+  });
+
+  // Pilih semua / bersihkan
+  selectAllBtn?.addEventListener('click', () => {
+    document.querySelectorAll('.chk-student').forEach(cb => cb.checked = true);
+    updateCount();
+  });
+  clearAllBtn?.addEventListener('click', () => {
+    document.querySelectorAll('.chk-student').forEach(cb => cb.checked = false);
+    updateCount();
+  });
+
+  // Event listener
   radios.forEach(r => r.addEventListener('change', refreshSections));
-  document.addEventListener('change', function(e){
-    if(e.target && e.target.classList && e.target.classList.contains('chk-student')) updateCount();
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.classList.contains('chk-student')) updateCount();
   }, true);
 
-  if(selectAllBtn){
-    selectAllBtn.addEventListener('click', function(){
-      checkboxes().forEach(cb => cb.checked = true);
-      updateCount();
-    });
-  }
-  if(clearAllBtn){
-    clearAllBtn.addEventListener('click', function(){
-      checkboxes().forEach(cb => cb.checked = false);
-      updateCount();
-    });
-  }
-
-  // init
+  // Init
   refreshSections();
-  updateCount();
 })();
 </script>
+
+<style>
+.d-none { display: none; }
+#search-student { padding-left: 1rem; padding-right: 2.5rem; }
+</style>
 {% endblock %}

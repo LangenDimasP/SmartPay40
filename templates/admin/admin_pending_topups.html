@@ -1,127 +1,175 @@
 {% extends 'admin_base.html' %}
-
-{% block title %}Admin - Request Top Up Pending{% endblock %}
-
-{% block styles %}
-{{ super() }}
-{% endblock %}
-
 {% block admin_content %}
-<div class="p-5 rounded-xl shadow-lg bg-[#f9f5ff] mt-5">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-[#7c4dff] font-semibold text-2xl relative pb-2 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-12 after:h-0.5 after:bg-gradient-to-r after:from-[#7c4dff] after:to-[#5e35b1] after:rounded">Request Top Up Pending</h2>
-        <a href="{{ url_for('admin_topup') }}" class="flex items-center gap-2 bg-[#7c4dff] text-white px-5 py-2 rounded-lg font-medium hover:bg-[#5e35b1] hover:-translate-y-0.5 hover:shadow-md transition-all shadow">
-            <i class="fas fa-plus text-sm"></i> Top Up Manual
+<div class="min-h-screen py-8">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+          <div class="w-12 h-12 bg-[#7c4dff] rounded-lg flex items-center justify-center mr-4">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Request Top Up Pending</h1>
+            <p class="text-gray-600 mt-1">Tinjau dan setujui permintaan top up dari siswa</p>
+          </div>
+        </div>
+        <a href="{{ url_for('admin_topup') }}" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white font-medium rounded-lg shadow-sm hover:from-[#6a3de8] hover:to-[#7c4dff] transition-all">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Top Up Manual
         </a>
+      </div>
     </div>
-    <p class="text-gray-600 text-base mb-5">Daftar permintaan top up saldo dari siswa yang menunggu persetujuan Anda setelah pembayaran tunai diterima.</p>
-    <hr class="border-0 h-px bg-gradient-to-r from-[rgba(124,77,255,0.1)] via-[rgba(124,77,255,0.3)] to-[rgba(124,77,255,0.1)] my-5" />
 
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="mt-4 mb-5">
-                {% for category, message in messages %}
-                    <p class="{% if category == 'success' %}bg-green-100 border-l-4 border-green-600 text-green-600 p-3 rounded-md text-sm{% else %}bg-red-100 border-l-4 border-red-600 text-red-600 p-3 rounded-md text-sm{% endif %}">{{ message }}</p>
-                {% endfor %}
+      {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for category, message in messages %}
+            <div class="p-4 rounded-lg border-l-4 {% if category == 'success' %}bg-green-50 border-green-600 text-green-800{% else %}bg-red-50 border-red-600 text-red-800{% endif %}">
+              {{ message }}
             </div>
-        {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
     {% endwith %}
 
-    <div class="overflow-x-auto bg-white rounded-lg shadow-md border border-[rgba(124,77,255,0.1)]">
-        <table class="min-w-full font-['Poppins',sans-serif]">
-            <thead>
-                <tr>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10">ID Req.</th>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10">Waktu Request</th>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10">Nama Siswa</th>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10">Kelas/Jur.</th>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10">Jumlah Request</th>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10">Bukti Transfer</th>
-                    <th class="py-3.5 px-4.5 bg-gradient-to-r from-[#f9f5ff] to-white font-semibold text-[#5e35b1] text-xs uppercase tracking-wider border-b-2 border-[#7c4dff] text-center sticky top-0 z-10 min-w-[120px]">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for req in requests %}
-                    <tr class="hover:bg-[rgba(124,77,255,0.05)] transition-colors even:bg-[rgba(249,245,255,0.3)]">
-                        <td data-label="ID Req." class="py-3.5 pl-3 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-[#333333] text-center">{{ req.id }}</td>
-                        <td data-label="Waktu Req." class="py-3.5 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-[#333333] text-center">
-                            <span class="text-gray-500 text-sm">{{ req.request_timestamp | wib }}</span>
-                        </td>
-                        <td data-label="Siswa" class="py-3.5 pl-3 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-[#333333] text-center">{{ req.student.username if req.student else 'N/A' }}</td>
-                        <td data-label="Kelas/Jur." class="py-3.5 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-[#333333] text-center">
-                            {% if req.student and req.student.kelas and req.student.jurusan %}
-                                {{ req.student.kelas }} - {{ req.student.jurusan }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td data-label="Jumlah" class="py-3.5 pl-3 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-left text-green-600 font-semibold">
-                            {{ req.amount | short_rupiah }}
-                        </td>
-                                    <td data-label="Bukti Transfer" class="py-3.5 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-center align-middle">
-                {% if req.bukti_transfer_filename %}
-                    <button type="button"
-                        class="bg-[#ede7f6] text-[#7c4dff] px-3 py-1 rounded-md text-xs font-medium hover:bg-[#d1c4e9] transition"
-                        onclick="showBuktiTransfer('{{ url_for('static', filename='profile_pics/' ~ req.bukti_transfer_filename) }}')">
-                        <i class="fas fa-image"></i> Lihat Bukti
-                    </button>
+    <!-- Table Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+          <svg class="w-8 h-8 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 16 16" id="request-16px" xmlns="http://www.w3.org/2000/svg">
+  <path id="Path_49" data-name="Path 49" d="M30.5,16a.489.489,0,0,1-.191-.038A.5.5,0,0,1,30,15.5V13h-.5A2.5,2.5,0,0,1,27,10.5v-8A2.5,2.5,0,0,1,29.5,0h11A2.5,2.5,0,0,1,43,2.5v8A2.5,2.5,0,0,1,40.5,13H33.707l-2.853,2.854A.5.5,0,0,1,30.5,16Zm-1-15A1.5,1.5,0,0,0,28,2.5v8A1.5,1.5,0,0,0,29.5,12h1a.5.5,0,0,1,.5.5v1.793l2.146-2.147A.5.5,0,0,1,33.5,12h7A1.5,1.5,0,0,0,42,10.5v-8A1.5,1.5,0,0,0,40.5,1ZM36,9a1,1,0,1,0-1,1A1,1,0,0,0,36,9Zm1-4a2,2,0,0,0-4,0,.5.5,0,0,0,1,0,1,1,0,1,1,1,1,.5.5,0,0,0,0,1A2,2,0,0,0,37,5Z" transform="translate(-27)"/>
+</svg>
+          Permintaan Top Up Menunggu Persetujuan
+        </h2>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Req</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu Request</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Siswa</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas/Jurusan</th>
+              <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bukti Transfer</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            {% for req in requests %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4 text-sm text-gray-900 font-mono">{{ req.id }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">{{ req.request_timestamp | wib }}</td>
+              <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ req.student.username if req.student else 'N/A' }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                {% if req.student and req.student.kelas and req.student.jurusan %}
+                  {{ req.student.kelas }} - {{ req.student.jurusan }}
                 {% else %}
-                    <span class="text-gray-400 italic">-</span>
+                  -
                 {% endif %}
-            </td>
-                        <td data-label="Aksi" class="py-3.5 px-4.5 border-b border-[rgba(124,77,255,0.1)] text-sm text-center align-middle">
-                            <div class="flex justify-center items-center gap-2">
-                                <form method="POST" action="{{ url_for('admin_approve_topup', request_id=req.id) }}" class="inline" onsubmit="return confirm('Konfirmasi persetujuan top up sebesar {{ req.amount|rupiah }} untuk {{ req.student.username if req.student else 'siswa ini' }}? Pastikan uang tunai sudah diterima.')">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                    <button type="submit" class="bg-gradient-to-r from-green-600 to-green-800 text-white px-3.5 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 hover:from-green-700 hover:to-green-600 hover:-translate-y-0.5 hover:shadow-md transition-all shadow" title="Setujui Request">
-                                        <i class="fas fa-check text-sm"></i> Approve
-                                    </button>
-                                </form>
-                                {% if req.bukti_transfer_filename %}
-                                    <button type="button" class="bg-[#7c4dff] text-white px-3.5 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 hover:bg-[#5e35b1] hover:-translate-y-0.5 hover:shadow-md transition-all shadow" onclick="showBuktiTransfer('{{ url_for('static', filename='profile_pics/' ~ req.bukti_transfer_filename) }}')">
-                                        <i class="fas fa-image text-sm"></i> Lihat Bukti
-                                    </button>
-                                {% endif %}
-                                {# Uncomment if you want to enable the Reject button #}
-                                {#
-                                <form method="POST" action="{{ url_for('admin_reject_topup', request_id=req.id) }}" class="inline" onsubmit="return confirm('Yakin menolak request ini?')">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                                    <button type="submit" class="bg-gradient-to-r from-red-600 to-red-800 text-white px-3.5 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 hover:from-red-700 hover:to-red-600 hover:-translate-y-0.5 hover:shadow-md transition-all shadow" title="Tolak Request">
-                                        <i class="fas fa-times text-sm"></i> Reject
-                                    </button>
-                                </form>
-                                #}
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                {% if not requests %}
-                    <tr>
-                        <td colspan="6" class="text-center py-10 text-gray-500 italic bg-gradient-to-r from-white to-[#f9f5ff] rounded-lg text-lg">Tidak ada request top up yang menunggu persetujuan saat ini.</td>
-                    </tr>
+              </td>
+              <td class="px-6 py-4 text-sm text-right text-green-600 font-semibold">
+                {{ req.amount | short_rupiah }}
+              </td>
+              <td class="px-6 py-4 text-sm text-center">
+                {% if req.bukti_transfer_filename %}
+                  <button type="button"
+                          class="inline-flex items-center px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-sm font-medium rounded-lg transition-colors"
+                          onclick="showBuktiTransfer('{{ url_for('static', filename='profile_pics/' ~ req.bukti_transfer_filename) }}')">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Lihat
+                  </button>
+                {% else %}
+                  <span class="text-gray-400 italic">Tidak ada</span>
                 {% endif %}
-            </tbody>
+              </td>
+              <td class="px-6 py-4 text-sm text-center space-x-2">
+                <!-- Approve Form -->
+                <form method="POST" action="{{ url_for('admin_approve_topup', request_id=req.id) }}" class="inline"
+                      onsubmit="return confirm('Setujui top up sebesar {{ req.amount|rupiah }} untuk {{ req.student.username if req.student else 'siswa ini' }}? Pastikan pembayaran tunai sudah diterima.')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit"
+                          class="inline-flex items-center px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-800 text-sm font-medium rounded-lg transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Approve
+                  </button>
+                </form>
+
+                <!-- Reject (dikomentari, bisa diaktifkan jika perlu) -->
+                {#
+                <form method="POST" action="{{ url_for('admin_reject_topup', request_id=req.id) }}" class="inline"
+                      onsubmit="return confirm('Yakin menolak request ini?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit"
+                          class="inline-flex items-center px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 text-sm font-medium rounded-lg transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Reject
+                  </button>
+                </form>
+                #}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="text-lg font-medium mb-1">Tidak ada request pending</p>
+                <p class="text-sm">Permintaan top up akan muncul di sini setelah siswa mengunggah bukti pembayaran.</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
         </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <p class="text-sm text-gray-600">
+          Menampilkan <span class="font-medium">{{ requests|length }}</span> permintaan menunggu persetujuan
+        </p>
+      </div>
     </div>
-    <hr class="border-0 h-px bg-gradient-to-r from-[rgba(124,77,255,0.1)] via-[rgba(124,77,255,0.3)] to-[rgba(124,77,255,0.1)] my-5" />
+  </div>
 </div>
 
-<!-- Modal Pop-up Bukti Transfer -->
-<div id="buktiTransferModal" class="hidden fixed inset-0 z-[9999] bg-[rgba(0,0,0,0.6)] flex justify-center items-center">
-    <div class="bg-white p-4 rounded-xl shadow-lg max-w-[90vw] max-h-[90vh] relative">
-        <button onclick="closeBuktiTransfer()" class="absolute top-3 right-3 bg-[#7c4dff] text-white rounded-full w-8 h-8 text-lg cursor-pointer flex items-center justify-center hover:bg-[#5e35b1] transition-colors">&times;</button>
-        <img id="buktiTransferImg" src="" alt="Bukti Transfer" class="max-w-[80vw] max-h-[70vh] rounded-lg block mx-auto">
-    </div>
+<!-- Modal Bukti Transfer -->
+<div id="buktiTransferModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-70">
+  <div class="bg-white rounded-xl max-w-2xl p-6 relative max-h-[90vh] overflow-hidden">
+    <button onclick="closeBuktiTransfer()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    <h3 class="text-lg font-semibold mb-4">Bukti Transfer</h3>
+    <img id="buktiTransferImg" class="w-full h-auto max-h-[70vh] object-contain rounded-lg" alt="Bukti Transfer" />
+  </div>
 </div>
 
 <script>
 function showBuktiTransfer(imgUrl) {
-    document.getElementById('buktiTransferImg').src = imgUrl;
-    document.getElementById('buktiTransferModal').style.display = 'flex';
+  document.getElementById('buktiTransferImg').src = imgUrl;
+  document.getElementById('buktiTransferModal').classList.remove('hidden');
+  document.getElementById('buktiTransferModal').classList.add('flex');
 }
+
 function closeBuktiTransfer() {
-    document.getElementById('buktiTransferModal').style.display = 'none';
-    document.getElementById('buktiTransferImg').src = '';
+  const modal = document.getElementById('buktiTransferModal');
+  const img = document.getElementById('buktiTransferImg');
+  img.src = '';
+  modal.classList.remove('flex');
+  modal.classList.add('hidden');
 }
 </script>
 {% endblock admin_content %}

@@ -1,0 +1,176 @@
+{% extends 'base_siswa.html' %}
+
+{% block title %}Top Board - Kantin Sekolah{% endblock %}
+
+{% block content %}
+<style>
+    /* Animations for consistency with reference */
+    @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideIn {
+        0% { transform: translateX(100%); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+    }
+
+    .animate-fade-in {
+        animation: fade-in 0.3s ease-out;
+    }
+
+    .animate-slide-in {
+        animation: slideIn 0.5s ease-out;
+    }
+</style>
+
+<div class="min-h-screen bg-gray-50 font-['Inter',-apple-system,BlinkMacSystemFont,sans-serif]">
+    <!-- Header -->
+    <header class="bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white sticky top-0 z-50 shadow-md">
+        <div class="container mx-auto px-6 py-4 flex items-center">
+            <a href="{{ url_for('dashboard') }}" class="text-white text-2xl mr-4 hover:scale-105 transition-transform" title="Kembali ke Dashboard">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </a>
+            <h1 class="text-xl font-semibold flex items-center">
+                <i class="fas fa-trophy mr-2"></i>
+                Top Board
+            </h1>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8 max-w-lg">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-lg border-l-4 animate-slide-in
+                            {% if category == 'success' %}bg-green-50 border-green-600 text-green-800
+                            {% elif category == 'danger' %}bg-red-50 border-red-600 text-red-800
+                            {% else %}bg-yellow-50 border-yellow-600 text-yellow-800
+                            {% endif %}">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                        d="{% if category == 'success' %}M5 13l4 4L19 7{% else %}M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z{% endif %}" />
+                                </svg>
+                                {{ message }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Leaderboard Card -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-5 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 9.143 15.714 12 18 21l-6-3.857L6 21l2.286-9.143L3 9.143l5.714 2.857L11 3z" />
+                </svg>
+                Peringkat Pembelanja Harian
+            </h2>
+            <p class="text-sm text-gray-500 mb-6 flex items-center justify-center">
+                <svg class="w-4 h-4 mr-1 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Tanggal: {{ date_str }}
+            </p>
+
+            {% if leaderboard %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead>
+                            <tr class="bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white">
+                                <th class="py-3 px-4 text-left rounded-tl-lg font-medium text-sm">Peringkat</th>
+                                <th class="py-3 px-4 text-left font-medium text-sm">Nama</th>
+                                <th class="py-3 px-4 text-left font-medium text-sm">Kelas</th>
+                                <th class="py-3 px-4 text-left font-medium text-sm">Jurusan</th>
+                                <th class="py-3 px-4 text-left rounded-tr-lg font-medium text-sm">Total Belanja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in leaderboard %}
+                                {% if entry.rank <= 10 %}
+                                    <tr class="border-b hover:bg-gray-100 transition-colors duration-150">
+                                        <td class="py-3 px-4 font-medium text-sm">
+                                            {% if entry.rank == 1 %}
+                                                <span class="flex items-center text-[#FFD700]">
+                                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                                    </svg>
+                                                    {{ entry.rank }}
+                                                </span>
+                                            {% elif entry.rank == 2 %}
+                                                <span class="flex items-center text-[#C0C0C0]">
+                                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                                    </svg>
+                                                    {{ entry.rank }}
+                                                </span>
+                                            {% elif entry.rank == 3 %}
+                                                <span class="flex items-center text-[#CD7F32]">
+                                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                                    </svg>
+                                                    {{ entry.rank }}
+                                                </span>
+                                            {% else %}
+                                                <span class="flex items-center">
+                                                    <span class="text-[#7c4dff] mr-2">#</span>{{ entry.rank }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-3 px-4 font-medium text-sm flex items-center gap-3">
+                                            <div class="relative w-10 h-10 flex items-center justify-center">
+                                                <img src="{{ url_for('static', filename='profile_pics/' + entry.profile_pic_filename) }}"
+                                                     alt="Foto Profil {{ entry.username }}"
+                                                     class="absolute w-8 h-8 rounded-full object-cover bg-white z-10">
+                                                {% if entry.active_border %}
+                                                    <img src="{{ url_for('static', filename=entry.active_border.image_path) }}"
+                                                         alt="Border"
+                                                         class="absolute w-10 h-10 rounded-full object-cover z-20">
+                                                {% endif %}
+                                            </div>
+                                            <span>{{ entry.username }}</span>
+                                        </td>
+                                        <td class="py-3 px-4 text-sm">{{ entry.kelas }}</td>
+                                        <td class="py-3 px-4 text-sm">{{ entry.jurusan }}</td>
+                                        <td class="py-3 px-4 font-semibold text-[#7c4dff] text-sm">{{ entry.total_spent }}</td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <svg class="w-10 h-10 mx-auto mb-4 text-[#7c4dff]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <p class="text-base text-gray-600">Belum ada transaksi hari ini. Ayo belanja di kantin!</p>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const flashMessages = document.querySelectorAll('.flash-message');
+        flashMessages.forEach(function(message) {
+            setTimeout(function() {
+                message.style.opacity = '0';
+                message.style.transform = 'translateX(100%)';
+                message.style.transition = 'all 0.5s ease-in-out';
+                setTimeout(function() {
+                    message.style.display = 'none';
+                }, 500);
+            }, 5000);
+        });
+    });
+</script>
+{% endblock %}

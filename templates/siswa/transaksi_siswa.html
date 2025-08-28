@@ -1,202 +1,202 @@
 {% extends 'base_siswa.html' %}
-
 {% block title %}Riwayat Transaksi - {{ current_user.username }}{% endblock %}
 
 {% block content %}
-<style>
-    /* Animations and custom styles not supported by Tailwind */
-    @keyframes slideIn {
-        from { transform: translateY(20px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
+<div class="min-h-screen bg-gray-50 text-gray-900">
+  <!-- Header -->
+  <header class="bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white sticky top-0 z-50 shadow-md">
+    <div class="container mx-auto px-6 py-4 flex items-center">
+      <a href="{{ url_for('dashboard') }}" class="text-white text-2xl mr-4 hover:scale-105 transition-transform" title="Kembali ke Dashboard">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </a>
+      <h1 class="text-xl font-semibold">Riwayat Transaksi</h1>
+    </div>
+  </header>
 
-    .animate-slideIn {
-        animation: slideIn 0.5s ease forwards;
-    }
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8 max-w-5xl">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for category, message in messages %}
+            <div class="p-4 rounded-lg border-l-4 
+              {% if category == 'success' %}bg-green-50 border-green-600 text-green-800
+              {% else %}bg-red-50 border-red-600 text-red-800
+              {% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
-    .filter-form select {
-        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%235E35B1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-        background-repeat: no-repeat;
-        background-position: right 0.8rem center;
-        background-size: 0.7em auto;
-        padding-right: 2.5rem;
-        cursor: pointer;
-    }
+    <!-- Filter Section -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-5 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+        Filter Transaksi
+      </h2>
 
-    @media (max-width: 768px) {
-        .history-table td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 15px;
-            width: 35%;
-            padding-right: 10px;
-            font-weight: 600;
-            text-align: left;
-            color: #1a1a1a;
-            font-size: 0.85em;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-    }
-</style>
+      <form method="GET" action="{{ url_for('riwayat_siswa') }}" class="grid md:grid-cols-3 gap-4 mb-5">
+        <div>
+          <label for="filter_month" class="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
+          <select id="filter_month" name="filter_month" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+            {% for num in range(1,13) %}
+              <option value="{{ num }}" {% if filter_month == num %}selected{% endif %}>
+                {{ "{:02d}".format(num) }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="filter_year" class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
+          <select id="filter_year" name="filter_year" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+            {% for year in range(2023, now.year+1) %}
+              <option value="{{ year }}" {% if filter_year == year %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex gap-2 pt-5">
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-[#7c4dff] text-white font-medium rounded-lg hover:bg-[#5e35b1] transition-all">
+            Filter
+          </button>
+          <a href="{{ url_for('riwayat_siswa') }}" class="px-4 py-2.5 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition-all">
+            Reset
+          </a>
+        </div>
+      </form>
 
-<div class="bg-[#f5f7fa] text-[#1a1a1a] pb-5">
-    <div class="history-header bg-gradient-to-br from-[#7c4dff] to-[#5e35b1] text-white p-[30px_25px] flex items-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] rounded-b-[40px] sticky top-0 z-[1000] md:p-[20px_15px]">
-        <a href="{{ url_for('dashboard') }}" class="back-link text-white text-2xl mr-[15px] no-underline hover:scale-110 hover:opacity-90 transition-all duration-300" title="Kembali ke Dashboard">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-        <h1 class="text-xl md:text-lg font-semibold m-0 tracking-tight">Riwayat Transaksi</h1>
+      <!-- Filter Tipe Transaksi -->
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="filter-type-btn px-4 py-2 rounded-lg text-sm font-medium
+          {% if selected_type_filter == 'all' %}bg-[#7c4dff] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"
+          data-type="all">Semua</button>
+        <button type="button" class="filter-type-btn px-4 py-2 rounded-lg text-sm font-medium
+          {% if selected_type_filter == 'payment' %}bg-[#7c4dff] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"
+          data-type="payment">Pembayaran</button>
+        <button type="button" class="filter-type-btn px-4 py-2 rounded-lg text-sm font-medium
+          {% if selected_type_filter == 'topup' %}bg-[#7c4dff] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"
+          data-type="topup">Top Up</button>
+        <button type="button" class="filter-type-btn px-4 py-2 rounded-lg text-sm font-medium
+          {% if selected_type_filter == 'transfer' %}bg-[#7c4dff] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"
+          data-type="transfer">Transfer</button>
+      </div>
     </div>
 
-    <div class="history-container max-w-[1000px] mx-auto mt-[30px] px-5 animate-slideIn md:px-[15px]">
-
-        <div class="filter-card bg-white rounded-[16px] p-[25px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] mb-[30px] hover:-translate-y-[5px] transition-transform duration-300 md:p-5">
-            <form method="GET" action="{{ url_for('riwayat_siswa') }}" class="filter-form flex flex-wrap items-end gap-5 md:flex-col md:items-stretch">
-                <div class="flex-1 min-w-[160px] md:min-w-full">
-                    <label for="filter_month" class="block mb-2 text-[0.85em] font-medium text-[#666] uppercase">Bulan:</label>
-                    <select id="filter_month" name="filter_month" class="w-full p-[12px_14px] border border-[#e8ecef] rounded-lg text-[0.95em] bg-[#ede7f6] text-[#5e35b1] focus:outline-none focus:border-[#7c4dff] transition-all duration-300 appearance-none">
-                        {% for num in range(1,13) %}
-                            <option value="{{ num }}" {% if filter_month == num %}selected{% endif %}>{{ "{:02d}".format(num) }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="flex-1 min-w-[160px] md:min-w-full">
-                    <label for="filter_year" class="block mb-2 text-[0.85em] font-medium text-[#666] uppercase">Tahun:</label>
-                    <select id="filter_year" name="filter_year" class="w-full p-[12px_14px] border border-[#e8ecef] rounded-lg text-[0.95em] bg-[#ede7f6] text-[#5e35b1] focus:outline-none focus:border-[#7c4dff] transition-all duration-300 appearance-none">
-                        {% for year in range(2023, now.year+1) %}
-                            <option value="{{ year }}" {% if filter_year == year %}selected{% endif %}>{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-actions flex flex-0 md:flex-row md:mt-[15px]">
-                    <label class="block mb-2 text-[0.85em] font-medium text-[#666] uppercase invisible"> </label>
-                    <button type="submit" class="btn-filter-submit bg-[#7c4dff] text-white border-none py-[10px] px-5 rounded-lg text-[0.9em] font-medium mr-[10px] hover:bg-[#5e35b1] hover:-translate-y-[2px] transition-all duration-300">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
-                    <a href="{{ url_for('riwayat_siswa') }}" class="btn-filter-reset bg-[#e8ecef] text-[#1a1a1a] border border-[#d1d5db] py-[10px] px-5 rounded-lg text-[0.9em] font-medium no-underline hover:bg-[#d1d5db] hover:-translate-y-[2px] transition-all duration-300">Reset</a>
-                </div>
-            </form>
-        
-        </div>
-                    <!-- Tombol filter tipe transaksi -->
-            <div class="flex gap-2 mt-4 mb-6">
-                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
-                    {% if selected_type_filter == 'all' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
-                    data-type="all">Semua</button>
-                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
-                    {% if selected_type_filter == 'payment' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
-                    data-type="payment">Pembayaran (-)</button>
-                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
-                    {% if selected_type_filter == 'topup' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
-                    data-type="topup">Top Up (+)</button>
-                <button type="button" class="filter-type-btn px-4 py-2 rounded-lg font-medium text-sm
-                    {% if selected_type_filter == 'transfer' %}bg-[#7c4dff] text-white{% else %}bg-[#ede7f6] text-[#5e35b1]{% endif %}"
-                    data-type="transfer">Transfer</button>
-            </div>
-
-        <div class="history-card bg-white rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#e8ecef] overflow-hidden md:shadow-none md:border-none md:bg-transparent">
-            <div class="history-table-wrapper overflow-x-auto rounded-[12px] md:shadow-[0_4px_20px_rgba(0,0,0,0.08)] md:border md:border-[#e8ecef]">
-<div class="space-y-3 overflow-x-auto max-w-full w-full px-2">
+    <!-- Rekap Saldo Bulanan -->
     {% if transactions %}
-    <div class="rekapan-bulanan text-[#5e35b1] rounded-xl px-5 py-4 font-semibold text-lg flex text-left w-full max-w-full">
-        {{ bulan_ini }} : 
-        <span class="{% if total_bulan >= 0 %}text-green-600{% else %}text-red-600{% endif %} ml-2">
-            {% if total_bulan >= 0 %}+{% endif %}{{ total_bulan|rupiah }}
+      <div class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white rounded-xl p-5 mb-6 font-semibold text-lg">
+        {{ bulan_ini }}: 
+        <span class="ml-2 {% if total_bulan >= 0 %}text-green-100{% else %}text-red-100{% endif %}">
+          {% if total_bulan >= 0 %}+{% endif %}{{ total_bulan|rupiah }}
         </span>
-    </div>
-    {% for tx in transactions %}
-    <a href="{{ url_for('detail_transaksi', transaksi_id=tx.id) }}" class="block">
-    <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 w-full max-w-full">
-        <div class="flex items-center justify-between w-full max-w-full">
-            <!-- Left side: Icon and details -->
-            <div class="flex items-center space-x-3 flex-1 min-w-0 pr-3">
-                <!-- Icon -->
-                <div class="w-10 h-10 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                    {% if tx.type == 'payment' %}
-                        <span class="icon payment text-[#e53935] text-lg w-6 text-center"><i class="fas fa-store"></i></span>
-                    {% elif tx.type == 'topup' %}
-                        <span class="icon topup text-[#43a047] text-lg w-6 text-center"><i class="fas fa-wallet"></i></span>
-                    {% elif tx.type == 'transfer' %}
-                        <span class="icon transfer text-[#7c4dff] text-lg w-6 text-center"><i class="fas fa-receipt"></i></span>
-                    {% endif %}
-                </div>
-                <!-- Transaction details: hanya nama merchant/terima uang dan waktu -->
-                <div class="flex-1 min-w-0">
-                    <h3 class="font-semibold text-gray-800 text-sm uppercase tracking-wide truncate">
-                        {% if tx.type == 'payment' %}
-                            {{ tx.related_user.username if tx.related_user else 'MERCHANT' }}
-                        {% elif tx.type == 'topup' %}
-                            TOP UP
-                        {% elif tx.type == 'transfer' %}
-                            {% if tx.user_id == current_user.id %}
-                                KIRIM KE {{ tx.related_user.username if tx.related_user else 'USER' }}
-                            {% elif tx.related_user_id == current_user.id %}
-                                TERIMA UANG DARI {{ tx.user.username if tx.user else 'USER' }}
-                            {% endif %}
-                        {% endif %}
-                    </h3>
-                    <p class="text-gray-500 text-xs">
-                        {{ tx.timestamp | wib }}
-                    </p>
-                </div>
-            </div>
-            <!-- Right side: hanya nominal saldo (+/-) -->
-            <div class="flex items-center space-x-2 flex-shrink-0">
-                <div class="text-right">
-                    <p class="font-semibold text-sm
-                        {% if tx.type == 'payment' or (tx.type == 'transfer' and tx.user_id == current_user.id) %}
-                            text-red-600
-                        {% else %}
-                            text-green-600
-                        {% endif %}">
-                        {% if tx.type == 'payment' or (tx.type == 'transfer' and tx.user_id == current_user.id) %}
-                            -
-                        {% else %}
-                            +
-                        {% endif %}
-                        {{ tx.amount|rupiah }}
-                    </p>
-                </div>
-                <!-- Chat/Message icon -->
-                <img src="{{ url_for('static', filename='images/hanya_logo.png') }}"
-                     alt="Logo"
-                     class="w-8 h-8 select-none pointer-events-none"
-                     draggable="false"
-                     oncontextmenu="return false;">
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-    {% else %}
-    <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center w-full max-w-full">
-        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-        </div>
-        <p class="text-gray-500 italic text-base">
-            Tidak ada transaksi ditemukan untuk periode atau filter yang dipilih.
-        </p>
-    </div>
+      </div>
     {% endif %}
-</div>
-</a>
-            </div>
-        </div>
 
-        <div class="back-link-bottom mt-[30px] text-center">
-            <a href="{{ url_for('dashboard') }}" class="text-[#7c4dff] no-underline font-medium hover:text-[#5e35b1] hover:underline transition-colors duration-300">Kembali ke Dashboard</a>
+    <!-- Daftar Transaksi -->
+    <div class="space-y-3">
+      {% if transactions %}
+        {% for tx in transactions %}
+          <a href="{{ url_for('detail_transaksi', transaksi_id=tx.id) }}" class="block">
+            <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
+              <div class="flex items-center justify-between">
+                <!-- Kiri: Ikon & Detail -->
+                <div class="flex items-center space-x-3 flex-1 min-w-0">
+                  <!-- Ikon -->
+                  <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    {% if tx.type == 'payment' %}
+                      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                    {% elif tx.type == 'topup' %}
+                      <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7-4a4 4 0 014-4h6a4 4 0 014 4v6a4 4 0 01-4 4H8a4 4 0 01-4-4v-6z" />
+                      </svg>
+                    {% elif tx.type == 'transfer' %}
+                      <svg class="w-5 h-5 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                    {% endif %}
+                  </div>
+
+                  <!-- Detail -->
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold text-gray-900 text-sm truncate">
+                      {% if tx.type == 'payment' %}
+                        {{ tx.related_user.username if tx.related_user else 'Penjual' }}
+                      {% elif tx.type == 'topup' %}
+                        TOP UP
+                      {% elif tx.type == 'transfer' %}
+                        {% if tx.user_id == current_user.id %}
+                          Kirim ke {{ tx.related_user.username if tx.related_user else 'Pengguna' }}
+                        {% elif tx.related_user_id == current_user.id %}
+                          Terima dari {{ tx.user.username if tx.user else 'Pengguna' }}
+                        {% endif %}
+                      {% endif %}
+                    </h3>
+                    <p class="text-gray-500 text-xs">{{ tx.timestamp | wib }}</p>
+                  </div>
+                </div>
+
+                <!-- Kanan: Nominal & Logo -->
+                <div class="flex items-center space-x-3 flex-shrink-0">
+                  <p class="font-semibold text-sm text-right
+                    {% if tx.type == 'payment' or (tx.type == 'transfer' and tx.user_id == current_user.id) %}
+                      text-red-600
+                    {% else %}
+                      text-green-600
+                    {% endif %}">
+                    {% if tx.type == 'payment' or (tx.type == 'transfer' and tx.user_id == current_user.id) %}-{% else %}+{% endif %}
+                    {{ tx.amount|rupiah }}
+                  </p>
+                  <img src="{{ url_for('static', filename='images/hanya_logo.png') }}"
+                       alt="Logo"
+                       class="w-8 h-8 rounded-full"
+                       draggable="false"
+                       oncontextmenu="return false;">
+                </div>
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div class="bg-white rounded-xl p-8 border border-gray-200 text-center shadow-sm">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+          </div>
+          <p class="text-gray-500 italic">Tidak ada transaksi ditemukan untuk periode atau filter yang dipilih.</p>
         </div>
+      {% endif %}
     </div>
+
+    <!-- Back to Dashboard -->
+    <div class="mt-8 text-center">
+      <a href="{{ url_for('dashboard') }}" class="inline-flex items-center text-[#7c4dff] hover:text-[#5e35b1] font-medium transition-colors">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Kembali ke Dashboard
+      </a>
+    </div>
+  </main>
 </div>
+
+<!-- Filter Tipe Transaksi Script -->
 <script>
 document.querySelectorAll('.filter-type-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        const type = btn.getAttribute('data-type');
-        const params = new URLSearchParams(window.location.search);
-        params.set('filter_type', type);
-        window.location.search = params.toString();
-    });
+  btn.addEventListener('click', function() {
+    const type = btn.getAttribute('data-type');
+    const url = new URL(window.location);
+    url.searchParams.set('filter_type', type);
+    window.location.href = url.toString();
+  });
 });
 </script>
 {% endblock %}

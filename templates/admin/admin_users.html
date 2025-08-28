@@ -1,202 +1,237 @@
-{% extends 'admin_base.html' %} 
-{% block title %}Admin - Daftar Pengguna{% endblock %} 
-
+{% extends 'admin_base.html' %}
 {% block admin_content %}
-<div class="p-5 font-['Poppins']">
-    <!-- Header -->
-    <h2 class="text-[#7c4dff] mb-8 font-semibold text-3xl relative pb-3 inline-block tracking-wide">
-        Daftar Semua Pengguna Terdaftar
-    </h2>
-
-
-
-        <!-- Data Table Container -->
-    <div class="rounded-xl overflow-x-auto my-8">
-        <form method="GET" action="{{ url_for('admin_export_users') }}" class="mb-8 flex flex-wrap gap-4 items-end">
-    <div>
-        <label for="export_role" class="block font-medium text-sm text-gray-600 mb-1">Jenis User:</label>
-        <select id="export_role" name="role" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md">
-            <option value="">Semua</option>
-            <option value="siswa">Siswa</option>
-            <option value="penjual">Penjual</option>
-        </select>
-    </div>
-    <div>
-        <label for="export_kelas" class="block font-medium text-sm text-gray-600 mb-1">Kelas:</label>
-        <select id="export_kelas" name="kelas" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md">
-            <option value="">Semua</option>
-            <option value="X">X</option>
-            <option value="XI">XI</option>
-            <option value="XII">XII</option>
-        </select>
-    </div>
-    <div>
-        <label for="export_jurusan" class="block font-medium text-sm text-gray-600 mb-1">Jurusan:</label>
-        <select id="export_jurusan" name="jurusan" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md">
-            <option value="">Semua</option>
-            <option value="RPL">RPL</option>
-            <option value="DKV1">DKV1</option>
-            <option value="DKV2">DKV2</option>
-            <option value="AK">AK</option>
-            <option value="MP">MP</option>
-            <option value="BR">BR</option>
-        </select>
-    </div>
-    <button type="submit" class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white border-0 rounded-full px-4 py-2 text-sm cursor-pointer transition-all duration-200 shadow-md shadow-[#7c4dff]/30 hover:from-[#6a3de8] hover:to-[#7c4dff] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#7c4dff]/40">
-        Export Excel
-    </button>
-</form>
-
-    <!-- Filter Form -->
-    <form method="GET" action="{{ url_for('admin_users') }}" class="mb-5 flex flex-wrap gap-4 items-end">
+<div class="min-h-screen py-8">
+  <div class="container mx-auto px-6 max-w-7xl">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="flex items-center mb-6">
+        <div class="w-12 h-12 bg-[#7c4dff] rounded-lg flex items-center justify-center mr-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+<path d="M11 15H8C6.13623 15 5.20435 15 4.46927 15.3045C3.48915 15.7105 2.71046 16.4892 2.30448 17.4693C2 18.2044 2 19.1362 2 21M15.5 3.29076C16.9659 3.88415 18 5.32131 18 7M11.9999 21.5L14.025 21.095C14.2015 21.0597 14.2898 21.042 14.3721 21.0097C14.4452 20.9811 14.5147 20.9439 14.579 20.899C14.6516 20.8484 14.7152 20.7848 14.8426 20.6574L21.5 14C22.0524 13.4477 22.0523 12.5523 21.5 12C20.9477 11.4477 20.0523 11.4477 19.5 12L12.8425 18.6575C12.7152 18.7848 12.6516 18.8484 12.601 18.921C12.5561 18.9853 12.5189 19.0548 12.4902 19.1278C12.458 19.2102 12.4403 19.2984 12.405 19.475L11.9999 21.5ZM13.5 7C13.5 9.20914 11.7091 11 9.5 11C7.29086 11 5.5 9.20914 5.5 7C5.5 4.79086 7.29086 3 9.5 3C11.7091 3 13.5 4.79086 13.5 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+        </div>
         <div>
-            <label for="kelas" class="block font-medium text-sm text-gray-600 mb-1">Kelas:</label>
-            <select id="kelas" name="kelas" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md transition-all duration-200 outline-none focus:border-[#7c4dff] focus:shadow-lg focus:shadow-[#7c4dff]/30">
-                <option value="" {% if not filter_kelas %}selected{% endif %}>Semua Kelas</option>
-                <option value="X" {% if filter_kelas == 'X' %}selected{% endif %}>X</option>
-                <option value="XI" {% if filter_kelas == 'XI' %}selected{% endif %}>XI</option>
-                <option value="XII" {% if filter_kelas == 'XII' %}selected{% endif %}>XII</option>
+          <h1 class="text-3xl font-bold text-gray-900">Manajemen Pengguna</h1>
+          <p class="text-gray-600 mt-1">Kelola pengguna, filter, dan ekspor data dengan mudah</p>
+        </div>
+      </div>
+
+      <!-- Export Form -->
+      <form method="GET" action="{{ url_for('admin_export_users') }}" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="grid md:grid-cols-4 gap-4 items-end">
+          <div>
+            <label for="export_role" class="block text-sm font-medium text-gray-700 mb-1">Jenis User</label>
+            <select id="export_role" name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+              <option value="">Semua</option>
+              <option value="siswa">Siswa</option>
+              <option value="penjual">Penjual</option>
             </select>
-        </div>
-        
-        <div>
-            <label for="jurusan" class="block font-medium text-sm text-gray-600 mb-1">Jurusan:</label>
-            <select id="jurusan" name="jurusan" class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md transition-all duration-200 outline-none focus:border-[#7c4dff] focus:shadow-lg focus:shadow-[#7c4dff]/30">
-                <option value="" {% if not filter_jurusan %}selected{% endif %}>Semua Jurusan</option>
-                <option value="RPL" {% if filter_jurusan == 'RPL' %}selected{% endif %}>RPL</option>
-                <option value="DKV1" {% if filter_jurusan == 'DKV1' %}selected{% endif %}>DKV1</option>
-                <option value="DKV2" {% if filter_jurusan == 'DKV2' %}selected{% endif %}>DKV2</option>
-                <option value="AK" {% if filter_jurusan == 'AK' %}selected{% endif %}>AK</option>
-                <option value="MP" {% if filter_jurusan == 'MP' %}selected{% endif %}>MP</option>
-                <option value="BR" {% if filter_jurusan == 'BR' %}selected{% endif %}>BR</option>
+          </div>
+          <div>
+            <label for="export_kelas" class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+            <select id="export_kelas" name="kelas" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+              <option value="">Semua</option>
+              <option value="X">X</option>
+              <option value="XI">XI</option>
+              <option value="XII">XII</option>
             </select>
-        </div>
-        
-        <div>
-            <label for="user_id" class="block font-medium text-sm text-gray-600 mb-1">ID Pengguna:</label>
-            <input type="number" id="user_id" name="user_id" value="{{ filter_user_id or '' }}"
-                   placeholder="Cari ID..."
-                   class="border border-gray-300 rounded-full px-4 py-2 text-sm text-gray-800 bg-white shadow-md transition-all duration-200 outline-none focus:border-[#7c4dff] focus:shadow-lg focus:shadow-[#7c4dff]/30">
-        </div>
-        
-        <div class="flex gap-2">
-            <button type="submit" class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white border-0 rounded-full px-4 py-2 text-sm cursor-pointer transition-all duration-200 shadow-md shadow-[#7c4dff]/30 hover:from-[#6a3de8] hover:to-[#7c4dff] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#7c4dff]/40">
-                Filter
+          </div>
+          <div>
+            <label for="export_jurusan" class="block text-sm font-medium text-gray-700 mb-1">Jurusan</label>
+            <select id="export_jurusan" name="jurusan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+              <option value="">Semua</option>
+              <option value="RPL">RPL</option>
+              <option value="DKV1">DKV1</option>
+              <option value="DKV2">DKV2</option>
+              <option value="AK">AK</option>
+              <option value="MP">MP</option>
+              <option value="BR">BR</option>
+            </select>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="flex items-center px-5 py-2.5 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white font-medium rounded-lg shadow-sm hover:from-[#6a3de8] hover:to-[#7c4dff] transition-all">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              Export Excel
             </button>
-            <a href="{{ url_for('admin_users') }}" class="bg-gradient-to-r from-red-500 to-red-400 text-white border-0 rounded-full px-4 py-2 text-sm no-underline transition-all duration-200 shadow-md shadow-red-500/30 hover:from-red-600 hover:to-red-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/40">
-                Reset
-            </a>
+          </div>
         </div>
-    </form>
-        <table class="w-full border-collapse bg-white">
-            <!-- Table Header -->
-            <thead>
-                <tr class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white uppercase text-sm tracking-wide">
-                    <th class="p-4 font-semibold text-left align-middle text-white">ID</th>
-                    <th class="p-4 font-semibold text-left align-middle text-white">Username</th>
-                    <th class="p-4 font-semibold text-center align-middle text-white">Peran</th>
-                    <th class="p-4 font-semibold text-center align-middle text-white">Kelas</th>
-                    <th class="p-4 font-semibold text-center align-middle text-white">Jurusan</th>
-                    <th class="p-4 font-semibold text-center align-middle text-white">Saldo</th>
-                    <th class="p-4 font-semibold text-center align-middle text-white">Status</th>
-                    <th class="p-4 font-semibold text-center align-middle text-white">Aksi</th>
-                </tr>
-            </thead>
-            
-            <!-- Table Body -->
-            <tbody>
-                {% for user in users %}
-                <tr class="hover:bg-indigo-50 transition-all duration-200">
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm">{{ user.id }}</td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm">{{ user.username }}</td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.role.capitalize() }}</td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.kelas if user.kelas else '-' }}</td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.jurusan if user.jurusan else '-' }}</td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">{{ user.balance|rupiah }}</td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center">
-                        {% if user.is_active %}
-                        <span class="text-green-600 font-semibold bg-green-100 px-3 py-1.5 rounded-full inline-block">Aktif</span>
-                        {% else %}
-                        <span class="text-red-500 font-semibold bg-red-100 px-3 py-1.5 rounded-full inline-block">Nonaktif</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-4 py-4 border-b border-indigo-100 text-sm text-center whitespace-nowrap">
-                        <form method="POST" action="{{ url_for('toggle_user_active', user_id=user.id) }}" class="inline-block">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            {% if user.is_active %}
-                            <button type="submit" class="bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-full px-4 py-2 mx-0.5 text-sm border-0 cursor-pointer transition-all duration-200 shadow-md font-medium hover:from-orange-600 hover:to-orange-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-500/30">
-                                Nonaktifkan
-                            </button>
-                            {% else %}
-                            <button type="submit" class="bg-gradient-to-r from-green-600 to-green-400 text-white rounded-full px-4 py-2 mx-0.5 text-sm border-0 cursor-pointer transition-all duration-200 shadow-md font-medium hover:from-green-700 hover:to-green-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-600/30">
-                                Aktifkan
-                            </button>
-                            {% endif %}
-                        </form>
-                        <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="bg-gradient-to-r from-[#7c4dff] to-[#b388ff] text-white rounded-full px-4 py-2 mx-0.5 text-sm no-underline inline-block transition-all duration-200 shadow-md font-medium hover:from-[#6a3de8] hover:to-[#7c4dff] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#7c4dff]/30">
-                            Edit
-                        </a>
-                    </td>
-                </tr>
+      </form>
+
+      <!-- Filter Form -->
+      <form method="GET" action="{{ url_for('admin_users') }}" class="grid md:grid-cols-4 gap-4 items-end">
+        <div>
+          <label for="kelas" class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+          <select id="kelas" name="kelas" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+            <option value="" {% if not filter_kelas %}selected{% endif %}>Semua Kelas</option>
+            <option value="X" {% if filter_kelas == 'X' %}selected{% endif %}>X</option>
+            <option value="XI" {% if filter_kelas == 'XI' %}selected{% endif %}>XI</option>
+            <option value="XII" {% if filter_kelas == 'XII' %}selected{% endif %}>XII</option>
+          </select>
+        </div>
+        <div>
+          <label for="jurusan" class="block text-sm font-medium text-gray-700 mb-1">Jurusan</label>
+          <select id="jurusan" name="jurusan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+            <option value="" {% if not filter_jurusan %}selected{% endif %}>Semua Jurusan</option>
+            <option value="RPL" {% if filter_jurusan == 'RPL' %}selected{% endif %}>RPL</option>
+            <option value="DKV1" {% if filter_jurusan == 'DKV1' %}selected{% endif %}>DKV1</option>
+            <option value="DKV2" {% if filter_jurusan == 'DKV2' %}selected{% endif %}>DKV2</option>
+            <option value="AK" {% if filter_jurusan == 'AK' %}selected{% endif %}>AK</option>
+            <option value="MP" {% if filter_jurusan == 'MP' %}selected{% endif %}>MP</option>
+            <option value="BR" {% if filter_jurusan == 'BR' %}selected{% endif %}>BR</option>
+          </select>
+        </div>
+        <div>
+          <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">ID Pengguna</label>
+          <input type="number" id="user_id" name="user_id" value="{{ filter_user_id or '' }}"
+                 placeholder="Cari ID..."
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white" />
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white font-medium rounded-lg shadow-sm hover:from-[#6a3de8] hover:to-[#7c4dff] transition-all">
+            Filter
+          </button>
+          <a href="{{ url_for('admin_users') }}" class="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors">
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Users Table Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+<svg class="w-8 h-8 mr-2 text-[#7c4dff]" fill="#7c4dff" stroke="currentColor" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 24 24" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;}
+</style>
+<path d="M7.5,5C5.6,5,4,6.6,4,8.5S5.6,12,7.5,12S11,10.4,11,8.5S9.4,5,7.5,5z M16.5,5C14.6,5,13,6.6,13,8.5s1.6,3.5,3.5,3.5
+	S20,10.4,20,8.5S18.4,5,16.5,5z M7.5,14C2.6,14,1,18,1,18v2h13v-2C14,18,12.4,14,7.5,14z M16.5,14c-1.5,0-2.7,0.4-3.6,0.9
+	c1.4,1.2,2,2.6,2.1,2.7l0.1,0.2V20h8v-2C23,18,21.4,14,16.5,14z"/>
+<rect class="st0"/>
+</svg>
+          Daftar Pengguna Terdaftar
+        </h2>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Peran</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jurusan</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            {% for user in users %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4 text-sm text-gray-900">{{ user.id }}</td>
+              <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ user.username }}</td>
+              <td class="px-6 py-4 text-sm text-center text-gray-600">{{ user.role.capitalize() }}</td>
+              <td class="px-6 py-4 text-sm text-center text-gray-600">{{ user.kelas or '-' }}</td>
+              <td class="px-6 py-4 text-sm text-center text-gray-600">{{ user.jurusan or '-' }}</td>
+              <td class="px-6 py-4 text-sm text-center text-gray-900 font-medium">{{ user.balance|rupiah }}</td>
+              <td class="px-6 py-4 text-sm text-center">
+                {% if user.is_active %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  Aktif
+                </span>
                 {% else %}
-                <tr>
-                    <td colspan="8" class="text-center py-10 px-5 text-gray-400 italic">Belum ada pengguna terdaftar.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <div class="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                  Nonaktif
+                </span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 text-sm text-center space-x-2">
+                <form method="POST" action="{{ url_for('toggle_user_active', user_id=user.id) }}" class="inline-block">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  {% if user.is_active %}
+                  <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-800 text-sm font-medium rounded-lg transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    Nonaktifkan
+                  </button>
+                  {% else %}
+                  <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-800 text-sm font-medium rounded-lg transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Aktifkan
+                  </button>
+                  {% endif %}
+                </form>
+                <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="inline-flex items-center px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-sm font-medium rounded-lg transition-colors">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM12 2a10 10 0 100 20 10 10 0 000-20z" />
+                </svg>
+                <p class="text-lg font-medium mb-1">Belum ada pengguna terdaftar</p>
+                <p class="text-sm">Silakan tambah pengguna atau ubah filter pencarian</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
         </table>
-    </div>
+      </div>
 
-    <!-- Pagination -->
-    <div class="flex justify-center mt-8">
-        <nav aria-label="Page navigation">
-            <ul class="flex justify-center list-none p-0 bg-white rounded-full shadow-lg shadow-[#7c4dff]/10 px-1.5 py-1.5">
-                {% if pagination.has_prev %}
-                <li>
-                    <a class="text-[#7c4dff] px-4 py-2.5 no-underline rounded-full block font-medium min-w-10 text-center transition-all duration-200 hover:bg-indigo-50" 
-                       href="{{ url_for('admin_users', page=pagination.prev_num) }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                {% else %}
-                <li>
-                    <span class="text-gray-300 px-4 py-2.5 rounded-full block font-medium min-w-10 text-center pointer-events-none">&laquo;</span>
-                </li>
-                {% endif %}
-
-                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      <!-- Pagination -->
+      {% if users %}
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-600">
+            Menampilkan halaman <span class="font-medium">{{ pagination.page }}</span> dari <span class="font-medium">{{ pagination.pages }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors {{ 'opacity-50 cursor-not-allowed' if not pagination.has_prev else '' }}"
+                    {{ 'disabled' if not pagination.has_prev }}
+                    onclick="window.location.href='{{ url_for('admin_users', page=pagination.prev_num) }}'">
+              Previous
+            </button>
+            <div class="flex gap-1">
+              {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                 {% if page_num %}
-                    {% if page_num == pagination.page %}
-                    <li>
-                        <span class="bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white px-4 py-2.5 rounded-full block font-medium min-w-10 text-center shadow-md shadow-[#7c4dff]/30">{{ page_num }}</span>
-                    </li>
-                    {% else %}
-                    <li>
-                        <a class="text-[#7c4dff] px-4 py-2.5 no-underline rounded-full block font-medium min-w-10 text-center transition-all duration-200 hover:bg-indigo-50" 
-                           href="{{ url_for('admin_users', page=page_num) }}">{{ page_num }}</a>
-                    </li>
-                    {% endif %}
+                  {% if page_num == pagination.page %}
+                    <span class="px-3 py-1.5 bg-[#7c4dff] text-white text-sm rounded-lg font-medium shadow-sm">{{ page_num }}</span>
+                  {% else %}
+                    <a href="{{ url_for('admin_users', page=page_num) }}" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors">{{ page_num }}</a>
+                  {% endif %}
                 {% else %}
-                <li>
-                    <span class="text-gray-300 px-4 py-2.5 rounded-full block font-medium min-w-10 text-center pointer-events-none">…</span>
-                </li>
+                  <span class="px-3 py-1.5 text-gray-400 text-sm">...</span>
                 {% endif %}
-                {% endfor %}
-
-                {% if pagination.has_next %}
-                <li>
-                    <a class="text-[#7c4dff] px-4 py-2.5 no-underline rounded-full block font-medium min-w-10 text-center transition-all duration-200 hover:bg-indigo-50" 
-                       href="{{ url_for('admin_users', page=pagination.next_num) }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-                {% else %}
-                <li>
-                    <span class="text-gray-300 px-4 py-2.5 rounded-full block font-medium min-w-10 text-center pointer-events-none">&raquo;</span>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+              {% endfor %}
+            </div>
+            <button class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors {{ 'opacity-50 cursor-not-allowed' if not pagination.has_next else '' }}"
+                    {{ 'disabled' if not pagination.has_next }}
+                    onclick="window.location.href='{{ url_for('admin_users', page=pagination.next_num) }}'">
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
+  </div>
 </div>
-{% endblock admin_content %}
+{% endblock %}

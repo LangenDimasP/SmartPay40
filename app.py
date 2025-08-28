@@ -368,6 +368,7 @@ class Laporan(db.Model):
     def __repr__(self):
         return f'<Laporan {self.id} oleh User {self.user_id}>'
 
+
 class AppConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     app_locked = db.Column(db.Boolean, nullable=False, default=False)
@@ -375,6 +376,8 @@ class AppConfig(db.Model):
     locked_user_ids = db.Column(db.PickleType, nullable=True, default=[])
     locked_kelas = db.Column(db.PickleType, nullable=True, default=[])
     locked_jurusan = db.Column(db.PickleType, nullable=True, default=[])
+    unlocked_user_ids = db.Column(db.PickleType, nullable=True, default=[])  # NEW: exempt list
+
 
 def get_app_config():
     cfg = AppConfig.query.first()
@@ -396,9 +399,13 @@ def inject_app_lock():
         'app_lock_message': cfg.lock_message if cfg else 'Layanan terkunci'
     }
 
+
+
+
 # Admin view untuk toggle lock (hanya admin)
 @app.route('/admin/app_lock', methods=['GET', 'POST'])
 @login_required
+@limiter.exempt
 def admin_app_lock():
     if current_user.role != 'admin':
         flash('Akses ditolak.', 'danger')
@@ -409,81 +416,345 @@ def admin_app_lock():
     all_kelas = sorted(set([u.kelas for u in User.query.filter(User.kelas.isnot(None)).all() if u.kelas]))
     all_jurusan = sorted(set([u.jurusan for u in User.query.filter(User.jurusan.isnot(None)).all() if u.jurusan]))
 
+    # Pastikan variabel selalu ada (fix UnboundLocalError saat GET)
+    locked_users = []
+
+    # Pastikan fields cfg ada
+    if not hasattr(cfg, 'locked_user_ids') or cfg.locked_user_ids is None:
+        cfg.locked_user_ids = []
+    if not hasattr(cfg, 'locked_kelas') or cfg.locked_kelas is None:
+        cfg.locked_kelas = []
+    if not hasattr(cfg, 'locked_jurusan') or cfg.locked_jurusan is None:
+        cfg.locked_jurusan = []
+    if not hasattr(cfg, 'unlocked_user_ids') or cfg.unlocked_user_ids is None:
+        cfg.unlocked_user_ids = []
+
+    # Ambil daftar siswa — coba role 'siswa' lalu fallback ke semua user jika kosong
+    students = User.query.filter(User.role.in_(['siswa', 'student'])).order_by(User.id.asc()).all()
+    if not students:
+        students = User.query.order_by(User.id.asc()).all()
+
+    locked_user_ids = set(str(x) for x in (cfg.locked_user_ids or []))
+    unlocked_user_ids = set(str(x) for x in (cfg.unlocked_user_ids or []))
+    locked_kelas = set(cfg.locked_kelas or [])
+    locked_jurusan = set(cfg.locked_jurusan or [])
+
+    for u in students:
+        sid = str(u.id)
+
+        # Gunakan is_user_locked sebagai sumber kebenaran untuk status terkunci
+        is_locked = is_user_locked(cfg, u)
+
+        # Bangun alasan tampil (informasional saja) — jangan gunakan ini untuk menentukan is_locked
+        reasons = []
+        if sid in unlocked_user_ids:
+            # NEW: Hanya tampilkan "Dikecualikan" jika filter kelas/jurusan aktif DAN user memenuhi filter
+            if locked_kelas or locked_jurusan:
+                user_meets_filter = True
+                if locked_kelas and u.kelas not in locked_kelas:
+                    user_meets_filter = False
+                if locked_jurusan and u.jurusan not in locked_jurusan:
+                    user_meets_filter = False
+                if user_meets_filter:
+                    reasons.append('Dikecualikan')
+            # Jika tidak ada filter, jangan tampilkan alasan "Dikecualikan"
+        else:
+            if cfg.app_locked:
+                reasons.append('Global')
+            if sid in locked_user_ids:
+                reasons.append('User')
+            # Jika admin memilih BOTH, perlakukan sebagai AND (sama dengan is_user_locked)
+            if locked_kelas and locked_jurusan:
+                if u.kelas and u.jurusan and u.kelas in locked_kelas and u.jurusan in locked_jurusan:
+                    reasons.append('Kelas+Jurusan')
+            else:
+                if u.kelas and u.kelas in locked_kelas:
+                    reasons.append('Kelas')
+                if u.jurusan and u.jurusan in locked_jurusan:
+                    reasons.append('Jurusan')
+
+        locked_users.append({
+            'id': u.id,
+            'name': getattr(u, 'username', '') or getattr(u, 'name', ''),
+            'kelas': u.kelas or '',
+            'jurusan': u.jurusan or '',
+            # status berdasarkan is_user_locked() sehingga konsisten dengan toggle endpoint
+            'is_locked': bool(is_locked),
+            'lock_reason': ', '.join(reasons) if reasons else ''
+        })
+
+    # Tangani POST actions (lock / unlock / update lists)
     if request.method == 'POST':
         action = request.form.get('action')
-        # Kunci semua user (global)
-        if action == 'lock':
-            cfg.app_locked = True
-            cfg.lock_message = request.form.get('lock_message') or cfg.lock_message
-            db.session.commit()
-            flash('Status kunci aplikasi diperbarui.', 'success')
-            return redirect(url_for('admin_app_lock'))
-        elif action == 'unlock':
-            cfg.app_locked = False
-            db.session.commit()
-            flash('Status kunci aplikasi diperbarui.', 'success')
-            return redirect(url_for('admin_app_lock'))
-        # Kunci beberapa user
-        elif action == 'update_user_lock':
-            raw_ids = request.form.get('locked_user_ids', '')
-            # Simpan sebagai list of int (atau str jika id bisa non-int)
-            cfg.locked_user_ids = [i.strip() for i in raw_ids.split(',') if i.strip()]
-            db.session.commit()
-            flash('Daftar user yang dikunci diperbarui.', 'success')
-            return redirect(url_for('admin_app_lock'))
-        # Kunci kelas & jurusan
-        elif action == 'update_kelas_jurusan_lock':
-            cfg.locked_kelas = request.form.getlist('locked_kelas')
-            cfg.locked_jurusan = request.form.getlist('locked_jurusan')
-            print("DEBUG locked_kelas:", cfg.locked_kelas)
-            print("DEBUG locked_jurusan:", cfg.locked_jurusan)
-            db.session.add(cfg) 
-            db.session.commit()
-            flash('Daftar kelas & jurusan yang dikunci diperbarui.', 'success')
-            return redirect(url_for('admin_app_lock'))
+        lock_message = request.form.get('lock_message', cfg.lock_message or '')
+        # pastikan atribut ada
+        if not hasattr(cfg, 'locked_user_ids') or cfg.locked_user_ids is None:
+            cfg.locked_user_ids = []
+        if not hasattr(cfg, 'unlocked_user_ids') or cfg.unlocked_user_ids is None:
+            cfg.unlocked_user_ids = []
+        if not hasattr(cfg, 'locked_kelas') or cfg.locked_kelas is None:
+            cfg.locked_kelas = []
+        if not hasattr(cfg, 'locked_jurusan') or cfg.locked_jurusan is None:
+            cfg.locked_jurusan = []
 
-    # Pastikan field ada di config (untuk render awal)
-    if not hasattr(cfg, 'locked_user_ids'):
-        cfg.locked_user_ids = []
-    if not hasattr(cfg, 'locked_kelas'):
-        cfg.locked_kelas = []
-    if not hasattr(cfg, 'locked_jurusan'):
-        cfg.locked_jurusan = []
+        try:
+            # normalize some legacy/templated action names
+            if action in ('lock_all', 'lock'):
+                cfg.app_locked = True
+                cfg.lock_message = lock_message
+                # NEW: Jika ada filter kelas/jurusan aktif, reset exemptions untuk user yang memenuhi filter
+                if cfg.locked_kelas or cfg.locked_jurusan:
+                    users_to_remove = []
+                    for uid in cfg.unlocked_user_ids or []:
+                        user = User.query.get(uid)
+                        if user:
+                            user_meets_filter = True
+                            if cfg.locked_kelas and user.kelas not in cfg.locked_kelas:
+                                user_meets_filter = False
+                            if cfg.locked_jurusan and user.jurusan not in cfg.locked_jurusan:
+                                user_meets_filter = False
+                            if user_meets_filter:
+                                users_to_remove.append(uid)
+                    for uid in users_to_remove:
+                        cfg.unlocked_user_ids.remove(uid)
+            elif action in ('unlock_all', 'unlock'):
+                cfg.app_locked = False
+                cfg.lock_message = lock_message
+                cfg.unlocked_user_ids = []
+            # per-user save (accept legacy name 'update_user_lock')
+            elif action in ('save_user_locks', 'update_user_lock'):
+                # accept either multiple inputs or comma-separated string
+                ids_list = request.form.getlist('locked_user_ids') or [s.strip() for s in (request.form.get('locked_user_ids', '') or '').split(',') if s.strip()]
+                parsed = []
+                for v in ids_list:
+                    try:
+                        if str(v).isdigit():
+                            parsed.append(int(v))
+                    except Exception:
+                        continue
+                cfg.locked_user_ids = parsed
+                # remove conflicting exemptions for safety
+                cfg.unlocked_user_ids = [uid for uid in (cfg.unlocked_user_ids or []) if str(uid) not in [str(x) for x in parsed]]
+            # kelas/jurusan save (accept legacy name 'update_kelas_jurusan_lock')
+            elif action in ('save_kelas_jurusan', 'update_kelas_jurusan_lock'):
+                kelas = request.form.getlist('locked_kelas') or []
+                jurusan = request.form.getlist('locked_jurusan') or []
+                # normalize: strip and uppercase for kelas, strip & upper for jurusan (optional)
+                norm_kelas = []
+                for k in kelas:
+                    if k:
+                        kk = str(k).strip().upper()
+                        if kk:
+                            norm_kelas.append(kk)
+                norm_jurusan = []
+                for j in jurusan:
+                    if j:
+                        jj = str(j).strip().upper()
+                        if jj:
+                            norm_jurusan.append(jj)
+                cfg.locked_kelas = norm_kelas
+                cfg.locked_jurusan = norm_jurusan
+                # NEW: Jika app_locked = False, hapus semua exemptions global, karena filter akan lock user yang memenuhi
+                if not cfg.app_locked:
+                    cfg.unlocked_user_ids = []
+                # NEW: Reset exemptions untuk user yang memenuhi filter baru (agar terkunci kembali)
+                users_to_remove = []
+                for uid in cfg.unlocked_user_ids or []:
+                    user = User.query.get(uid)
+                    if user:
+                        user_meets_filter = True
+                        if norm_kelas and user.kelas not in norm_kelas:
+                            user_meets_filter = False
+                        if norm_jurusan and user.jurusan not in norm_jurusan:
+                            user_meets_filter = False
+                        if user_meets_filter:
+                            users_to_remove.append(uid)
+                for uid in users_to_remove:
+                    cfg.unlocked_user_ids.remove(uid)
+            elif action in ('reset_kelas_jurusan', 'reset_kelas_jurusan_lock'):
+                cfg.locked_kelas = []
+                cfg.locked_jurusan = []
+            else:
+                pass
 
-    return render_template(
-        'admin/admin_app_lock.html',
-        cfg=cfg,
-        all_kelas=all_kelas,
-        all_jurusan=all_jurusan,
-        active_page='admin_app_lock'
-    )
+            db.session.add(cfg)
+            db.session.commit()
+            flash("Pengaturan kunci berhasil disimpan.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Gagal menyimpan pengaturan: {e}", "danger")
+        return redirect(url_for('admin_app_lock'))
 
-# helper check untuk route yang butuh block saat locked
-def ensure_app_unlocked():
+    return render_template('admin/admin_app_lock.html',
+                           cfg=cfg,
+                           all_kelas=all_kelas,
+                           all_jurusan=all_jurusan,
+                           locked_users=locked_users)
+
+def is_user_locked(cfg, user):
+    """Return True jika user seharusnya terkunci berdasarkan cfg (memperhitungkan exemption)."""
+    if not cfg:
+        return False
+    # ensure lists exist
+    locked_user_ids = set(str(x) for x in (getattr(cfg, 'locked_user_ids', []) or []))
+    unlocked_user_ids = set(str(x) for x in (getattr(cfg, 'unlocked_user_ids', []) or []))
+    locked_kelas = set(getattr(cfg, 'locked_kelas', []) or [])
+    locked_jurusan = set(getattr(cfg, 'locked_jurusan', []) or [])
+
+    if not user or not getattr(user, 'id', None):
+        return False
+
+    sid = str(user.id)
+
+    # NEW: Jika ada filter kelas/jurusan aktif, exemptions hanya berlaku jika user memenuhi filter
+    if sid in unlocked_user_ids:
+        if locked_kelas or locked_jurusan:
+            user_meets_filter = True
+            if locked_kelas and getattr(user, 'kelas', None) not in locked_kelas:
+                user_meets_filter = False
+            if locked_jurusan and getattr(user, 'jurusan', None) not in locked_jurusan:
+                user_meets_filter = False
+            if not user_meets_filter:
+                # Jika tidak memenuhi filter, exemptions tidak berlaku, lanjutkan cek lock
+                pass
+            else:
+                return False  # Dikecualikan jika memenuhi filter
+        else:
+            return False  # Jika tidak ada filter, exemptions berlaku global
+
+    # Jika global lock aktif -> semua kecuali yang dikecualikan (di atas) terkunci
+    if getattr(cfg, 'app_locked', False):
+        return True
+
+    # Jika tidak global lock -> periksa per-user / kelas / jurusan
+    if sid in locked_user_ids:
+        return True
+
+    # Jika admin memilih kedua filter, perlakukan sebagai AND
+    if locked_kelas and locked_jurusan:
+        if getattr(user, 'kelas', None) and getattr(user, 'jurusan', None):
+            if user.kelas in locked_kelas and user.jurusan in locked_jurusan:
+                return True
+        return False
+
+    # Jika hanya satu sisi dipilih, gunakan perilaku lama (kelas OR jurusan)
+    if getattr(user, 'kelas', None) and user.kelas in locked_kelas:
+        return True
+    if getattr(user, 'jurusan', None) and user.jurusan in locked_jurusan:
+        return True
+
+    return False
+
+# Inject per-user lock status ke semua template agar JS/template bisa menggunakan app_locked secara efektif
+@app.context_processor
+def inject_app_lock_status():
+    try:
+        cfg = get_app_config()
+    except Exception:
+        cfg = None
+    user = current_user if current_user and getattr(current_user, 'is_authenticated', False) else None
+    return {
+        # app_locked = effective locked status for current_user (True/False)
+        'app_locked': bool(is_user_locked(cfg, user)),
+        # app_global_locked = true kalau admin menyalakan "kunci semua" (untuk informasi/debug)
+        'app_global_locked': bool(getattr(cfg, 'app_locked', False)),
+        'app_lock_message': getattr(cfg, 'lock_message', 'Aplikasi sedang dikunci oleh admin') if cfg else 'Aplikasi sedang dikunci'
+    }
+
+
+
+
+# NEW: endpoint toggle user lock (dipakai oleh JS)
+
+@app.route('/admin/app_lock/toggle_user/<int:user_id>', methods=['POST'])
+@login_required
+@csrf.exempt
+def admin_app_lock_toggle_user(user_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'unauthorized'}), 403
     cfg = get_app_config()
-    # Global lock (semua user)
-    if cfg.app_locked:
-        return False, (cfg.lock_message or 'Aplikasi sedang dikunci oleh admin')
+    if not hasattr(cfg, 'locked_user_ids') or cfg.locked_user_ids is None:
+        cfg.locked_user_ids = []
+    if not hasattr(cfg, 'unlocked_user_ids') or cfg.unlocked_user_ids is None:
+        cfg.unlocked_user_ids = []
 
-    # --- Lock khusus user, kelas, jurusan ---
-    # Pastikan field ada di config, jika belum, set default
-    locked_user_ids = getattr(cfg, 'locked_user_ids', []) or []
-    locked_kelas = getattr(cfg, 'locked_kelas', []) or []
-    locked_jurusan = getattr(cfg, 'locked_jurusan', []) or []
+    ids = set(str(x) for x in (cfg.locked_user_ids or []))
+    exemptions = set(str(x) for x in (cfg.unlocked_user_ids or []))
+    sid = str(user_id)
 
-    # Jika user sudah login
-    if current_user.is_authenticated:
-        # Lock by user id
-        if str(current_user.id) in [str(uid) for uid in locked_user_ids]:
-            return False, cfg.lock_message or "Akun Anda sedang dikunci oleh admin."
-        # Lock by kelas
-        if current_user.kelas and current_user.kelas in locked_kelas:
-            return False, cfg.lock_message or "Akses kelas Anda sedang dikunci oleh admin."
-        # Lock by jurusan
-        if current_user.jurusan and current_user.jurusan in locked_jurusan:
-            return False, cfg.lock_message or "Akses jurusan Anda sedang dikunci oleh admin."
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'user_not_found'}), 404
+
+    try:
+        # Cek apakah user sudah terkunci berdasarkan kondisi lain (global atau filter)
+        is_locked_by_other = False
+        if cfg.app_locked:
+            is_locked_by_other = True
+        elif cfg.locked_kelas or cfg.locked_jurusan:
+            user_meets_filter = True
+            if cfg.locked_kelas and getattr(user, 'kelas', None) not in cfg.locked_kelas:
+                user_meets_filter = False
+            if cfg.locked_jurusan and getattr(user, 'jurusan', None) not in cfg.locked_jurusan:
+                user_meets_filter = False
+            if user_meets_filter:
+                is_locked_by_other = True
+
+        if is_locked_by_other:
+            # Jika sudah terkunci oleh kondisi lain, toggle exemption
+            if sid in exemptions:
+                exemptions.remove(sid)
+            else:
+                exemptions.add(sid)
+                ids.discard(sid)  # Hapus dari locked per-user jika ada
+        else:
+            # Jika belum terkunci, toggle lock per-user
+            if sid in ids:
+                ids.remove(sid)
+            else:
+                ids.add(sid)
+                exemptions.discard(sid)  # Hapus exemption jika ada
+
+        cfg.unlocked_user_ids = list(exemptions)
+        cfg.locked_user_ids = list(ids)
+
+        # Recompute effective lock for response
+        is_locked = is_user_locked(cfg, user)
+
+        db.session.add(cfg)
+        db.session.commit()
+        return jsonify({'success': True, 'is_locked': bool(is_locked)})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+def ensure_app_unlocked():
+    """
+    Return (True, None) jika akses diizinkan untuk current_user.
+    Jika user terkunci menurut aturan (global / per-user / kelas / jurusan)
+    return (False, message).
+    Menggunakan is_user_locked(cfg, user) untuk menentukan status efektif.
+    """
+    try:
+        cfg = get_app_config()
+    except Exception:
+        cfg = None
+
+    # Jika tidak ada konfigurasi, anggap terbuka
+    if not cfg:
+        return True, None
+
+    # Jika user tidak ter-autentikasi => izinkan (login_required route akan tangani)
+    if not (current_user and getattr(current_user, 'is_authenticated', False)):
+        return True, None
+
+    # Gunakan util is_user_locked untuk mengevaluasi semua aturan lock
+    if is_user_locked(cfg, current_user):
+        return False, (getattr(cfg, 'lock_message', None) or 'Aplikasi sedang dikunci oleh admin')
 
     return True, None
+
 
 
 # --- Routes (Halaman Web) ---
@@ -1437,6 +1708,7 @@ def admin_users():
         active_page='admin_users')
 
 
+
 @app.route('/admin/transactions')
 @login_required
 def admin_transactions():
@@ -1451,19 +1723,27 @@ def admin_transactions():
     end_date = request.args.get('end_date')
     filter_type = request.args.get('filter_type', 'all')
     username = request.args.get('username')
-    transaction_id = request.args.get('transaction_id', type=int)  # Tambah ini
+    transaction_id = request.args.get('transaction_id', type=int)
 
     query = Transaction.query
 
-    # Filter berdasarkan ID transaksi jika diisi
+    # Filter berdasarkan ID transaksi jika diisi (opsional: hapus 'else' jika ingin gabung filter)
     if transaction_id:
         query = query.filter(Transaction.id == transaction_id)
     else:
-        # Filter berdasarkan tanggal
+        # Filter berdasarkan tanggal (dengan parsing)
         if start_date:
-            query = query.filter(Transaction.timestamp >= start_date)
+            try:
+                start_date_parsed = datetime.strptime(start_date, '%Y-%m-%d')
+                query = query.filter(Transaction.timestamp >= start_date_parsed)
+            except ValueError:
+                flash("Format tanggal mulai tidak valid.", "danger")
         if end_date:
-            query = query.filter(Transaction.timestamp <= end_date)
+            try:
+                end_date_parsed = datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+                query = query.filter(Transaction.timestamp <= end_date_parsed)
+            except ValueError:
+                flash("Format tanggal akhir tidak valid.", "danger")
         # Filter berdasarkan tipe transaksi
         if filter_type != 'all':
             query = query.filter(Transaction.type == filter_type)
@@ -1483,7 +1763,7 @@ def admin_transactions():
         filter_end_date=end_date,
         selected_type_filter=filter_type,
         filter_username=username,
-        filter_transaction_id=transaction_id,  # Kirim ke template
+        filter_transaction_id=transaction_id,
         active_page='admin_transactions')
 
 
@@ -1659,6 +1939,7 @@ def print_daily_summary_pdf():
 
 @app.route('/admin/users/toggle_active/<int:user_id>', methods=['POST'])
 @login_required
+@csrf.exempt
 def toggle_user_active(user_id):
     # 1. Otorisasi: Pastikan hanya admin
     if current_user.role != 'admin':
@@ -2462,6 +2743,7 @@ def admin_register_user():
         role = request.form.get('role')
         kelas = request.form.get('kelas')
         jurusan = request.form.get('jurusan')
+        new_id = request.form.get('id')  # Ambil ID dari form
 
         error = False
         # Validasi dasar
@@ -2474,6 +2756,17 @@ def admin_register_user():
         if role not in ['siswa', 'penjual']:
             flash('Peran yang dipilih tidak valid.', 'danger')
             error = True
+
+        # Validasi ID (baru ditambahkan)
+        if not new_id or not new_id.isdigit() or len(new_id) != 5:
+            flash('ID harus terdiri dari 5 angka.', 'danger')
+            error = True
+        else:
+            # Cek apakah ID sudah digunakan
+            existing_user = User.query.filter_by(id=int(new_id)).first()
+            if existing_user:
+                flash('ID ini sudah digunakan, silakan pilih ID lain.', 'danger')
+                error = True
 
         # Validasi kelas/jurusan jika siswa
         if role == 'siswa':
@@ -2498,8 +2791,9 @@ def admin_register_user():
         if error:
             return redirect(url_for('admin_register_user'))
 
-        # Buat user baru
+        # Buat user baru (dengan ID disertakan)
         user_data = {
+            'id': int(new_id),  # Sertakan ID agar tidak auto-increment
             'username': username,
             'role': role
         }
@@ -2581,7 +2875,7 @@ def top_board():
 
     # Render template Top Board
     return render_template(
-        'top_board.html',
+        'siswa/top_board.html',
         leaderboard=leaderboard,
         date_str=today_wib.strftime('%A, %d %B %Y'),
         current_user_role=current_user.role if current_user.is_authenticated else None,
@@ -3078,7 +3372,8 @@ def admin_margin():
         flash("Margin berhasil diupdate!", "success")
         return redirect(url_for('admin_margin'))
 
-    return render_template('admin/admin_margin.html', margin=margin)
+    return render_template('admin/admin_margin.html', margin=margin, active_page='admin_margin')
+
 
 @app.route('/admin/broadcast', methods=['GET', 'POST'])
 @login_required
@@ -3112,23 +3407,50 @@ def admin_broadcast():
                 return redirect(url_for('admin_broadcast'))
 
         # build recipients
-        recipients = []
+        recipients_query = None
         if send_to == 'all':
-            recipients = User.query.filter_by(role='siswa', is_active=True).all()
-        elif send_to == 'selected' and selected_ids:
-            ids = [int(i) for i in selected_ids if str(i).isdigit()]
-            recipients = User.query.filter(User.id.in_(ids), User.role=='siswa').all()
-        elif send_to == 'kelas' and target_kelas:
-            recipients = User.query.filter_by(role='siswa', kelas=target_kelas, is_active=True).all()
-        elif send_to == 'jurusan' and target_jurusan:
-            recipients = User.query.filter_by(role='siswa', jurusan=target_jurusan, is_active=True).all()
+            recipients_query = User.query.filter_by(role='siswa', is_active=True)
+        elif send_to == 'selected':
+            # require some selected ids
+            ids = []
+            for i in selected_ids:
+                try:
+                    ids.append(int(i))
+                except Exception:
+                    continue
+            if not ids:
+                flash("Tidak ada siswa terpilih.", "danger")
+                return redirect(url_for('admin_broadcast'))
+            recipients_query = User.query.filter(User.id.in_(ids), User.role == 'siswa', User.is_active == True)
+        elif send_to == 'kelas':
+            if not target_kelas:
+                flash("Pilih kelas terlebih dahulu.", "danger")
+                return redirect(url_for('admin_broadcast'))
+            recipients_query = User.query.filter_by(role='siswa', kelas=target_kelas, is_active=True)
+        elif send_to == 'jurusan':
+            if not target_jurusan:
+                flash("Pilih jurusan terlebih dahulu.", "danger")
+                return redirect(url_for('admin_broadcast'))
+            recipients_query = User.query.filter_by(role='siswa', jurusan=target_jurusan, is_active=True)
+        elif send_to == 'kelas_jurusan':
+            # new combined filter (misal "10 RPL" atau pilih kelas + jurusan)
+            if not target_kelas or not target_jurusan:
+                flash("Pilih kelas dan jurusan terlebih dahulu.", "danger")
+                return redirect(url_for('admin_broadcast'))
+            recipients_query = User.query.filter_by(role='siswa', kelas=target_kelas, jurusan=target_jurusan, is_active=True)
         else:
             flash("Penerima tidak valid atau belum dipilih.", "danger")
             return redirect(url_for('admin_broadcast'))
 
+        recipients = recipients_query.all() if recipients_query is not None else []
+
+        if not recipients:
+            flash('Tidak ditemukan siswa untuk kriteria tersebut.', 'warning')
+            return redirect(url_for('admin_broadcast'))
+
         try:
             for u in recipients:
-                n = Notification(user_id=u.id, message=message, image_filename=image_filename)
+                # create single notif object with is_broadcast flag
                 n = Notification(user_id=u.id, message=message, image_filename=image_filename, is_broadcast=True)
                 db.session.add(n)
             db.session.commit()
@@ -3148,6 +3470,33 @@ def admin_broadcast():
                            kelas_list=kelas_list,
                            jurusan_list=jurusan_list,
                            active_page='admin_broadcast')
+
+# API endpoint untuk frontend: ambil daftar siswa sesuai filter kelas/jurusan dan search
+@app.route('/admin/api/students')
+@login_required
+def admin_api_students():
+    # hanya admin boleh akses
+    if current_user.role != 'admin':
+        return jsonify([]), 403
+
+    kelas = request.args.get('kelas', type=str)
+    jurusan = request.args.get('jurusan', type=str)
+    q = request.args.get('q', type=str)
+
+    query = User.query.filter_by(role='siswa', is_active=True)
+    if kelas:
+        query = query.filter(User.kelas == kelas)
+    if jurusan:
+        query = query.filter(User.jurusan == jurusan)
+    if q:
+        term = f"%{q}%"
+        # cari berdasarkan username atau id
+        query = query.filter(or_(User.username.ilike(term), func.cast(User.id, db.String).ilike(term)))
+
+    students = query.order_by(User.username).limit(1000).all()
+    result = [{'id': s.id, 'username': s.username or '', 'kelas': s.kelas or '', 'jurusan': s.jurusan or ''} for s in students]
+    return jsonify(result)
+# ...existing code...
 
 @app.route('/admin/news')
 @login_required
@@ -3504,9 +3853,24 @@ def add_notification_image_column():
             db.session.rollback()
             print(f"Error ensuring notification image/is_broadcast column: {e}")
 
+def add_appconfig_unlocked_column():
+    with app.app_context():
+        try:
+            insp = db.inspect(db.engine)
+            cols = [c['name'] for c in insp.get_columns('app_config')]
+            if 'unlocked_user_ids' not in cols:
+                # SQLite: gunakan BLOB for PickleType
+                db.session.execute(db.text('ALTER TABLE app_config ADD COLUMN unlocked_user_ids BLOB'))
+                db.session.commit()
+                print("Added unlocked_user_ids to app_config")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error ensuring unlocked_user_ids column: {e}")
+
 if __name__ == '__main__':
     with app.app_context():
         add_border_column()
         add_laporan_response_columns()
         add_notification_image_column()
+        add_appconfig_unlocked_column()   # NEW: pastikan kolom unlocked_user_ids ada
     app.run(debug=True, host='0.0.0.0', port=5000)

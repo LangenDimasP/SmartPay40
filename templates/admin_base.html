@@ -276,9 +276,9 @@
           <li>
             <a 
               href="{{ url_for('admin_margin') }}"
-              class="nav-link flex items-center p-3 mb-1 rounded-lg no-underline text-gray-600 font-medium hover:bg-[#7c4dff] hover:text-white"
+              class="nav-link flex items-center p-3 mb-1 rounded-lg no-underline text-gray-600 font-medium hover:bg-[#7c4dff] hover:text-white {% if active_page == 'admin_margin' %}bg-[#7c4dff] text-white{% endif %}"
             >
-              <span class="nav-icon w-8 h-8 inline-flex justify-center items-center bg-purple-100 text-[#7c4dff] rounded-lg mr-4 text-sm hover:bg-white hover:text-[#7c4dff]">
+              <span class="nav-icon w-8 h-8 inline-flex justify-center items-center bg-purple-100 text-[#7c4dff] rounded-lg mr-4 text-sm hover:bg-white hover:text-[#7c4dff] {% if active_page == 'admin_margin' %}!bg-white !text-[#7c4dff]{% endif %}">
                 <i class="fas fa-percent"></i>
               </span>
               <span class="flex-grow">Pengaturan Margin Penjual</span>

@@ -1,184 +1,241 @@
 {% extends 'admin_base.html' %}
-
-{% block title %}Registrasi{% endblock %}
-
 {% block admin_content %}
-<div class="flex w-full min-h-[calc(100vh-60px)] justify-center items-center">
-    <!-- Registration Form Section -->
-    <div class="w-3/5 p-10 flex flex-col justify-center">
-        <div class="mb-6">
-            <h2 class="text-2xl text-[#333333] font-semibold mb-2">Registrasi</h2>
-            <p class="text-gray-500 text-sm">Daftarkan untuk mendapatkan akses ke Kantin Digital</p>
-        </div>
-        
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
+<div class="min-h-screen py-8 px-4 bg-gray-50">
+  <div class="container mx-auto max-w-5xl">
+    <!-- Registration Card -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div class="grid md:grid-cols-2 gap-0">
+        <!-- Form Section -->
+        <div class="p-8">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Registrasi Pengguna</h2>
+            <p class="text-gray-600 text-sm">Daftarkan siswa atau penjual ke sistem Kantin Digital</p>
+          </div>
+
+          <!-- Flash Messages -->
+          {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="mb-5">
-                    {% for category, message in messages %}
-                        <p class="{% if category == 'success' %}bg-green-100 text-green-600 p-2 rounded text-sm mb-2{% else %}bg-red-100 text-red-600 p-2 rounded text-sm mb-2{% endif %}">{{ message }}</p>
-                    {% endfor %}
-                </div>
+              <div class="mb-6 space-y-2">
+                {% for category, message in messages %}
+                  <div class="p-3 rounded-lg border-l-4 {% if category == 'success' %}bg-green-50 border-green-600 text-green-800{% else %}bg-red-50 border-red-600 text-red-800{% endif %}">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              </div>
             {% endif %}
-        {% endwith %}
-        
-        <!-- Registration Form -->
-        <form method="POST" action="{{ url_for('admin_register_user') }}">
+          {% endwith %}
+
+          <!-- Registration Form -->
+          <form method="POST" action="{{ url_for('admin_register_user') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-            <div class="mb-4 relative">
-                <label for="id" class="block mb-2 text-sm text-gray-600">ID Siswa/Penjual</label>
-                <div class="flex gap-2">
-                    <input type="text" id="id" name="id" placeholder="Masukkan ID atau klik generate" maxlength="5" pattern="\d{5}" required class="flex-1 p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                    <button type="button" class="bg-[#7c4dff] text-white px-4 py-2 rounded-md font-semibold hover:bg-[#5e35b1] transition-colors" onclick="generateId()">Generate</button>
-                </div>
-                <small class="text-gray-500 text-xs">ID terdiri dari 5 angka, digunakan untuk login.</small>
+            <!-- ID Field -->
+            <div class="mb-5">
+              <label for="id" class="block text-sm font-medium text-gray-700 mb-1">ID Siswa/Penjual</label>
+              <div class="flex gap-2">
+                <input type="text" id="id" name="id" placeholder="Masukkan ID (5 angka)" maxlength="5" pattern="\d{5}" required
+                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] text-base bg-white" />
+                <button type="button" class="px-4 py-3 bg-[#7c4dff] text-white rounded-lg font-medium hover:bg-[#5e35b1] transition-colors"
+                        onclick="generateId()">
+                  Generate
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">ID terdiri dari 5 angka, digunakan untuk login.</p>
             </div>
 
-            <div class="mb-4 relative">
-                <label for="nama" class="block mb-2 text-sm text-gray-600">Nama Lengkap</label>
-                <input type="text" id="nama" name="username" placeholder="Masukkan nama lengkap" required class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
+            <!-- Nama Lengkap -->
+            <div class="mb-5">
+              <label for="nama" class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+              <input type="text" id="nama" name="username" placeholder="Masukkan nama lengkap" required
+                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] text-base bg-white" />
+            </div>
+
+            <!-- Password -->
+            <div class="mb-5">
+              <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div class="flex gap-2">
+                <input type="text" id="password" name="password" placeholder="Masukkan password (8 huruf)" maxlength="8" required
+                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] text-base bg-white" />
+                <button type="button" class="px-4 py-3 bg-[#7c4dff] text-white rounded-lg font-medium hover:bg-[#5e35b1] transition-colors"
+                        onclick="generatePassword()">
+                  Generate
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Password otomatis digunakan untuk login.</p>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="mb-5">
+              <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password</label>
+              <input type="text" id="confirm_password" name="confirm_password" placeholder="Ketik ulang password" required
+                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] text-base bg-white" />
+            </div>
+
+            <!-- Role -->
+            <div class="mb-5">
+              <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Daftar sebagai</label>
+              <select id="role" name="role" required onchange="toggleStudentFields()"
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+                <option value="" disabled selected>-- Pilih Peran --</option>
+                <option value="siswa">Siswa</option>
+                <option value="penjual">Penjual Kantin</option>
+              </select>
+            </div>
+
+            <!-- Siswa Fields (Kelas & Jurusan) -->
+            <div id="kelas-jurusan-fields" class="p-5 rounded-lg bg-blue-50 border border-blue-100 mb-6" style="display: none;">
+              <h3 class="text-sm font-semibold text-blue-800 mb-4 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
-            </div>
-
-            <div class="mb-4 relative">
-                <label for="password" class="block mb-2 text-sm text-gray-600">Password</label>
-                <div class="flex gap-2">
-                    <input type="text" id="password" name="password" placeholder="Masukkan password atau klik generate" maxlength="8" required class="flex-1 p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                    <button type="button" class="bg-[#7c4dff] text-white px-4 py-2 rounded-md font-semibold hover:bg-[#5e35b1] transition-colors" onclick="generatePassword()">Generate</button>
+                Informasi Siswa
+              </h3>
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label for="kelas" class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+                  <select id="kelas" name="kelas"
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+                    <option value="" disabled selected>-- Pilih Kelas --</option>
+                    <option value="X">X</option>
+                    <option value="XI">XI</option>
+                    <option value="XII">XII</option>
+                  </select>
                 </div>
-                <small class="text-gray-500 text-xs">Password terdiri dari 8 huruf acak, digunakan untuk login.</small>
-            </div>
-
-            <div class="mb-4 relative">
-                <label for="confirm_password" class="block mb-2 text-sm text-gray-600">Konfirmasi Password</label>
-                <input type="text" id="confirm_password" name="confirm_password" placeholder="Konfirmasi password" required class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-            </div>
-
-            <div class="mb-4 relative">
-                <label for="role" class="block mb-2 text-sm text-gray-600">Daftar sebagai</label>
-                <select id="role" name="role" required onchange="toggleStudentFields()" class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                    <option value="" disabled selected>-- Pilih Peran --</option>
-                    <option value="siswa">Siswa</option>
-                    <option value="penjual">Penjual Kantin</option>
-                </select>
-                <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="8.5" cy="7" r="4"></circle>
-                    <polyline points="17 11 19 13 23 9"></polyline>
-                </svg>
-            </div>
-
-            <div id="kelas-jurusan-fields" class="p-4 rounded-lg bg-[#f9f5ff] mb-4 border-l-4 border-[#7c4dff]" style="display: none;">
-                <h3 class="text-base text-[#5e35b1] mt-2 mb-3 font-semibold">Informasi Tambahan Siswa</h3>
-                <div class="mb-4 relative">
-                    <label for="kelas" class="block mb-2 text-sm text-gray-600">Kelas</label>
-                    <select id="kelas" name="kelas" class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                        <option value="" disabled selected>-- Pilih Kelas --</option>
-                        <option value="X">X</option>
-                        <option value="XI">XI</option>
-                        <option value="XII">XII</option>
-                    </select>
-                    <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                    </svg>
+                <div>
+                  <label for="jurusan" class="block text-sm font-medium text-gray-700 mb-1">Jurusan</label>
+                  <select id="jurusan" name="jurusan"
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+                    <option value="" disabled selected>-- Pilih Jurusan --</option>
+                    <option value="RPL">RPL</option>
+                    <option value="DKV1">DKV1</option>
+                    <option value="DKV2">DKV2</option>
+                    <option value="AK">AK</option>
+                    <option value="MP">MP</option>
+                    <option value="BR">BR</option>
+                  </select>
                 </div>
-                <div class="relative">
-                    <label for="jurusan" class="block mb-2 text-sm text-gray-600">Jurusan</label>
-                    <select id="jurusan" name="jurusan" class="w-full p-3 pl-10 border border-gray-300 rounded-md text-base focus:border-[#7c4dff] focus:outline-none transition-colors">
-                        <option value="" disabled selected>-- Pilih Jurusan --</option>
-                        <option value="RPL">RPL</option>
-                        <option value="DKV1">DKV1</option>
-                        <option value="DKV2">DKV2</option>
-                        <option value="AK">AK</option>
-                        <option value="MP">MP</option>
-                        <option value="BR">BR</option>
-                    </select>
-                    <svg class="absolute left-3 bottom-3 text-gray-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                </div>
+              </div>
             </div>
-            
-            <button type="submit" class="w-full p-3 bg-[#7c4dff] text-white rounded-md font-semibold text-base hover:bg-[#5e35b1] transition-colors mt-2">Buat Akun Sekarang</button>
-        </form>
 
-                <!-- Import Excel Section -->
-        <div class="mt-12 mb-6 border-t pt-8">
-            <h2 class="text-2xl font-semibold mb-4 text-[#7c4dff]">Import Data Siswa/Penjual dari Excel</h2>
-            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_register_user') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <label class="block mb-2 font-medium">Pilih Jenis User:</label>
-                <select name="role" required class="mb-4 p-2 border rounded w-full">
-                    <option value="siswa">Siswa</option>
-                    <option value="penjual">Penjual</option>
-                </select>
-                <label class="block mb-2 font-medium">Upload File Excel (.xlsx):</label>
-                <input type="file" name="file" accept=".xlsx" required class="mb-4 p-2 border rounded w-full">
-                <button type="submit" class="w-full p-3 bg-[#7c4dff] text-white rounded font-semibold hover:bg-[#5e35b1]">Import Data</button>
-            </form>
-            <div class="mt-6 text-sm">
-                <p>Download template:</p>
-                <ul class="list-disc ml-6">
-                    <li><a href="{{ url_for('download_template', role='siswa') }}" class="text-[#7c4dff] underline">Template Siswa</a></li>
-                    <li><a href="{{ url_for('download_template', role='penjual') }}" class="text-[#7c4dff] underline">Template Penjual</a></li>
-                </ul>
-            </div>
+            <!-- Submit Button -->
+            <button type="submit"
+                    class="w-full py-3 bg-gradient-to-r from-[#7c4dff] to-[#9969ff] text-white font-semibold rounded-lg shadow-sm hover:from-[#6a3de8] hover:to-[#7c4dff] transition-all focus:outline-none focus:ring-2 focus:ring-[#7c4dff]/50">
+              Buat Akun Sekarang
+            </button>
+          </form>
         </div>
-    
+
+        <!-- Import Section (Sidebar) -->
+        <div class="bg-gray-50 p-8 border-l border-gray-200">
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+              <svg class="w-5 h-5 mr-2 text-[#7c4dff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Impor Data Excel
+            </h3>
+            <p class="text-gray-600 text-sm mt-1">Tambahkan banyak pengguna sekaligus</p>
+          </div>
+
+          <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_register_user') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Pengguna</label>
+              <select name="role" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white">
+                <option value="siswa">Siswa</option>
+                <option value="penjual">Penjual</option>
+              </select>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Upload File (.xlsx)</label>
+              <input type="file" name="file" accept=".xlsx" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7c4dff] focus:border-[#7c4dff] bg-white text-sm" />
+            </div>
+
+            <button type="submit"
+                    class="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-400 text-white font-medium rounded-lg shadow-sm hover:from-green-600 hover:to-green-500 transition-all">
+              Import Data
+            </button>
+          </form>
+
+          <div class="mt-8">
+            <h4 class="text-sm font-medium text-gray-900 mb-3">Download Template:</h4>
+            <ul class="space-y-2 text-sm">
+              <li>
+                <a href="{{ url_for('download_template', role='siswa') }}"
+                   class="flex items-center text-[#7c4dff] hover:text-[#5e35b1] transition-colors">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Template Siswa (.xlsx)
+                </a>
+              </li>
+              <li>
+                <a href="{{ url_for('download_template', role='penjual') }}"
+                   class="flex items-center text-[#7c4dff] hover:text-[#5e35b1] transition-colors">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Template Penjual (.xlsx)
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-{{ super() }}
 <script>
-    function toggleStudentFields() {
-        const roleSelect = document.getElementById('role');
-        const studentFieldsDiv = document.getElementById('kelas-jurusan-fields');
-        const kelasSelect = document.getElementById('kelas');
-        const jurusanSelect = document.getElementById('jurusan');
+  function toggleStudentFields() {
+    const roleSelect = document.getElementById('role');
+    const studentFieldsDiv = document.getElementById('kelas-jurusan-fields');
+    const kelasSelect = document.getElementById('kelas');
+    const jurusanSelect = document.getElementById('jurusan');
 
-        if (roleSelect.value === 'siswa') {
-            studentFieldsDiv.style.display = 'block';
-            kelasSelect.required = true;
-            jurusanSelect.required = true;
-        } else {
-            studentFieldsDiv.style.display = 'none';
-            kelasSelect.required = false;
-            jurusanSelect.required = false;
-            kelasSelect.value = "";
-            jurusanSelect.value = "";
-        }
+    if (roleSelect.value === 'siswa') {
+      studentFieldsDiv.style.display = 'block';
+      kelasSelect.required = true;
+      jurusanSelect.required = true;
+    } else {
+      studentFieldsDiv.style.display = 'none';
+      kelasSelect.required = false;
+      jurusanSelect.required = false;
+      kelasSelect.value = "";
+      jurusanSelect.value = "";
     }
-    function generateId() {
-        let id = Math.floor(10000 + Math.random() * 90000);
-        document.getElementById('id').value = id;
-    }
-    function generatePassword() {
-        let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-        let pass = '';
-        for (let i = 0; i < 8; i++) {
-            pass += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        document.getElementById('password').value = pass;
-        document.getElementById('confirm_password').value = pass;
-    }
+  }
 
-        document.addEventListener('DOMContentLoaded', function() {
-        const passwordInput = document.getElementById('password');
-        const confirmInput = document.getElementById('confirm_password');
-        passwordInput.addEventListener('input', function() {
-            confirmInput.value = passwordInput.value;
-        });
+  function generateId() {
+    const id = String(Math.floor(10000 + Math.random() * 90000));
+    document.getElementById('id').value = id;
+  }
+
+  function generatePassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    let pass = '';
+    for (let i = 0; i < 8; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm_password');
+    passwordInput.value = pass;
+    confirmInput.value = pass;
+  }
+
+  // Sync confirm password when password is typed
+  document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm_password');
+    passwordInput.addEventListener('input', function() {
+      if (confirmInput.value === '' || confirmInput.value === passwordInput.dataset.last) {
+        confirmInput.value = passwordInput.value;
+      }
+      passwordInput.dataset.last = passwordInput.value;
     });
+  });
 </script>
-{% endblock %}
+{% endblock admin_content %}
